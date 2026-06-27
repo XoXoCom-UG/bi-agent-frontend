@@ -20,7 +20,7 @@ export default function LoginPage() {
     if (tab === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMsg({ text: error.message, ok: false });
-      else router.push("/");
+      else router.push("/chat");
     } else {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) setMsg({ text: error.message, ok: false });
@@ -33,64 +33,104 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm">
+    <div style={{
+      minHeight: "100vh", display: "flex", alignItems: "center",
+      justifyContent: "center", background: "var(--bg)", padding: "1.5rem",
+    }}>
+      <div style={{ width: "100%", maxWidth: "380px" }}>
         {/* Brand */}
-        <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-lg font-serif"
-            style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
-            B
-          </div>
-          <span className="text-lg font-semibold tracking-tight">BI Agent</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "2rem", justifyContent: "center" }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: "var(--accent)", color: "var(--on-accent)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontWeight: 700, fontSize: 18, fontFamily: "Georgia, serif",
+          }}>B</div>
+          <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.01em" }}>BI Agent</span>
         </div>
 
         {/* Card */}
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+        <div style={{
+          background: "var(--bg2)", border: "1px solid var(--border)",
+          borderRadius: 16, padding: "1.5rem",
+        }}>
           {/* Tabs */}
-          <div className="flex gap-1 bg-muted p-1 rounded-lg mb-6">
-            {(["login", "signup"] as const).map((t) => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${
-                  tab === t ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                }`}>
+          <div style={{
+            display: "flex", gap: 4, background: "var(--panel)",
+            padding: 4, borderRadius: 10, marginBottom: "1.5rem",
+          }}>
+            {(["login", "signup"] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)} style={{
+                flex: 1, padding: "6px 0", fontSize: 13, fontWeight: 500,
+                borderRadius: 7, border: "none", cursor: "pointer", transition: "all 0.15s",
+                fontFamily: "inherit",
+                background: tab === t ? "var(--bg)" : "transparent",
+                color: tab === t ? "var(--text)" : "var(--text2)",
+                boxShadow: tab === t ? "0 1px 4px rgba(0,0,0,0.2)" : "none",
+              }}>
                 {t === "login" ? "Einloggen" : "Registrieren"}
               </button>
             ))}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">E-Mail</label>
+          <form onSubmit={handleSubmit}>
+            {/* Email */}
+            <div style={{ marginBottom: "1rem" }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 6, color: "var(--text)" }}>
+                E-Mail
+              </label>
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm 
-                           text-foreground placeholder:text-muted-foreground
-                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="name@example.com" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Passwort</label>
-              <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm
-                           text-foreground placeholder:text-muted-foreground
-                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="••••••••" />
+                placeholder="name@example.com"
+                style={{
+                  width: "100%", height: 40, borderRadius: 10,
+                  border: "1px solid var(--border)", background: "var(--bg)",
+                  color: "var(--text)", padding: "0 12px", fontSize: 13,
+                  fontFamily: "inherit", outline: "none",
+                }} />
             </div>
 
+            {/* Password */}
+            <div style={{ marginBottom: "1.25rem" }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 6, color: "var(--text)" }}>
+                Passwort
+              </label>
+              <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                style={{
+                  width: "100%", height: 40, borderRadius: 10,
+                  border: "1px solid var(--border)", background: "var(--bg)",
+                  color: "var(--text)", padding: "0 12px", fontSize: 13,
+                  fontFamily: "inherit", outline: "none",
+                }} />
+            </div>
+
+            {/* Error/success message */}
             {msg && (
-              <p className={`text-sm px-3 py-2 rounded-lg ${msg.ok ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-red-500/10 text-red-600 dark:text-red-400"}`}>
+              <div style={{
+                padding: "8px 12px", borderRadius: 8, marginBottom: "1rem",
+                fontSize: 12, lineHeight: 1.5,
+                background: msg.ok ? "rgba(74,222,128,0.1)" : "rgba(248,113,113,0.1)",
+                color: msg.ok ? "var(--green)" : "var(--red)",
+                border: `1px solid ${msg.ok ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}`,
+              }}>
                 {msg.text}
-              </p>
+              </div>
             )}
 
-            <button type="submit" disabled={loading}
-              className="w-full h-10 rounded-lg font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-60"
-              style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
+            {/* Submit */}
+            <button type="submit" disabled={loading} style={{
+              width: "100%", height: 42, borderRadius: 10, border: "none",
+              background: "var(--accent)", color: "var(--on-accent)",
+              fontWeight: 600, fontSize: 14, cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.6 : 1, transition: "opacity 0.15s, transform 0.1s",
+              fontFamily: "inherit",
+            }}>
               {loading ? "Bitte warten…" : tab === "login" ? "Einloggen" : "Account erstellen"}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-4">
+        <p style={{ textAlign: "center", fontSize: 11, color: "var(--muted)", marginTop: "1rem" }}>
           IT Consulting Agent · v3
         </p>
       </div>
