@@ -5,6 +5,11 @@ import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api, ConceptData } from "@/lib/api";
 
+function truncate(s: string | undefined, n: number) {
+  if (!s) return "—";
+  return s.length > n ? s.slice(0, n) + "…" : s;
+}
+
 function ConceptContent() {
   const { token, loading } = useAuth();
   const store = useChatStore();
@@ -14,10 +19,9 @@ function ConceptContent() {
   const [concept, setConcept] = useState<ConceptData | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
-  const [openStep, setOpenStep] = useState<number | null>(0);
+  const [openStep, setOpenStep] = useState<number | null>(null);
 
   useEffect(() => { if (!loading && !token) router.replace("/login"); }, [token, loading]);
-
   useEffect(() => {
     if (!token || !sessionId) return;
     api.getConcept(token, sessionId).then(d => { if (d?.concept) setConcept(d.concept); }).catch(() => {});
@@ -27,8 +31,8 @@ function ConceptContent() {
     if (!token) return;
     setGenerating(true); setError("");
     try {
-      const msgs = store.messages.length > 0 ? store.messages : [];
-      if (msgs.length === 0) { setError("Schreibe zuerst mit dem Agenten, dann kann ein Concept erstellt werden."); setGenerating(false); return; }
+      const msgs = store.messages;
+      if (!msgs.length) { setError("Schreibe zuerst mit dem Agenten, dann kann ein Concept erstellt werden."); setGenerating(false); return; }
       const res = await api.generateConcept(token, { messages: msgs, session_id: sessionId });
       setConcept(res.concept);
       await api.saveConcept(token, res.session_id, res.concept);
@@ -44,123 +48,201 @@ function ConceptContent() {
   const pains = now.pain_points ?? [];
   const outcomes = goal.outcomes ?? [];
 
-  const S = {
-    page: { background: "var(--bg)", minHeight: "100vh" } as React.CSSProperties,
-    nav: { height: 52, background: "#fff", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 24px", gap: 12, position: "sticky" as const, top: 0, zIndex: 10 },
-    back: { display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--text-2)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", background: "#fff", cursor: "pointer", fontFamily: "inherit", fontWeight: 500 } as React.CSSProperties,
-    btn: (primary: boolean) => ({ padding: "6px 14px", borderRadius: 8, border: primary ? "none" : "1px solid var(--border)", background: primary ? "var(--green)" : "#fff", color: primary ? "#fff" : "var(--text-2)", fontSize: 12, fontWeight: primary ? 600 : 500, cursor: "pointer", fontFamily: "inherit" } as React.CSSProperties),
-    body: { maxWidth: 900, margin: "0 auto", padding: "28px 24px 48px" },
-    kpi: { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 24 },
-    kpiCard: (c: string) => ({ background: "#fff", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 18px", borderTop: `3px solid ${c}` } as React.CSSProperties),
-    kpiLabel: { fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "var(--text-3)", marginBottom: 6 },
-    card: { background: "#fff", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden", marginBottom: 16 } as React.CSSProperties,
-    cardHead: { padding: "14px 20px 12px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" },
-    sLabel: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "var(--text-3)" },
-    tag: (c: string, bg: string) => ({ fontSize: 10, fontWeight: 600, letterSpacing: "0.05em", padding: "3px 9px", borderRadius: 20, background: bg, color: c } as React.CSSProperties),
-  };
-
-  if (loading || !token) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}><div className="thinking-spinner" style={{ width: 24, height: 24 }} /></div>;
+  if (loading || !token) return (
+    <div className="min-h-screen flex items-center justify-center bg-canvas">
+      <div className="thinking-spinner" style={{ width: 28, height: 28 }} />
+    </div>
+  );
 
   return (
-    <div style={S.page}>
-      <div style={S.nav}>
-        <button style={S.back} onClick={() => router.push("/chat")}>← Chat</button>
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+    <div className="min-h-screen" style={{ background: "var(--color-canvas)" }}>
+
+      {/* Sticky nav */}
+      <nav className="sticky top-0 z-10 bg-white border-b flex items-center gap-3 px-6 h-14"
+        style={{ borderColor: "var(--color-line)" }}>
+        <button onClick={() => router.push("/chat")}
+          className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors"
+          style={{ color: "var(--color-ink-2)", borderColor: "var(--color-line)", background: "white" }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--color-brand)")}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--color-line)")}>
+          ← Chat
+        </button>
+        <span className="flex-1 text-sm font-semibold truncate" style={{ color: "var(--color-ink)" }}>
           {concept?.title || "Transformation Concept"}
         </span>
-        {concept && <span style={S.tag("var(--green-dark)", "var(--green-light)")}>✓ Bereit</span>}
-        <button style={S.btn(false)}>✎ Bearbeiten</button>
-        <button style={S.btn(false)}>⬇ PDF</button>
-        <button style={S.btn(true)} onClick={() => router.push(`/dashboard?session=${sessionId}`)}>Roadmap öffnen →</button>
-      </div>
+        {concept && (
+          <span className="text-xs font-semibold px-3 py-1 rounded-full"
+            style={{ background: "var(--color-brand-light)", color: "var(--color-brand-dark)", border: "1px solid var(--color-brand-mid)" }}>
+            ✓ Bereit
+          </span>
+        )}
+        <button className="text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors"
+          style={{ color: "var(--color-ink-2)", borderColor: "var(--color-line)", background: "white" }}>
+          ✎ Bearbeiten
+        </button>
+        <button className="text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors"
+          style={{ color: "var(--color-ink-2)", borderColor: "var(--color-line)", background: "white" }}>
+          ⬇ PDF
+        </button>
+        <button onClick={() => router.push(`/dashboard?session=${sessionId}`)}
+          className="text-sm font-semibold px-4 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
+          style={{ background: "var(--color-brand)" }}>
+          Roadmap →
+        </button>
+      </nav>
 
-      <div style={S.body}>
-        {/* Hero */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--green)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }}></span>
-            Transformation Concept
+      <div className="max-w-4xl mx-auto px-6 py-8 pb-16">
+
+        {/* Page header */}
+        <div className="mb-8 animate-in">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#22c55e" }}></span>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--color-brand)" }}>Transformation Concept</span>
           </div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.025em", lineHeight: 1.2, marginBottom: 6 }}>{concept?.title || "Noch kein Concept generiert"}</h1>
-          {concept && <p style={{ fontSize: 13, color: "var(--text-3)" }}>{steps.length} Schritte · {stories.length} User Stories · Erstellt für Session {sessionId?.slice(-8)}</p>}
+          <h1 className="text-2xl font-extrabold leading-tight mb-2" style={{ color: "var(--color-ink)", letterSpacing: "-0.025em" }}>
+            {concept?.title || "Noch kein Concept generiert"}
+          </h1>
+          {concept && (
+            <p className="text-sm" style={{ color: "var(--color-ink-3)" }}>
+              {steps.length} Schritte · {stories.length} User Stories
+            </p>
+          )}
         </div>
 
         {/* Empty state */}
         {!concept && (
-          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 14, padding: "48px 32px", textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>⚡</div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "var(--text)" }}>Concept noch nicht generiert</h3>
-            <p style={{ fontSize: 14, color: "var(--text-3)", marginBottom: 24, maxWidth: 400, margin: "0 auto 24px" }}>Führe zuerst ein Gespräch mit dem Agenten, dann kann das Transformation Concept automatisch erstellt werden.</p>
-            {error && <p style={{ color: "var(--red)", fontSize: 13, marginBottom: 16 }}>{error}</p>}
-            <button onClick={generate} disabled={generating} style={{ padding: "10px 24px", borderRadius: 10, border: "none", background: "var(--green)", color: "#fff", fontWeight: 600, fontSize: 14, cursor: generating ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: generating ? 0.7 : 1 }}>
+          <div className="bg-white rounded-2xl border p-16 text-center animate-in"
+            style={{ borderColor: "var(--color-line)" }}>
+            <div className="text-5xl mb-4">⚡</div>
+            <h3 className="text-lg font-bold mb-2" style={{ color: "var(--color-ink)" }}>Noch kein Concept generiert</h3>
+            <p className="text-sm mb-6 max-w-xs mx-auto" style={{ color: "var(--color-ink-3)" }}>
+              Führe zuerst ein Gespräch mit dem Agenten, dann kann das Concept automatisch erstellt werden.
+            </p>
+            {error && <p className="text-sm mb-4" style={{ color: "#dc2626" }}>{error}</p>}
+            <button onClick={generate} disabled={generating}
+              className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-opacity"
+              style={{ background: "var(--color-brand)", opacity: generating ? 0.7 : 1 }}>
               {generating ? "Generiere…" : "⚡ Concept generieren"}
             </button>
           </div>
         )}
 
         {concept && (
-          <>
-            {/* KPI Strip */}
-            {(bv.manual_effort || bv.error_rate || bv.cost_savings) && (
-              <div style={S.kpi}>
-                {bv.manual_effort && <div style={S.kpiCard("var(--green)")}><div style={S.kpiLabel}>Zeitersparnis</div><div style={{ fontSize: 28, fontWeight: 800, color: "var(--green-dark)", letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 4 }}>{bv.manual_effort}</div><div style={{ fontSize: 11, color: "var(--text-3)" }}>Manuelle Aufwände</div></div>}
-                {bv.error_rate && <div style={S.kpiCard("var(--red)")}><div style={S.kpiLabel}>Fehlerrate</div><div style={{ fontSize: 28, fontWeight: 800, color: "var(--red)", letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 4 }}>{bv.error_rate}</div><div style={{ fontSize: 11, color: "var(--text-3)" }}>Reduzierung</div></div>}
-                {bv.cost_savings && <div style={S.kpiCard("var(--blue)")}><div style={S.kpiLabel}>Kostenersparnis</div><div style={{ fontSize: 28, fontWeight: 800, color: "var(--blue)", letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 4 }}>{bv.cost_savings}</div><div style={{ fontSize: 11, color: "var(--text-3)" }}>Pro Jahr</div></div>}
-                <div style={S.kpiCard("var(--amber)")}><div style={S.kpiLabel}>Schritte</div><div style={{ fontSize: 28, fontWeight: 800, color: "var(--amber)", letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 4 }}>{steps.length}</div><div style={{ fontSize: 11, color: "var(--text-3)" }}>Transformationsschritte</div></div>
-              </div>
-            )}
+          <div className="space-y-5 animate-in">
 
-            {/* Ist/Ziel */}
-            <div style={S.card}>
-              <div style={S.cardHead}><span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Ist → Ziel im Vergleich</span><span style={S.tag("var(--green-dark)", "var(--green-light)")}>{Math.max(pains.length, outcomes.length) + 1} Aspekte</span></div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr" }}>
-                <div style={{ padding: "16px 18px" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--red)", marginBottom: 10, display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--red)", display: "inline-block" }}></span>Ist-Zustand</div>
-                  <p style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.55, fontWeight: 500, marginBottom: 12, paddingBottom: 12, borderBottom: "1px solid var(--bg)" }}>{now.summary || "—"}</p>
-                  {pains.map((p, i) => <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}><span style={{ width: 5, height: 5, borderRadius: "50%", background: "#fca5a5", flexShrink: 0, marginTop: 5 }}></span><span style={{ fontSize: 12, color: "var(--text-2)", lineHeight: 1.5 }}>{p}</span></div>)}
+            {/* KPI strip — truncated values only */}
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { label: "Zeitersparnis", val: truncate(bv.manual_effort, 12), sub: "Manuelle Aufwände", top: "var(--color-brand)", valColor: "var(--color-brand-dark)" },
+                { label: "Fehlerrate", val: truncate(bv.error_rate, 12), sub: "Reduzierung", top: "#dc2626", valColor: "#dc2626" },
+                { label: "Kostenersparnis", val: truncate(bv.cost_savings, 12), sub: "Pro Jahr", top: "#1d4ed8", valColor: "#1d4ed8" },
+                { label: "Schritte", val: String(steps.length), sub: "Transformationsschritte", top: "#b45309", valColor: "#b45309" },
+              ].map(k => (
+                <div key={k.label} className="bg-white rounded-xl border p-4"
+                  style={{ borderColor: "var(--color-line)", borderTop: `3px solid ${k.top}` }}>
+                  <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--color-ink-3)" }}>{k.label}</p>
+                  <p className="text-2xl font-extrabold leading-none mb-1 truncate" style={{ color: k.valColor, letterSpacing: "-0.02em" }}>{k.val}</p>
+                  <p className="text-xs" style={{ color: "var(--color-ink-3)" }}>{k.sub}</p>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "var(--border-2)", background: "var(--bg)" }}>→</div>
-                <div style={{ padding: "16px 18px" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--green)", marginBottom: 10, display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)", display: "inline-block" }}></span>Ziel-Zustand</div>
-                  <p style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.55, fontWeight: 500, marginBottom: 12, paddingBottom: 12, borderBottom: "1px solid var(--bg)" }}>{goal.summary || "—"}</p>
-                  {outcomes.map((o, i) => <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}><span style={{ width: 5, height: 5, borderRadius: "50%", background: "#86efac", flexShrink: 0, marginTop: 5 }}></span><span style={{ fontSize: 12, color: "var(--text-2)", lineHeight: 1.5 }}>{o}</span></div>)}
+              ))}
+            </div>
+
+            {/* Ist → Ziel */}
+            <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: "var(--color-line)" }}>
+              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--color-line)" }}>
+                <h2 className="text-sm font-bold" style={{ color: "var(--color-ink)" }}>Ist → Ziel im Vergleich</h2>
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                  style={{ background: "var(--color-brand-light)", color: "var(--color-brand-dark)" }}>
+                  {Math.max(pains.length, outcomes.length) + 1} Aspekte
+                </span>
+              </div>
+              <div className="grid grid-cols-2">
+                {/* Ist */}
+                <div className="p-5 border-r" style={{ borderColor: "var(--color-line)", background: "#fefefe" }}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="w-2 h-2 rounded-full" style={{ background: "#dc2626", flexShrink: 0 }}></span>
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#dc2626" }}>Ist-Zustand</span>
+                  </div>
+                  <p className="text-sm font-medium mb-4 pb-4 leading-relaxed" style={{ color: "var(--color-ink)", borderBottom: "1px solid var(--color-line)" }}>
+                    {now.summary || "—"}
+                  </p>
+                  <div className="space-y-3">
+                    {pains.map((p, i) => (
+                      <div key={i} className="flex gap-3">
+                        <span className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: "#fca5a5" }}></span>
+                        <p className="text-xs leading-relaxed" style={{ color: "var(--color-ink-2)" }}>{p}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Ziel */}
+                <div className="p-5" style={{ background: "#fefffe" }}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="w-2 h-2 rounded-full" style={{ background: "var(--color-brand)", flexShrink: 0 }}></span>
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--color-brand)" }}>Ziel-Zustand</span>
+                  </div>
+                  <p className="text-sm font-medium mb-4 pb-4 leading-relaxed" style={{ color: "var(--color-ink)", borderBottom: "1px solid var(--color-line)" }}>
+                    {goal.summary || "—"}
+                  </p>
+                  <div className="space-y-3">
+                    {outcomes.map((o, i) => (
+                      <div key={i} className="flex gap-3">
+                        <span className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: "#86efac" }}></span>
+                        <p className="text-xs leading-relaxed" style={{ color: "var(--color-ink-2)" }}>{o}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Steps */}
-            <div style={S.card}>
-              <div style={S.cardHead}><span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Transformationsschritte</span><span style={S.tag("var(--green-dark)", "var(--green-light)")}>{steps.length} Schritte</span></div>
-              <div style={{ padding: "12px 16px" }}>
+            <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: "var(--color-line)" }}>
+              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--color-line)" }}>
+                <h2 className="text-sm font-bold" style={{ color: "var(--color-ink)" }}>Transformationsschritte</h2>
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                  style={{ background: "var(--color-brand-light)", color: "var(--color-brand-dark)" }}>
+                  {steps.length} Schritte
+                </span>
+              </div>
+              <div className="divide-y" style={{ borderColor: "var(--color-line)" }}>
                 {steps.map((s, i) => (
-                  <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10, paddingBottom: 10, borderBottom: i < steps.length - 1 ? "1px solid var(--bg)" : "none" }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flexShrink: 0 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 8, background: "var(--green)", color: "#fff", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</div>
-                      {i < steps.length - 1 && <div style={{ width: 2, flex: 1, background: "var(--border)", minHeight: 16 }} />}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", flex: 1 }}>{s.title}</span>
-                        {s.effort && <span style={{ fontSize: 10, fontFamily: "monospace", border: "1px solid var(--border)", borderRadius: 5, padding: "2px 7px", color: "var(--text-3)" }}>{s.effort}</span>}
-                        {s.business_value && <span style={{ fontSize: 10, color: "var(--green-dark)", background: "var(--green-light)", border: "1px solid var(--green-mid)", borderRadius: 20, padding: "2px 9px", fontWeight: 500 }}>↗ {s.business_value}</span>}
-                      </div>
-                      {s.description && (
-                        <div>
-                          <button onClick={() => setOpenStep(openStep === i ? null : i)} style={{ fontSize: 11, color: "var(--green)", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
-                            {openStep === i ? "▾ Details" : "▸ Details"}
-                          </button>
-                          {openStep === i && (
-                            <div style={{ marginTop: 8, padding: "10px 12px", background: "var(--bg)", borderRadius: 8 }}>
-                              <p style={{ fontSize: 12, color: "var(--text-2)", lineHeight: 1.6, marginBottom: s.implementation_ideas?.length ? 8 : 0 }}>{s.description}</p>
-                              {s.implementation_ideas?.length ? (
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                                  {s.implementation_ideas.map((idea, j) => <span key={j} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 5, background: "#fff", border: "1px solid var(--border)", color: "var(--text-2)" }}>{idea}</span>)}
-                                </div>
-                              ) : null}
-                            </div>
+                  <div key={i} className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                        style={{ background: "var(--color-brand)" }}>{i + 1}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="text-sm font-semibold" style={{ color: "var(--color-ink)" }}>{s.title}</span>
+                          {s.effort && (
+                            <span className="text-xs px-2 py-0.5 rounded font-mono" style={{ background: "var(--color-canvas)", border: "1px solid var(--color-line)", color: "var(--color-ink-3)" }}>{s.effort}</span>
                           )}
                         </div>
-                      )}
+                        {s.business_value && (
+                          <p className="text-xs font-medium mb-1" style={{ color: "var(--color-brand)" }}>
+                            ↗ {truncate(s.business_value, 80)}
+                          </p>
+                        )}
+                        {s.description && (
+                          <button onClick={() => setOpenStep(openStep === i ? null : i)}
+                            className="text-xs font-medium mt-1" style={{ color: "var(--color-brand)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                            {openStep === i ? "▾ Details ausblenden" : "▸ Details anzeigen"}
+                          </button>
+                        )}
+                        {openStep === i && (
+                          <div className="mt-3 p-3 rounded-lg" style={{ background: "var(--color-canvas)" }}>
+                            <p className="text-xs leading-relaxed mb-2" style={{ color: "var(--color-ink-2)" }}>{s.description}</p>
+                            {s.implementation_ideas?.length ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {s.implementation_ideas.map((idea, j) => (
+                                  <span key={j} className="text-xs px-2 py-0.5 rounded"
+                                    style={{ background: "white", border: "1px solid var(--color-line)", color: "var(--color-ink-2)" }}>{idea}</span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -169,16 +251,24 @@ function ConceptContent() {
 
             {/* User Stories */}
             {stories.length > 0 && (
-              <div style={S.card}>
-                <div style={S.cardHead}><span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>User Stories</span><span style={{ fontSize: 10, fontWeight: 600, padding: "3px 9px", borderRadius: 20, background: "var(--amber-bg)", color: "var(--amber)" }}>Product Owner</span></div>
-                <div style={{ padding: "12px 16px" }}>
+              <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: "var(--color-line)" }}>
+                <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--color-line)" }}>
+                  <h2 className="text-sm font-bold" style={{ color: "var(--color-ink)" }}>User Stories</h2>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" }}>
+                    Product Owner
+                  </span>
+                </div>
+                <div className="divide-y" style={{ borderColor: "var(--color-line)" }}>
                   {stories.map((s, i) => (
-                    <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: i < stories.length - 1 ? "1px solid var(--bg)" : "none" }}>
-                      <div style={{ width: 26, height: 26, borderRadius: 7, background: "var(--amber-bg)", border: "1px solid #fde68a", color: "var(--amber)", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.size || "M"}</div>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 2 }}>{s.title}</div>
-                        <div style={{ fontSize: 12, color: "var(--text-2)", lineHeight: 1.5, marginBottom: 4 }}>{s.story}</div>
-                        {s.acceptance_criteria && <div style={{ fontSize: 11, color: "var(--green)", fontWeight: 500 }}>✓ {s.acceptance_criteria}</div>}
+                    <div key={i} className="p-4 flex gap-3">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        style={{ background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" }}>{s.size || "M"}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold mb-1" style={{ color: "var(--color-ink)" }}>{s.title}</p>
+                        <p className="text-xs leading-relaxed mb-1.5" style={{ color: "var(--color-ink-2)" }}>{s.story}</p>
+                        {s.acceptance_criteria && (
+                          <p className="text-xs font-medium" style={{ color: "var(--color-brand)" }}>✓ {s.acceptance_criteria}</p>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -188,24 +278,30 @@ function ConceptContent() {
 
             {/* Business Value */}
             {(bv.manual_effort || bv.error_rate || bv.cost_savings) && (
-              <div style={S.card}>
-                <div style={S.cardHead}><span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Business Value</span><span style={S.tag("var(--green-dark)", "var(--green-light)")}>ROI-Übersicht</span></div>
-                <div style={{ padding: "16px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+              <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: "var(--color-line)" }}>
+                <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--color-line)" }}>
+                  <h2 className="text-sm font-bold" style={{ color: "var(--color-ink)" }}>Business Value</h2>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "var(--color-brand-light)", color: "var(--color-brand-dark)" }}>ROI-Übersicht</span>
+                </div>
+                <div className="grid grid-cols-3 divide-x p-0" style={{ borderColor: "var(--color-line)" }}>
                   {[
-                    { label: "Zeitersparnis", val: bv.manual_effort, sub: "Manuelle Aufwände", bg: "linear-gradient(135deg,#edf7df,#d9f0bb)", border: "#b8df7a", c: "var(--green-dark)" },
-                    { label: "Fehlerrate", val: bv.error_rate, sub: "Reduzierung", bg: "linear-gradient(135deg,#fef2f2,#fee2e2)", border: "#fca5a5", c: "var(--red)" },
-                    { label: "Kostenersparnis", val: bv.cost_savings, sub: "Pro Jahr", bg: "linear-gradient(135deg,#eff6ff,#dbeafe)", border: "#93c5fd", c: "var(--blue)" },
+                    { label: "Zeitersparnis", val: bv.manual_effort, sub: "Manuelle Aufwände", bg: "var(--color-brand-light)", tc: "var(--color-brand-dark)", border: "var(--color-brand-mid)" },
+                    { label: "Fehlerrate", val: bv.error_rate, sub: "Reduzierung", bg: "#fef2f2", tc: "#dc2626", border: "#fca5a5" },
+                    { label: "Kostenersparnis", val: bv.cost_savings, sub: "Pro Jahr", bg: "#eff6ff", tc: "#1d4ed8", border: "#93c5fd" },
                   ].filter(x => x.val).map(x => (
-                    <div key={x.label} style={{ background: x.bg, border: `1px solid ${x.border}`, borderRadius: 10, padding: "14px 16px" }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: x.c, marginBottom: 6, opacity: 0.8 }}>{x.label}</div>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: x.c, letterSpacing: "-0.02em", lineHeight: 1, marginBottom: 4 }}>{x.val}</div>
-                      <div style={{ fontSize: 11, color: "var(--text-3)" }}>{x.sub}</div>
+                    <div key={x.label} className="p-5" style={{ background: x.bg, borderBottom: `3px solid ${x.border}` }}>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: x.tc, opacity: 0.7 }}>{x.label}</p>
+                      <p className="text-xl font-extrabold leading-none mb-1.5" style={{ color: x.tc, letterSpacing: "-0.02em" }}>
+                        {truncate(x.val, 20)}
+                      </p>
+                      <p className="text-xs" style={{ color: "var(--color-ink-3)" }}>{x.sub}</p>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-          </>
+
+          </div>
         )}
       </div>
     </div>
@@ -213,5 +309,13 @@ function ConceptContent() {
 }
 
 export default function ConceptPage() {
-  return <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}><div className="thinking-spinner" style={{ width: 24, height: 24 }} /></div>}><ConceptContent /></Suspense>;
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-canvas)" }}>
+        <div className="thinking-spinner" style={{ width: 28, height: 28 }} />
+      </div>
+    }>
+      <ConceptContent />
+    </Suspense>
+  );
 }
