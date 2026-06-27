@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent: #b9f227;
+  --accent-2: #8fce1e;
+  --accent-soft: rgba(185,242,39,0.12);
+  --on-accent: #0a0b0a;
+}
+
+.dark {
+  --accent: #b9f227;
+  --accent-2: #8fce1e;
+  --accent-soft: rgba(185,242,39,0.12);
+  --on-accent: #0a0b0a;
+}
+
+.light {
+  --accent: #5fa800;
+  --accent-2: #4d8c00;
+  --accent-soft: rgba(95,168,0,0.10);
+  --on-accent: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 9999px; }
+
+.prose-chat strong { font-weight: 600; }
+.prose-chat em { font-style: italic; }
+.prose-chat ul { margin-left: 1.25rem; list-style-type: disc; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.prose-chat ol { margin-left: 1.25rem; list-style-type: decimal; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.prose-chat li { font-size: 0.875rem; line-height: 1.625; }
+.prose-chat p { margin-bottom: 0.5rem; }
+.prose-chat p:last-child { margin-bottom: 0; }
+.prose-chat h3 { font-weight: 600; margin-bottom: 0.25rem; margin-top: 0.75rem; }
+.prose-chat code { font-size: 0.75rem; font-family: monospace; background: rgba(0,0,0,0.1); padding: 0.125rem 0.25rem; border-radius: 0.25rem; }
+.prose-chat a { color: var(--accent); text-underline-offset: 2px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.thinking-spinner {
+  width: 14px; height: 14px; flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.choice-chip {
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.choice-chip:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.choice-chip.chosen {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: transparent;
+  font-weight: 500;
+}
+.choice-chip:disabled:not(.chosen) { opacity: 0.4; cursor: default; }
