@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -7,20 +6,20 @@ import { useChatStore } from "@/lib/chat-store";
 import { api } from "@/lib/api";
 import { Sidebar } from "@/components/layout/sidebar";
 
-const PHASES_CHAT = ["Verstehe deine Frage…","Analysiere relevante Aspekte…","Ordne die Antwort…","Formuliere die Antwort…"];
-const PHASES_RESEARCH = ["Recherchiere Quellen…","Analysiere die Ergebnisse…","Vergleiche Optionen…","Formuliere fundierte Antwort…"];
+const PHASES = ["Verstehe deine Frage…","Analysiere relevante Aspekte…","Ordne die wichtigsten Punkte…","Formuliere die Antwort…"];
+const PHASES_R = ["Recherchiere Quellen…","Analysiere die Ergebnisse…","Vergleiche Optionen…","Formuliere fundierte Antwort…"];
 
-function formatMarkdown(text: string): string {
+function md(text: string) {
   return text
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.*?)\*/g, "<em>$1</em>")
-    .replace(/^### (.+)$/gm, "<h4 style='font-weight:600;margin:10px 0 4px'>$1</h4>")
-    .replace(/^## (.+)$/gm, "<h4 style='font-weight:600;margin:10px 0 4px'>$1</h4>")
-    .replace(/^- (.+)$/gm, "<li style='margin-left:18px;margin-bottom:3px'>$1</li>")
-    .replace(/(<li.*<\/li>\n?)+/g, m => `<ul style='margin:8px 0'>${m}</ul>`)
-    .replace(/\n\n/g, "</p><p style='margin-bottom:8px'>")
-    .replace(/^(?!<[hupl])(.+)$/gm, "<p style='margin-bottom:8px'>$1</p>")
-    .replace(/<p style='margin-bottom:8px'><\/p>/g, "");
+    .replace(/^### (.+)$/gm, "<h4 style='font-size:13px;font-weight:600;margin:10px 0 4px;color:#0f1410'>$1</h4>")
+    .replace(/^## (.+)$/gm, "<h4 style='font-size:13px;font-weight:600;margin:10px 0 4px;color:#0f1410'>$1</h4>")
+    .replace(/^- (.+)$/gm, "<li>$1</li>")
+    .replace(/(<li>[\s\S]*?<\/li>(\n|$))+/g, m => `<ul style='margin:8px 0 8px 18px'>${m}</ul>`)
+    .replace(/\n\n/g, "</p><p>")
+    .replace(/^(?!<[hupl\/])(.+)$/gm, "<p>$1</p>")
+    .replace(/<p><\/p>/g, "");
 }
 
 function ChoiceChips({ choices, onSelect }: { choices: string[]; onSelect: (c: string) => void }) {
@@ -30,16 +29,10 @@ function ChoiceChips({ choices, onSelect }: { choices: string[]; onSelect: (c: s
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {choices.map(c => (
           <button key={c} disabled={!!picked} onClick={() => { setPicked(c); onSelect(c); }}
-            style={{
-              padding: "8px 16px", borderRadius: 12, border: `1px solid ${picked === c ? "transparent" : "var(--border)"}`,
-              background: picked === c ? "var(--accent)" : "var(--bg2)", color: picked === c ? "var(--on-accent)" : "var(--text)",
-              fontSize: 13, cursor: picked ? "default" : "pointer", fontFamily: "inherit",
-              opacity: picked && picked !== c ? 0.4 : 1, fontWeight: picked === c ? 500 : 400,
-              transition: "all 0.15s",
-            }}>{c}</button>
+            className={`choice-chip${picked === c ? " chosen" : ""}`}>{c}</button>
         ))}
       </div>
-      <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>Wähle eine Option oder schreib unten deine eigene Antwort.</p>
+      <p style={{ fontSize: 11, color: "var(--text-3)", marginTop: 6 }}>Wähle eine Option oder schreib unten deine eigene Antwort.</p>
     </div>
   );
 }
@@ -53,20 +46,15 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [phaseIdx, setPhaseIdx] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const [theme, setTheme] = useState<"dark"|"light">("dark");
+  const turnCount = store.messages.filter(m => m.role === "user").length;
 
   useEffect(() => { if (!loading && !token) router.replace("/login"); }, [token, loading]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [store.messages, store.sending]);
-  useEffect(() => {
-    document.documentElement.className = theme;
-    document.documentElement.style.background = theme === "dark" ? "#0a0a0a" : "#fbfcfa";
-  }, [theme]);
 
   function startThinking() {
-    store.setSending(true);
-    setPhaseIdx(0);
-    const phases = store.mode === "research" ? PHASES_RESEARCH : PHASES_CHAT;
-    timerRef.current = setInterval(() => setPhaseIdx(i => (i + 1) % phases.length), 1800);
+    store.setSending(true); setPhaseIdx(0);
+    const p = store.mode === "research" ? PHASES_R : PHASES;
+    timerRef.current = setInterval(() => setPhaseIdx(i => (i + 1) % p.length), 1800);
   }
   function stopThinking() {
     store.setSending(false);
@@ -83,12 +71,7 @@ export default function ChatPage() {
     if (isFirst) store.setSessionTitle(t.slice(0, 55));
     startThinking();
     try {
-      const res = await api.chat(token, {
-        messages: [...store.messages, userMsg],
-        session_id: store.sessionId,
-        project_id: store.activeProjectId,
-        guided: store.guidedProject,
-      });
+      const res = await api.chat(token, { messages: [...store.messages, userMsg], session_id: store.sessionId, project_id: store.activeProjectId, guided: store.guidedProject });
       store.setMessages(res.messages);
       store.setSessionId(res.session_id);
       if (store.guidedProject) store.setGuidedProject(false);
@@ -98,88 +81,83 @@ export default function ChatPage() {
     } finally { stopThinking(); }
   }
 
-  const phases = store.mode === "research" ? PHASES_RESEARCH : PHASES_CHAT;
+  const phases = store.mode === "research" ? PHASES_R : PHASES;
   const showWelcome = store.messages.length === 0 && !store.sending;
 
   if (loading || !token) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}>
-      <div className="thinking-spinner" />
+      <div className="thinking-spinner" style={{ width: 24, height: 24 }} />
     </div>
   );
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)" }}>
-      <Sidebar onNavigate={(p) => p !== "/chat" && router.push(p)} />
+      <Sidebar currentPath="/chat" />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Topbar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 20px", height: 56, borderBottom: "1px solid var(--border)", background: "var(--bg2)", flexShrink: 0 }}>
-          {/* View toggle */}
-          <div style={{ display: "flex", gap: 3, background: "var(--panel)", padding: 3, borderRadius: 10 }}>
-            {[
-              { label: "Konversation", path: "/chat", active: true },
-              { label: "Dashboard", path: "/dashboard", active: false },
-            ].map(v => (
-              <button key={v.path} onClick={() => !v.active && router.push(v.path)}
-                style={{ padding: "6px 14px", borderRadius: 7, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
-                  background: v.active ? "var(--bg)" : "transparent", color: v.active ? "var(--text)" : "var(--muted)",
-                  boxShadow: v.active ? "0 1px 4px rgba(0,0,0,0.2)" : "none" }}>
-                {v.label}
+        <div style={{ height: 52, background: "#fff", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 20px", gap: 12, flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: 2, background: "var(--bg)", padding: 3, borderRadius: 9, border: "1px solid var(--border)" }}>
+            {[{ l: "Konversation", p: "/chat" }, { l: "Dashboard", p: "/dashboard" }].map(v => (
+              <button key={v.p} onClick={() => router.push(v.p)}
+                style={{ padding: "5px 13px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", background: v.p === "/chat" ? "#fff" : "transparent", color: v.p === "/chat" ? "var(--text)" : "var(--text-3)", boxShadow: v.p === "/chat" ? "0 1px 3px rgba(0,0,0,0.08)" : "none", transition: "all 0.15s" }}>
+                {v.l}
               </button>
             ))}
           </div>
-
-          <h1 style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "var(--text2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {store.sessionTitle}
-          </h1>
-
-          {/* Theme toggle */}
-          <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
-            style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--text2)", fontSize: 15 }}>
-            {theme === "dark" ? "☀" : "🌙"}
-          </button>
-
-          {/* TC button */}
-          <button onClick={() => router.push(`/dashboard?session=${store.sessionId}&view=concept`)}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text2)", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "var(--text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{store.sessionTitle}</span>
+          {turnCount > 0 && (
+            <span style={{ fontSize: 11, fontFamily: "monospace", color: "var(--text-3)", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 20, padding: "2px 9px" }}>{turnCount} turns</span>
+          )}
+          <button onClick={() => router.push(`/concept?session=${store.sessionId}`)}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "#fff", color: "var(--text-2)", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--green)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--green-dark)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-2)"; }}>
             ⚡ Transformation Concept
           </button>
         </div>
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "0" }}>
+        <div style={{ flex: 1, overflowY: "auto" }}>
           {showWelcome ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100%", padding: "48px 24px" }}>
-              <div style={{ maxWidth: 640, width: "100%", textAlign: "center" }}>
-                <p style={{ fontSize: 11, fontFamily: "monospace", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--accent2)", marginBottom: 16 }}>
-                  IT Consulting Agent
-                </p>
-                <h2 style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 12 }}>
-                  Was möchtest du <em style={{ fontStyle: "italic", fontFamily: "Georgia,serif", fontWeight: 400 }}>tun?</em>
-                </h2>
-                <p style={{ fontSize: 14, color: "var(--text2)", marginBottom: 40 }}>
-                  Wähle, wie du starten willst. Du wirst Schritt für Schritt geführt.
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100%", padding: "48px 32px" }}>
+              <div style={{ maxWidth: 600, width: "100%", textAlign: "center" }}>
+                {/* Logo mark */}
+                <div style={{ width: 56, height: 56, borderRadius: 16, background: "var(--green)", margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontFamily: "Georgia,serif", fontWeight: 700, color: "#fff", boxShadow: "0 4px 20px rgba(61,139,0,0.25)" }}>B</div>
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--green)", marginBottom: 10 }}>IT Consulting Agent</div>
+                <h2 style={{ fontSize: 32, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.03em", marginBottom: 10, lineHeight: 1.15 }}>Was möchtest du <em style={{ fontStyle: "italic", fontFamily: "Georgia,serif", fontWeight: 400 }}>heute</em> lösen?</h2>
+                <p style={{ fontSize: 14, color: "var(--text-3)", marginBottom: 36 }}>Stell eine Frage oder starte ein geführtes Projekt.</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 28 }}>
                   {[
-                    { icon: "💬", title: "Chat starten", desc: "Stell eine konkrete Frage und bekomme eine fundierte, belegte Antwort.", action: () => inputRef.current?.focus() },
-                    { icon: "⚡", title: "Projekt starten", desc: "Lass dich durch Fragen führen und erhalte ein Transformation Concept.", action: () => { store.setGuidedProject(true); inputRef.current?.focus(); } },
+                    { icon: "💬", title: "Chat starten", desc: "Direkter Zugang zur IT-Wissensbasis. Frag alles.", action: () => inputRef.current?.focus(), color: "var(--border)" },
+                    { icon: "⚡", title: "Projekt starten", desc: "Geführtes Interview → Transformation Concept → Roadmap.", action: () => { store.setGuidedProject(true); inputRef.current?.focus(); }, color: "var(--green-mid)" },
                   ].map(c => (
                     <button key={c.title} onClick={c.action}
-                      style={{ position: "relative", padding: "28px 24px", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 16, cursor: "pointer", textAlign: "left", fontFamily: "inherit", color: "var(--text)", transition: "border-color 0.2s, transform 0.2s, box-shadow 0.2s" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--accent)"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 10px 30px rgba(0,0,0,0.3)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "none"; }}>
-                      <span style={{ position: "absolute", top: 20, right: 20, color: "var(--muted)", fontSize: 18 }}>→</span>
-                      <div style={{ fontSize: 24, marginBottom: 12 }}>{c.icon}</div>
-                      <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 8 }}>{c.title}</div>
-                      <div style={{ fontSize: 13, color: "var(--text2)", lineHeight: 1.55 }}>{c.desc}</div>
+                      style={{ padding: "22px 20px", background: "#fff", border: `1px solid ${c.color}`, borderRadius: 14, cursor: "pointer", textAlign: "left", fontFamily: "inherit", color: "var(--text)", transition: "all 0.2s", position: "relative" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--green)"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 20px rgba(61,139,0,0.12)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = c.color; (e.currentTarget as HTMLButtonElement).style.transform = "none"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "none"; }}>
+                      <div style={{ fontSize: 24, marginBottom: 10 }}>{c.icon}</div>
+                      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 5, color: "var(--text)" }}>{c.title}</div>
+                      <div style={{ fontSize: 12, color: "var(--text-3)", lineHeight: 1.5 }}>{c.desc}</div>
+                      <span style={{ position: "absolute", top: 16, right: 16, color: "var(--text-3)", fontSize: 16 }}>→</span>
+                    </button>
+                  ))}
+                </div>
+                {/* Quick prompts */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+                  {["Cloud Migration strategie", "Make.com vs Zapier?", "IT-Sicherheitskonzept", "ERP-Auswahl Mittelstand"].map(p => (
+                    <button key={p} onClick={() => { setInput(p); inputRef.current?.focus(); }}
+                      style={{ padding: "6px 13px", borderRadius: 20, border: "1px solid var(--border)", background: "#fff", fontSize: 12, color: "var(--text-2)", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--green)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--green-dark)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-2)"; }}>
+                      {p}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
           ) : (
-            <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 24px" }}>
+            <div style={{ maxWidth: 780, margin: "0 auto", padding: "28px 24px" }}>
               {store.messages.map((m, i) => {
                 const isUser = m.role === "user";
                 let content = m.content;
@@ -187,30 +165,29 @@ export default function ChatPage() {
                 const cm = content.match(/\[\[CHOICES:\s*([\s\S]*?)\]\]/i);
                 if (cm) { choices = cm[1].split("|").map(s => s.trim()).filter(Boolean); content = content.replace(cm[0], "").trim(); }
                 return (
-                  <div key={i} style={{ display: "flex", gap: 14, marginBottom: 28, justifyContent: isUser ? "flex-end" : "flex-start" }}>
-                    {!isUser && (
-                      <div style={{ width: 32, height: 32, borderRadius: 10, background: "var(--accent)", color: "var(--on-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14, fontFamily: "Georgia,serif", flexShrink: 0, marginTop: 2 }}>A</div>
-                    )}
-                    <div style={{ maxWidth: "72%", display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start" }}>
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 5 }}>{isUser ? "Du" : "BI Agent"}</div>
-                      <div style={{ fontSize: 14, lineHeight: 1.6, color: "var(--text)", background: isUser ? "var(--panel)" : "transparent", padding: isUser ? "10px 16px" : "0", borderRadius: isUser ? "16px 16px 4px 16px" : 0 }}
-                        dangerouslySetInnerHTML={{ __html: formatMarkdown(content) }} />
+                  <div key={i} style={{ display: "flex", gap: 12, marginBottom: 24, flexDirection: isUser ? "row-reverse" : "row" }}>
+                    {/* Avatar */}
+                    <div style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, ...(isUser ? { background: "var(--text)", color: "#fff" } : { background: "var(--green)", color: "#fff", fontFamily: "Georgia,serif" }) }}>
+                      {isUser ? "U" : "A"}
+                    </div>
+                    <div style={{ maxWidth: "70%", display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start" }}>
+                      <span style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 5, fontWeight: 500 }}>{isUser ? "Du" : "BI Agent"}</span>
+                      <div style={{ fontSize: 13.5, lineHeight: 1.65, color: "var(--text)", ...(isUser ? { background: "var(--text)", color: "#fff", padding: "10px 16px", borderRadius: "14px 14px 4px 14px" } : { background: "#fff", border: "1px solid var(--border)", padding: "12px 16px", borderRadius: "4px 14px 14px 14px" }) }}>
+                        <div className="prose-chat" dangerouslySetInnerHTML={{ __html: md(content) }} />
+                      </div>
                       {choices.length > 0 && <ChoiceChips choices={choices} onSelect={send} />}
                     </div>
-                    {isUser && (
-                      <div style={{ width: 32, height: 32, borderRadius: 10, background: "var(--text)", color: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0, marginTop: 2 }}>U</div>
-                    )}
                   </div>
                 );
               })}
               {store.sending && (
-                <div style={{ display: "flex", gap: 14, marginBottom: 28 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "var(--accent)", color: "var(--on-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14, fontFamily: "Georgia,serif", flexShrink: 0, marginTop: 2 }}>A</div>
+                <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "var(--green)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, fontFamily: "Georgia,serif", flexShrink: 0, marginTop: 2 }}>A</div>
                   <div>
-                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 5 }}>BI Agent</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 11, color: "var(--text-3)", display: "block", marginBottom: 5, fontWeight: 500 }}>BI Agent</span>
+                    <div style={{ background: "#fff", border: "1px solid var(--border)", padding: "12px 16px", borderRadius: "4px 14px 14px 14px", display: "flex", alignItems: "center", gap: 10 }}>
                       <div className="thinking-spinner" />
-                      <span style={{ fontSize: 13, color: "var(--text2)", fontStyle: "italic" }}>{phases[phaseIdx]}</span>
+                      <span style={{ fontSize: 13, color: "var(--text-3)", fontStyle: "italic" }}>{phases[phaseIdx]}</span>
                     </div>
                   </div>
                 </div>
@@ -221,33 +198,32 @@ export default function ChatPage() {
         </div>
 
         {/* Composer */}
-        <div style={{ padding: "12px 24px 20px", borderTop: "1px solid var(--border)", background: "var(--bg2)", flexShrink: 0 }}>
-          <div style={{ maxWidth: 760, margin: "0 auto" }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
-              <div style={{ display: "flex", gap: 2, background: "var(--panel)", padding: 3, borderRadius: 8 }}>
-                {(["chat","research"] as const).map(m => (
-                  <button key={m} onClick={() => store.setMode(m)}
-                    style={{ padding: "5px 12px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
-                      background: store.mode === m ? "var(--bg)" : "transparent", color: store.mode === m ? "var(--text)" : "var(--muted)" }}>
-                    {m === "chat" ? "Chat" : "Research"}
+        <div style={{ padding: "12px 24px 18px", borderTop: "1px solid var(--border)", background: "#fff", flexShrink: 0 }}>
+          <div style={{ maxWidth: 780, margin: "0 auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <div style={{ display: "flex", gap: 2, background: "var(--bg)", padding: "3px", borderRadius: 8, border: "1px solid var(--border)" }}>
+                {(["chat", "research"] as const).map(mode => (
+                  <button key={mode} onClick={() => store.setMode(mode)}
+                    style={{ padding: "4px 12px", borderRadius: 6, border: "none", fontSize: 11, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", background: store.mode === mode ? "#fff" : "transparent", color: store.mode === mode ? "var(--text)" : "var(--text-3)", boxShadow: store.mode === mode ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>
+                    {mode === "chat" ? "Chat" : "Research"}
                   </button>
                 ))}
               </div>
-              <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted)" }}>
-                {store.messages.filter(m => m.role === "user").length} turns
-              </span>
+              {store.guidedProject && (
+                <span style={{ fontSize: 11, color: "var(--green)", background: "var(--green-light)", border: "1px solid var(--green-mid)", borderRadius: 20, padding: "2px 10px", fontWeight: 600 }}>⚡ Geführter Modus</span>
+              )}
             </div>
-            <div style={{ display: "flex", gap: 12, alignItems: "flex-end", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 16, padding: "12px 14px", transition: "border-color 0.2s" }}
-              onFocus={e => (e.currentTarget as HTMLDivElement).style.borderColor = "var(--accent)"}
-              onBlur={e => (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)"}>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-end", background: "#fff", border: "1px solid var(--border-2)", borderRadius: 14, padding: "10px 12px", transition: "border-color 0.2s, box-shadow 0.2s" }}
+              onFocusCapture={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--green)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 3px rgba(61,139,0,0.08)"; }}
+              onBlurCapture={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-2)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
               <textarea ref={inputRef} value={input} rows={1}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
-                onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${Math.min(t.scrollHeight, 200)}px`; }}
-                placeholder="Ask anything... (Enter to send, Shift+Enter for new line)"
-                style={{ flex: 1, background: "transparent", border: "none", resize: "none", color: "var(--text)", fontSize: 14, fontFamily: "inherit", outline: "none", minHeight: 26, maxHeight: 200, lineHeight: 1.55 }} />
+                onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${Math.min(t.scrollHeight, 180)}px`; }}
+                placeholder={store.guidedProject ? "Beschreibe dein Projekt…" : "Ask anything… (Enter to send)"}
+                style={{ flex: 1, background: "transparent", border: "none", resize: "none", color: "var(--text)", fontSize: 14, fontFamily: "inherit", outline: "none", minHeight: 26, maxHeight: 180, lineHeight: 1.55 }} />
               <button onClick={() => send(input)} disabled={!input.trim() || store.sending}
-                style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: "var(--accent)", color: "var(--on-accent)", cursor: input.trim() && !store.sending ? "pointer" : "default", opacity: input.trim() && !store.sending ? 1 : 0.4, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "opacity 0.15s" }}>
+                style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: input.trim() && !store.sending ? "var(--green)" : "var(--bg)", color: input.trim() && !store.sending ? "#fff" : "var(--text-3)", cursor: input.trim() && !store.sending ? "pointer" : "default", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>
                 ↑
               </button>
             </div>

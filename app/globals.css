@@ -1,40 +1,26 @@
 @import "tailwindcss";
 
-/* ── Theme tokens ──────────────────────────────────── */
 :root {
-  --bg:       #0a0a0a;
-  --bg2:      #141614;
-  --panel:    #1b1e1b;
-  --border:   #2b2f2b;
-  --text:     #f4f6f3;
-  --text2:    #a6ada4;
-  --muted:    #5b625a;
-  --accent:   #b9f227;
-  --accent2:  #8fce1e;
-  --on-accent:#0a0b0a;
-  --accent-soft: rgba(185,242,39,0.12);
-  --red:      #f87171;
-  --green:    #4ade80;
-  --radius:   0.75rem;
+  --green: #3d8b00;
+  --green-light: #edf7df;
+  --green-mid: #b8df7a;
+  --green-dark: #2d6e00;
+  --green-hover: #357a00;
+  --bg: #f5f6f2;
+  --surface: #ffffff;
+  --border: #e5e7e2;
+  --border-2: #d4d8ce;
+  --text: #0f1410;
+  --text-2: #4a5546;
+  --text-3: #8a9487;
+  --red: #dc2626;
+  --red-bg: #fef2f2;
+  --blue: #1d4ed8;
+  --blue-bg: #eff6ff;
+  --amber: #b45309;
+  --amber-bg: #fffbeb;
 }
 
-.light {
-  --bg:       #fbfcfa;
-  --bg2:      #f3f5f1;
-  --panel:    #ffffff;
-  --border:   #d6dbd0;
-  --text:     #1a1d18;
-  --text2:    #5a6157;
-  --muted:    #9aa394;
-  --accent:   #5fa800;
-  --accent2:  #4d8c00;
-  --on-accent:#ffffff;
-  --accent-soft: rgba(95,168,0,0.10);
-  --red:      #dc2626;
-  --green:    #16a34a;
-}
-
-/* ── Base ────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -48,43 +34,36 @@ body {
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 9999px; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 9999px; }
 
-/* ── Prose / Markdown ────────────────────────────── */
-.prose-chat strong { font-weight: 600; }
-.prose-chat em { font-style: italic; color: var(--text2); }
-.prose-chat ul { margin-left: 1.25rem; list-style: disc; margin-block: 0.5rem; }
-.prose-chat ol { margin-left: 1.25rem; list-style: decimal; margin-block: 0.5rem; }
-.prose-chat li { font-size: 0.875rem; line-height: 1.625; }
-.prose-chat p { margin-bottom: 0.5rem; }
-.prose-chat p:last-child { margin-bottom: 0; }
-.prose-chat h3 { font-weight: 600; margin-bottom: 0.25rem; margin-top: 0.75rem; }
-.prose-chat code { font-size: 0.75rem; font-family: monospace; background: rgba(255,255,255,0.07); padding: 0.1rem 0.3rem; border-radius: 0.25rem; }
-
-/* ── Thinking spinner ────────────────────────────── */
+/* Thinking spinner */
 @keyframes thinking-spin { to { transform: rotate(360deg); } }
 .thinking-spinner {
   width: 14px; height: 14px; flex-shrink: 0;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
+  border: 2px solid var(--border-2);
+  border-top-color: var(--green);
   border-radius: 50%;
   animation: thinking-spin 0.7s linear infinite;
   display: inline-block;
 }
 
-/* ── Choice chips ────────────────────────────────── */
+/* Choice chips */
 .choice-chip {
-  padding: 0.5rem 1rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
-  background: var(--bg2);
-  color: var(--text);
-  font-size: 0.8125rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  padding: 7px 15px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-2); font-size: 13px; font-family: inherit;
+  cursor: pointer; transition: all 0.15s;
 }
-.choice-chip:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
-.choice-chip:active:not(:disabled) { transform: scale(0.97); }
-.choice-chip.chosen { background: var(--accent); color: var(--on-accent); border-color: transparent; font-weight: 500; }
+.choice-chip:hover:not(:disabled) { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+.choice-chip.chosen { background: var(--green); color: #fff; border-color: transparent; font-weight: 500; }
 .choice-chip:disabled:not(.chosen) { opacity: 0.4; cursor: default; }
+
+/* Prose in chat */
+.prose-chat p { margin-bottom: 6px; }
+.prose-chat p:last-child { margin-bottom: 0; }
+.prose-chat strong { font-weight: 600; color: var(--text); }
+.prose-chat em { font-style: italic; color: var(--text-2); }
+.prose-chat ul { margin: 8px 0 8px 18px; }
+.prose-chat li { margin-bottom: 3px; font-size: 13px; line-height: 1.55; }
+.prose-chat h3, .prose-chat h4 { font-weight: 600; margin: 10px 0 4px; }
+.prose-chat code { font-size: 12px; font-family: monospace; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
