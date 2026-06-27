@@ -4,6 +4,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { Button, Badge, Avatar, Separator } from "@/components/ui";
+import { cn, dateStr } from "@/lib/utils";
 
 export function Sidebar({ currentPath }: { currentPath?: string }) {
   const { token, user, signOut } = useAuth();
@@ -21,18 +23,15 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
     if (!token) return;
     try {
       const s = await api.getSession(token, sid);
-      store.setSessionId(sid);
-      store.setSessionTitle(s.title || "Konversation");
-      store.setMessages(s.messages ?? []);
-      router.push("/chat");
+      store.setSessionId(sid); store.setSessionTitle(s.title || "Konversation");
+      store.setMessages(s.messages ?? []); router.push("/chat");
     } catch {}
   }
 
   async function toggleProject(pid: string) {
     const n = new Set(expanded);
     if (n.has(pid)) { n.delete(pid); setExpanded(n); return; }
-    n.add(pid); setExpanded(n);
-    store.setActiveProject(pid);
+    n.add(pid); setExpanded(n); store.setActiveProject(pid);
     if (!store.projectSessions[pid]) {
       try { const d = await api.getProjectSessions(token!, pid); store.setProjectSessions(pid, d.sessions); } catch {}
     }
@@ -47,55 +46,80 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
   const loose = store.history.filter(s => !s.project_id);
 
   return (
-    <aside className="flex flex-col bg-white border-r border-gray-200 shrink-0" style={{ width: 232, height: "100vh" }}>
+    <aside className="flex flex-col bg-white border-r border-gray-200 shrink-0" style={{ width: 240, height: "100vh" }}>
 
-      {/* Brand */}
-      <button onClick={() => { store.newChat(); router.push("/chat"); }}
-        className="flex items-center gap-2.5 px-4 py-3.5 border-b border-gray-100 w-full text-left hover:bg-gray-50 transition-colors">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0"
-          style={{ background: "var(--green)", fontFamily: "Georgia,serif", fontSize: 15 }}>B</div>
-        <span className="font-bold text-sm text-gray-900 tracking-tight">BI Agent</span>
-        <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
-          style={{ background: "var(--green-light)", color: "var(--green)", border: "1px solid var(--green-mid)", fontFamily: "monospace" }}>v3</span>
-      </button>
-
-      {/* New chat */}
-      <div className="px-3 pt-3 pb-2">
-        <button onClick={() => { store.newChat(); router.push("/chat"); }}
-          className="w-full h-9 rounded-lg text-white text-sm font-semibold flex items-center justify-center gap-1.5 transition-opacity hover:opacity-90"
-          style={{ background: "var(--green)" }}>
-          <span className="text-base leading-none">+</span> New chat
-        </button>
+      {/* Brand header */}
+      <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-base shrink-0"
+          style={{ background: "var(--green)", fontFamily: "Georgia,serif" }}>B</div>
+        <div>
+          <p className="font-bold text-sm text-gray-900 leading-none">BI Agent</p>
+          <p className="text-xs text-gray-400 mt-0.5">IT Consulting</p>
+        </div>
+        <Badge variant="default" className="ml-auto">v3</Badge>
       </div>
 
-      {/* Scroll list */}
-      <div className="flex-1 overflow-y-auto px-2 pb-4 space-y-0.5">
+      {/* New chat CTA */}
+      <div className="p-3">
+        <Button onClick={() => { store.newChat(); router.push("/chat"); }} className="w-full" style={{ background: "var(--green)" }}>
+          <span className="text-base leading-none">+</span> New chat
+        </Button>
+      </div>
+
+      <Separator />
+
+      {/* Navigation */}
+      <div className="px-3 py-2">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-2 mb-1.5">Navigation</p>
+        {[
+          { icon: "💬", label: "Chat", path: "/chat" },
+          { icon: "⚡", label: "Transformation Concept", path: "/concept" },
+          { icon: "🗺", label: "Dashboard", path: "/dashboard" },
+        ].map(item => (
+          <button key={item.path} onClick={() => router.push(item.path)}
+            className={cn("w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all mb-0.5 text-left font-medium",
+              currentPath === item.path
+                ? "text-green-700 bg-green-50 border border-green-100"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900")}>
+            <span className="text-base">{item.icon}</span>
+            <span className="truncate">{item.label}</span>
+          </button>
+        ))}
+      </div>
+
+      <Separator />
+
+      {/* Scrollable list */}
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
 
         {/* Projects */}
-        <div className="flex items-center justify-between px-2 pt-3 pb-1">
-          <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Projekte</span>
-          <button onClick={newProject} className="text-lg leading-none transition-colors hover:opacity-70"
-            style={{ color: "var(--green)", background: "none", border: "none", cursor: "pointer" }}>+</button>
+        <div className="flex items-center justify-between px-2 pt-1 pb-1.5">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Projekte</p>
+          <button onClick={newProject} className="text-lg leading-none text-green-600 hover:opacity-70 transition-opacity" style={{ background: "none", border: "none", cursor: "pointer" }}>+</button>
         </div>
-        {store.projects.length === 0 && <p className="text-xs px-2 py-1 text-gray-400">Noch keine Projekte.</p>}
+
+        {store.projects.length === 0 && (
+          <p className="text-xs text-gray-400 px-2 py-1">Noch keine Projekte.</p>
+        )}
+
         {store.projects.map(p => (
           <div key={p.project_id}>
             <button onClick={() => toggleProject(p.project_id)}
-              className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-colors hover:bg-gray-50"
-              style={{ background: store.activeProjectId === p.project_id ? "var(--green-light)" : "" }}>
-              <span className="text-xs" style={{ color: "var(--green)" }}>◆</span>
-              <span className="flex-1 text-xs font-medium text-gray-800 truncate">{p.name}</span>
-              <span className="text-xs font-mono text-gray-400 bg-gray-100 rounded px-1.5">{p.chats}</span>
+              className={cn("w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-all",
+                store.activeProjectId === p.project_id ? "bg-green-50 text-green-800" : "hover:bg-gray-50 text-gray-700")}>
+              <span className="text-xs text-green-600">◆</span>
+              <span className="flex-1 text-xs font-medium truncate">{p.name}</span>
+              <span className="text-xs font-mono bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded">{p.chats}</span>
               <span className="text-xs text-gray-400">{expanded.has(p.project_id) ? "▾" : "▸"}</span>
             </button>
             {expanded.has(p.project_id) && (
-              <div className="ml-3 pl-2.5 border-l" style={{ borderColor: "var(--green-mid)" }}>
+              <div className="ml-3 pl-2.5 border-l border-green-200 space-y-0.5 mt-0.5">
                 {(store.projectSessions[p.project_id] ?? []).map(s => (
                   <button key={s.session_id} onClick={() => loadChat(s.session_id)}
-                    className="w-full flex flex-col px-2 py-1.5 rounded text-left transition-colors hover:bg-gray-50"
-                    style={{ background: store.sessionId === s.session_id ? "var(--green-light)" : "" }}>
-                    <span className="text-xs font-medium text-gray-800 truncate">{(s.title || "Untitled").slice(0, 28)}</span>
-                    <span className="text-xs text-gray-400 mt-0.5">{s.message_count} msg</span>
+                    className={cn("w-full flex flex-col px-2 py-1.5 rounded text-left transition-all",
+                      store.sessionId === s.session_id ? "bg-green-50 text-green-800" : "hover:bg-gray-50 text-gray-600")}>
+                    <span className="text-xs font-medium truncate">{(s.title || "Untitled").slice(0, 26)}</span>
+                    <span className="text-xs text-gray-400">{s.message_count} msg</span>
                   </button>
                 ))}
               </div>
@@ -103,35 +127,36 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
           </div>
         ))}
 
-        {/* Divider */}
-        <div className="flex items-center justify-between px-2 pt-4 pb-1 border-t border-gray-100 mt-2">
-          <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Konversationen</span>
-          <span className="text-xs font-mono text-gray-400">{loose.length}</span>
+        <div className="flex items-center justify-between px-2 pt-3 pb-1.5 border-t border-gray-100 mt-2">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Konversationen</p>
+          <Badge variant="secondary">{loose.length}</Badge>
         </div>
-        {loose.length === 0 && <p className="text-xs px-2 py-1 text-gray-400">Noch keine Chats.</p>}
+
+        {loose.length === 0 && <p className="text-xs text-gray-400 px-2 py-1">Noch keine Chats.</p>}
+
         {loose.map(s => (
           <button key={s.session_id} onClick={() => loadChat(s.session_id)}
-            className="w-full flex flex-col px-2 py-2 rounded-lg text-left transition-colors hover:bg-gray-50"
-            style={{ background: store.sessionId === s.session_id ? "var(--green-light)" : "", borderLeft: store.sessionId === s.session_id ? "2px solid var(--green)" : "2px solid transparent" }}>
-            <span className="text-xs font-medium text-gray-800 truncate">{(s.title || "Untitled").slice(0, 30)}</span>
-            <span className="text-xs text-gray-400 mt-0.5">
-              {new Date(s.saved_at).toLocaleDateString("de", { month: "short", day: "numeric" })} · {s.message_count} msg
-            </span>
+            className={cn("w-full flex flex-col px-2 py-2 rounded-lg text-left transition-all",
+              store.sessionId === s.session_id ? "bg-green-50 border-l-2 border-green-500 text-green-900 pl-1.5" : "hover:bg-gray-50 text-gray-700")}>
+            <span className="text-xs font-medium truncate">{(s.title || "Untitled").slice(0, 28)}</span>
+            <span className="text-xs text-gray-400 mt-0.5">{dateStr(s.saved_at)} · {s.message_count} msg</span>
           </button>
         ))}
       </div>
 
-      {/* Footer */}
+      {/* User footer */}
       <div className="border-t border-gray-100 p-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-            style={{ background: "var(--green-light)", border: "1px solid var(--green-mid)", color: "var(--green-dark)" }}>
-            {user?.email?.[0]?.toUpperCase() ?? "U"}
+        <div className="flex items-center gap-2.5">
+          <Avatar initials={user?.email?.[0]?.toUpperCase() ?? "U"} size="sm" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-gray-700 truncate">{user?.email}</p>
+            <p className="text-xs text-gray-400">IT Consultant</p>
           </div>
-          <span className="flex-1 text-xs text-gray-400 truncate">{user?.email}</span>
           <button onClick={async () => { await signOut(); router.push("/login"); }}
-            className="text-sm p-1 rounded hover:bg-gray-100 transition-colors text-gray-400"
-            style={{ background: "none", border: "none", cursor: "pointer" }}>⎋</button>
+            className="text-gray-400 hover:text-gray-700 transition-colors text-sm"
+            style={{ background: "none", border: "none", cursor: "pointer" }} title="Abmelden">
+            ⎋
+          </button>
         </div>
       </div>
     </aside>
