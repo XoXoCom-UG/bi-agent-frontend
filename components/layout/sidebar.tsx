@@ -50,7 +50,7 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
     <aside style={{ width: 220, flexShrink: 0, height: "100vh", background: "#fff", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* Brand */}
       <button onClick={() => { store.newChat(); router.push("/chat"); }}
-        style={{ display: "flex", alignItems: "center", gap: 10, padding: "15px 14px 11px", borderBottom: "1px solid var(--border)", cursor: "pointer", background: "none", border: "none", borderBottom: "1px solid var(--border)", width: "100%", textAlign: "left" }}>
+        style={{ display: "flex", alignItems: "center", gap: 10, padding: "15px 14px 11px", borderBottom: "1px solid var(--border)", cursor: "pointer", background: "none", border: "none", width: "100%", textAlign: "left" }}>
         <div style={{ width: 28, height: 28, borderRadius: 8, background: "var(--green)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, fontFamily: "Georgia,serif", flexShrink: 0 }}>B</div>
         <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text)", letterSpacing: "-0.01em" }}>BI Agent</span>
         <span style={{ marginLeft: "auto", fontSize: 10, fontFamily: "monospace", color: "var(--green)", background: "var(--green-light)", border: "1px solid var(--green-mid)", borderRadius: 20, padding: "2px 7px", fontWeight: 600 }}>v3</span>
