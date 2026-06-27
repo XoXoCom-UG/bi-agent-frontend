@@ -4,18 +4,14 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api } from "@/lib/api";
-import { truncate, dateStr } from "@/lib/utils";
-import { FolderOpen, ChevronDown, ChevronRight, Plus, MessageSquare, Trash2, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export function Sidebar() {
+export function Sidebar({ onNavigate }: { onNavigate?: (path: string) => void }) {
   const { token, user, signOut } = useAuth();
   const store = useChatStore();
   const router = useRouter();
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const [loadingProject, setLoadingProject] = useState<string | null>(null);
 
-  // Load history and projects on mount
   useEffect(() => {
     if (!token) return;
     api.getHistory(token).then(d => store.setHistory(d.sessions)).catch(() => {});
@@ -29,9 +25,8 @@ export function Sidebar() {
       store.setSessionId(sessionId);
       store.setSessionTitle(sess.title || "Konversation");
       store.setMessages(sess.messages ?? []);
-    } catch (e) {
-      console.error(e);
-    }
+      onNavigate?.("/chat");
+    } catch (e) { console.error(e); }
   }
 
   async function toggleProject(pid: string) {
@@ -41,12 +36,10 @@ export function Sidebar() {
     setExpandedProjects(next);
     store.setActiveProject(pid);
     if (!store.projectSessions[pid]) {
-      setLoadingProject(pid);
       try {
         const d = await api.getProjectSessions(token!, pid);
         store.setProjectSessions(pid, d.sessions);
       } catch (e) { console.error(e); }
-      finally { setLoadingProject(null); }
     }
   }
 
@@ -60,139 +53,100 @@ export function Sidebar() {
     } catch (e) { console.error(e); }
   }
 
-  async function handleDeleteSession(e: React.MouseEvent, sessionId: string) {
-    e.stopPropagation();
-    if (!token || !confirm("Konversation löschen?")) return;
-    await api.deleteSession(token, sessionId);
-    store.setHistory(store.history.filter(s => s.session_id !== sessionId));
-  }
-
-  // Loose conversations (not in any project)
   const loose = store.history.filter(s => !s.project_id);
 
+  const s = {
+    aside: { width: 248, minWidth: 248, height: "100vh", background: "var(--bg2)", borderRight: "1px solid var(--border)", display: "flex" as const, flexDirection: "column" as const, overflow: "hidden" },
+    brand: { display: "flex", alignItems: "center", gap: 10, padding: "14px 16px 10px", cursor: "pointer", borderBottom: "1px solid var(--border)" } as React.CSSProperties,
+    brandMark: { width: 28, height: 28, borderRadius: 8, background: "var(--accent)", color: "var(--on-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, fontFamily: "Georgia,serif", flexShrink: 0 },
+    brandName: { fontSize: 14, fontWeight: 600, letterSpacing: "-0.01em" },
+    brandBadge: { marginLeft: "auto", fontSize: 10, fontFamily: "monospace", color: "var(--text2)", border: "1px solid var(--border)", borderRadius: 20, padding: "2px 7px" },
+    newChat: { margin: "10px 12px 4px", height: 38, borderRadius: 10, border: "none", background: "var(--accent)", color: "var(--on-accent)", fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "inherit" } as React.CSSProperties,
+    scroll: { flex: 1, overflowY: "auto" as const, padding: "8px 8px" },
+    sectionHead: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 8px 4px", marginTop: 4 },
+    sectionLabel: { fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "var(--muted)" },
+    emptyText: { fontSize: 12, color: "var(--muted)", padding: "4px 8px" },
+    projRow: (active: boolean) => ({ display: "flex", alignItems: "center", gap: 8, padding: "7px 8px", borderRadius: 8, cursor: "pointer", background: active ? "var(--panel)" : "transparent", border: "none", width: "100%", textAlign: "left" as const, fontFamily: "inherit", color: "var(--text)", fontSize: 13, transition: "background 0.15s" } as React.CSSProperties),
+    projName: { flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const },
+    projCount: { fontSize: 10, fontFamily: "monospace", color: "var(--muted)", background: "var(--panel)", borderRadius: 10, padding: "1px 6px" },
+    projChildren: { marginLeft: 14, paddingLeft: 8, borderLeft: "1px solid var(--border)", marginBottom: 4 },
+    chatRow: (active: boolean) => ({ display: "flex", alignItems: "flex-start", gap: 8, padding: "7px 8px", borderRadius: 8, cursor: "pointer", background: active ? "var(--panel)" : "transparent", border: active ? "none" : "none", borderLeft: active ? "2px solid var(--accent)" : "2px solid transparent", width: "100%", textAlign: "left" as const, fontFamily: "inherit", color: "var(--text)", transition: "background 0.15s" } as React.CSSProperties),
+    chatTitle: { fontSize: 12, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, flex: 1 },
+    chatMeta: { fontSize: 10, color: "var(--muted)", marginTop: 2 },
+    footer: { borderTop: "1px solid var(--border)", padding: "10px 12px" },
+    footerInner: { display: "flex", alignItems: "center", gap: 8 },
+    avatar: { width: 28, height: 28, borderRadius: "50%", background: "var(--panel)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, flexShrink: 0, color: "var(--text2)" },
+    footerEmail: { flex: 1, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, color: "var(--text2)" },
+    signout: { background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 16, padding: "2px 4px", fontFamily: "inherit" },
+  };
+
   return (
-    <aside className="flex flex-col h-full bg-card border-r border-border w-64 shrink-0">
-      {/* Brand */}
-      <button onClick={store.newChat}
-        className="flex items-center gap-2.5 px-4 py-4 hover:bg-muted/50 transition-colors cursor-pointer text-left">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-sm font-serif shrink-0"
-          style={{ background: "var(--accent)", color: "var(--on-accent)" }}>B</div>
-        <span className="font-semibold text-sm tracking-tight">BI Agent</span>
-        <span className="ml-auto text-[10px] font-mono text-muted-foreground border border-border rounded-full px-2 py-0.5">v3</span>
+    <aside style={s.aside}>
+      <div style={s.brand} onClick={() => { store.newChat(); onNavigate?.("/chat"); }}>
+        <div style={s.brandMark}>B</div>
+        <span style={s.brandName}>BI Agent</span>
+        <span style={s.brandBadge}>v3</span>
+      </div>
+
+      <button style={s.newChat} onClick={() => { store.newChat(); onNavigate?.("/chat"); }}>
+        <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> New chat
       </button>
 
-      {/* New chat */}
-      <div className="px-3 pb-3">
-        <button onClick={store.newChat}
-          className="w-full flex items-center justify-center gap-2 h-9 rounded-lg text-sm font-semibold transition-all active:scale-[0.98]"
-          style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
-          <Plus size={14} strokeWidth={2.5} />
-          New chat
-        </button>
-      </div>
-
-      {/* Scrollable list */}
-      <div className="flex-1 overflow-y-auto px-2 space-y-4 pb-4">
+      <div style={s.scroll}>
         {/* Projects */}
-        <div>
-          <div className="flex items-center justify-between px-2 py-1">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Projekte</span>
-            <button onClick={createProject}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              title="Neues Projekt">
-              <Plus size={14} />
+        <div style={s.sectionHead}>
+          <span style={s.sectionLabel}>Projekte</span>
+          <button onClick={createProject} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", fontSize: 18, lineHeight: 1, padding: "0 2px" }} title="Neues Projekt">+</button>
+        </div>
+        {store.projects.length === 0 && <p style={s.emptyText}>Noch keine Projekte.</p>}
+        {store.projects.map(p => (
+          <div key={p.project_id}>
+            <button style={s.projRow(store.activeProjectId === p.project_id)} onClick={() => toggleProject(p.project_id)}>
+              <span style={{ color: "var(--accent2)", fontSize: 13 }}>📁</span>
+              <span style={s.projName}>{p.name}</span>
+              <span style={s.projCount}>{p.chats}</span>
+              <span style={{ color: "var(--muted)", fontSize: 11 }}>{expandedProjects.has(p.project_id) ? "▾" : "▸"}</span>
             </button>
-          </div>
-          {store.projects.length === 0 && (
-            <p className="text-xs text-muted-foreground px-2 py-1">Noch keine Projekte.</p>
-          )}
-          {store.projects.map(p => (
-            <div key={p.project_id}>
-              <button onClick={() => toggleProject(p.project_id)}
-                className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors hover:bg-muted/60 ${store.activeProjectId === p.project_id ? "bg-muted/60" : ""}`}>
-                <FolderOpen size={14} className="text-muted-foreground shrink-0" style={{ color: "var(--accent-2)" }} />
-                <span className="flex-1 text-left truncate">{p.name}</span>
-                <span className="text-[10px] font-mono text-muted-foreground bg-muted rounded-full px-1.5">{p.chats}</span>
-                {expandedProjects.has(p.project_id)
-                  ? <ChevronDown size={12} className="text-muted-foreground" />
-                  : <ChevronRight size={12} className="text-muted-foreground" />}
-              </button>
-              {expandedProjects.has(p.project_id) && (
-                <div className="ml-4 pl-2 border-l border-border space-y-0.5 mt-0.5">
-                  {loadingProject === p.project_id && (
-                    <p className="text-xs text-muted-foreground py-1 px-2">Lädt…</p>
-                  )}
-                  {(store.projectSessions[p.project_id] ?? []).map(s => (
-                    <SessionRow key={s.session_id} session={s}
-                      active={store.sessionId === s.session_id}
-                      onClick={() => loadChat(s.session_id)}
-                      onDelete={(e) => handleDeleteSession(e, s.session_id)} />
+            {expandedProjects.has(p.project_id) && (
+              <div style={s.projChildren}>
+                {(store.projectSessions[p.project_id] ?? []).length === 0
+                  ? <p style={s.emptyText}>Noch keine Chats.</p>
+                  : (store.projectSessions[p.project_id] ?? []).map(sess => (
+                    <button key={sess.session_id} style={s.chatRow(store.sessionId === sess.session_id)} onClick={() => loadChat(sess.session_id)}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={s.chatTitle}>{sess.title?.slice(0, 38) || "Untitled"}</div>
+                        <div style={s.chatMeta}>{sess.message_count} msg</div>
+                      </div>
+                    </button>
                   ))}
-                  {!loadingProject && (store.projectSessions[p.project_id]?.length ?? 0) === 0 && (
-                    <p className="text-xs text-muted-foreground py-1 px-2">Noch keine Chats.</p>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Loose conversations */}
-        <div>
-          <div className="flex items-center justify-between px-2 py-1">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Konversationen</span>
-            <span className="text-[10px] font-mono text-muted-foreground">{loose.length}</span>
+              </div>
+            )}
           </div>
-          {loose.length === 0 && (
-            <p className="text-xs text-muted-foreground px-2 py-1">Noch keine Chats.</p>
-          )}
-          {loose.map(s => (
-            <SessionRow key={s.session_id} session={s}
-              active={store.sessionId === s.session_id}
-              onClick={() => loadChat(s.session_id)}
-              onDelete={(e) => handleDeleteSession(e, s.session_id)} />
-          ))}
+        ))}
+
+        {/* Loose chats */}
+        <div style={s.sectionHead}>
+          <span style={s.sectionLabel}>Konversationen</span>
+          <span style={{ ...s.sectionLabel, letterSpacing: 0 }}>{loose.length}</span>
         </div>
+        {loose.length === 0 && <p style={s.emptyText}>Noch keine Chats.</p>}
+        {loose.map(sess => (
+          <button key={sess.session_id} style={s.chatRow(store.sessionId === sess.session_id)} onClick={() => loadChat(sess.session_id)}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={s.chatTitle}>{sess.title?.slice(0, 38) || "Untitled"}</div>
+              <div style={s.chatMeta}>{new Date(sess.saved_at).toLocaleDateString("de", { month: "short", day: "numeric" })} · {sess.message_count} msg</div>
+            </div>
+          </button>
+        ))}
       </div>
 
-      {/* User footer */}
-      <div className="border-t border-border p-3">
-        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/60 transition-colors">
-          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-semibold uppercase">
-            {user?.email?.[0] ?? "U"}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate">{user?.email}</p>
-          </div>
-          <button onClick={async () => { await signOut(); router.push("/login"); }}
-            className="text-muted-foreground hover:text-foreground transition-colors" title="Abmelden">
-            <LogOut size={14} />
-          </button>
+      <div style={s.footer}>
+        <div style={s.footerInner}>
+          <div style={s.avatar}>{user?.email?.[0]?.toUpperCase() ?? "U"}</div>
+          <span style={s.footerEmail}>{user?.email}</span>
+          <button style={s.signout} title="Abmelden" onClick={async () => { await signOut(); router.push("/login"); }}>⎋</button>
         </div>
       </div>
     </aside>
-  );
-}
-
-function SessionRow({ session, active, onClick, onDelete }: {
-  session: { session_id: string; title: string; saved_at: string; message_count: number };
-  active: boolean;
-  onClick: () => void;
-  onDelete: (e: React.MouseEvent) => void;
-}) {
-  return (
-    <button onClick={onClick}
-      className={`group w-full flex items-start gap-2 px-2 py-2 rounded-lg text-sm transition-colors hover:bg-muted/60 text-left relative ${active ? "bg-muted/60 border-l-2 pl-1.5" : ""}`}
-      style={active ? { borderLeftColor: "var(--accent)" } : {}}>
-      <MessageSquare size={13} className="text-muted-foreground shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium truncate">{truncate(session.title, 40)}</p>
-        <p className="text-[10px] text-muted-foreground mt-0.5">{dateStr(session.saved_at)} · {session.message_count} msg</p>
-      </div>
-      <button onClick={onDelete}
-        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-all shrink-0 mt-0.5">
-        <Trash2 size={12} />
-      </button>
-    </button>
   );
 }
