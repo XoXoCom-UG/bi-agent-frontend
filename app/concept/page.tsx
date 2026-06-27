@@ -5,11 +5,6 @@ import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api, ConceptData } from "@/lib/api";
 
-function truncate(s: string | undefined, n: number) {
-  if (!s) return "—";
-  return s.length > n ? s.slice(0, n) + "…" : s;
-}
-
 function ConceptContent() {
   const { token, loading } = useAuth();
   const store = useChatStore();
@@ -49,146 +44,128 @@ function ConceptContent() {
   const outcomes = goal.outcomes ?? [];
 
   if (loading || !token) return (
-    <div className="min-h-screen flex items-center justify-center bg-canvas">
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8f7f4" }}>
       <div className="thinking-spinner" style={{ width: 28, height: 28 }} />
     </div>
   );
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--color-canvas)" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f7f4", fontFamily: "'Inter', system-ui, sans-serif" }}>
 
-      {/* Sticky nav */}
-      <nav className="sticky top-0 z-10 bg-white border-b flex items-center gap-3 px-6 h-14"
-        style={{ borderColor: "var(--color-line)" }}>
-        <button onClick={() => router.push("/chat")}
-          className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors"
-          style={{ color: "var(--color-ink-2)", borderColor: "var(--color-line)", background: "white" }}
-          onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--color-brand)")}
-          onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--color-line)")}>
+      {/* Nav */}
+      <nav style={{ position: "sticky", top: 0, zIndex: 10, background: "white", borderBottom: "1px solid #e8e5e0", display: "flex", alignItems: "center", gap: 12, padding: "0 32px", height: 56 }}>
+        <button onClick={() => router.push("/chat")} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 500, color: "#6b7280", background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>
           ← Chat
         </button>
-        <span className="flex-1 text-sm font-semibold truncate" style={{ color: "var(--color-ink)" }}>
+        <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {concept?.title || "Transformation Concept"}
         </span>
         {concept && (
-          <span className="text-xs font-semibold px-3 py-1 rounded-full"
-            style={{ background: "var(--color-brand-light)", color: "var(--color-brand-dark)", border: "1px solid var(--color-brand-mid)" }}>
-            ✓ Bereit
-          </span>
+          <span style={{ fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 20, background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>✓ Bereit</span>
         )}
-        <button className="text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors"
-          style={{ color: "var(--color-ink-2)", borderColor: "var(--color-line)", background: "white" }}>
-          ✎ Bearbeiten
-        </button>
-        <button className="text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors"
-          style={{ color: "var(--color-ink-2)", borderColor: "var(--color-line)", background: "white" }}>
-          ⬇ PDF
-        </button>
+        <button style={{ fontSize: 13, fontWeight: 500, color: "#6b7280", background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>✎ Bearbeiten</button>
+        <button style={{ fontSize: 13, fontWeight: 500, color: "#6b7280", background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>⬇ PDF</button>
         <button onClick={() => router.push(`/dashboard?session=${sessionId}`)}
-          className="text-sm font-semibold px-4 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
-          style={{ background: "var(--color-brand)" }}>
+          style={{ fontSize: 13, fontWeight: 600, color: "white", background: "#16a34a", border: "none", borderRadius: 8, padding: "6px 16px", cursor: "pointer" }}>
           Roadmap →
         </button>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-6 py-8 pb-16">
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "48px 32px 80px" }}>
 
-        {/* Page header */}
-        <div className="mb-8 animate-in">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="w-2 h-2 rounded-full inline-block" style={{ background: "#22c55e" }}></span>
-            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--color-brand)" }}>Transformation Concept</span>
+        {/* Header */}
+        <div style={{ marginBottom: 48 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a", display: "inline-block" }}></span>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#16a34a" }}>Transformation Concept</span>
           </div>
-          <h1 className="text-2xl font-extrabold leading-tight mb-2" style={{ color: "var(--color-ink)", letterSpacing: "-0.025em" }}>
+          <h1 style={{ fontSize: 36, fontWeight: 800, color: "#111827", letterSpacing: "-0.03em", lineHeight: 1.15, margin: "0 0 12px", fontFamily: "Georgia, 'Times New Roman', serif" }}>
             {concept?.title || "Noch kein Concept generiert"}
           </h1>
           {concept && (
-            <p className="text-sm" style={{ color: "var(--color-ink-3)" }}>
-              {steps.length} Schritte · {stories.length} User Stories
+            <p style={{ fontSize: 14, color: "#9ca3af", margin: 0 }}>
+              {steps.length} Transformationsschritte · {stories.length} User Stories
             </p>
           )}
         </div>
 
         {/* Empty state */}
         {!concept && (
-          <div className="bg-white rounded-2xl border p-16 text-center animate-in"
-            style={{ borderColor: "var(--color-line)" }}>
-            <div className="text-5xl mb-4">⚡</div>
-            <h3 className="text-lg font-bold mb-2" style={{ color: "var(--color-ink)" }}>Noch kein Concept generiert</h3>
-            <p className="text-sm mb-6 max-w-xs mx-auto" style={{ color: "var(--color-ink-3)" }}>
+          <div style={{ background: "white", borderRadius: 20, border: "1px solid #e8e5e0", padding: "80px 40px", textAlign: "center" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>⚡</div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: "0 0 8px" }}>Noch kein Concept generiert</h3>
+            <p style={{ fontSize: 14, color: "#9ca3af", maxWidth: 320, margin: "0 auto 24px" }}>
               Führe zuerst ein Gespräch mit dem Agenten, dann kann das Concept automatisch erstellt werden.
             </p>
-            {error && <p className="text-sm mb-4" style={{ color: "#dc2626" }}>{error}</p>}
+            {error && <p style={{ fontSize: 14, color: "#dc2626", marginBottom: 16 }}>{error}</p>}
             <button onClick={generate} disabled={generating}
-              className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-opacity"
-              style={{ background: "var(--color-brand)", opacity: generating ? 0.7 : 1 }}>
+              style={{ fontSize: 14, fontWeight: 700, color: "white", background: generating ? "#9ca3af" : "#16a34a", border: "none", borderRadius: 12, padding: "12px 24px", cursor: generating ? "not-allowed" : "pointer" }}>
               {generating ? "Generiere…" : "⚡ Concept generieren"}
             </button>
           </div>
         )}
 
         {concept && (
-          <div className="space-y-5 animate-in">
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
-            {/* KPI strip — truncated values only */}
-            <div className="grid grid-cols-4 gap-3">
-              {[
-                { label: "Zeitersparnis", val: truncate(bv.manual_effort, 12), sub: "Manuelle Aufwände", top: "var(--color-brand)", valColor: "var(--color-brand-dark)" },
-                { label: "Fehlerrate", val: truncate(bv.error_rate, 12), sub: "Reduzierung", top: "#dc2626", valColor: "#dc2626" },
-                { label: "Kostenersparnis", val: truncate(bv.cost_savings, 12), sub: "Pro Jahr", top: "#1d4ed8", valColor: "#1d4ed8" },
-                { label: "Schritte", val: String(steps.length), sub: "Transformationsschritte", top: "#b45309", valColor: "#b45309" },
-              ].map(k => (
-                <div key={k.label} className="bg-white rounded-xl border p-4"
-                  style={{ borderColor: "var(--color-line)", borderTop: `3px solid ${k.top}` }}>
-                  <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--color-ink-3)" }}>{k.label}</p>
-                  <p className="text-2xl font-extrabold leading-none mb-1 truncate" style={{ color: k.valColor, letterSpacing: "-0.02em" }}>{k.val}</p>
-                  <p className="text-xs" style={{ color: "var(--color-ink-3)" }}>{k.sub}</p>
-                </div>
-              ))}
-            </div>
+            {/* KPI row — full text, no truncation */}
+            {(bv.manual_effort || bv.error_rate || bv.cost_savings) && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+                {[
+                  { label: "Zeitersparnis", val: bv.manual_effort, sub: "Manuelle Aufwände", accent: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
+                  { label: "Fehlerrate", val: bv.error_rate, sub: "Reduzierung", accent: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
+                  { label: "Kostenersparnis", val: bv.cost_savings, sub: "Pro Jahr", accent: "#1d4ed8", bg: "#eff6ff", border: "#bfdbfe" },
+                ].filter(k => k.val).map(k => (
+                  <div key={k.label} style={{ background: k.bg, border: `1px solid ${k.border}`, borderRadius: 16, padding: "24px 20px" }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: k.accent, opacity: 0.8, margin: "0 0 10px" }}>{k.label}</p>
+                    <p style={{ fontSize: 22, fontWeight: 800, color: k.accent, letterSpacing: "-0.02em", margin: "0 0 6px", lineHeight: 1.2, wordBreak: "break-word" }}>{k.val}</p>
+                    <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>{k.sub}</p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Ist → Ziel */}
-            <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: "var(--color-line)" }}>
-              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--color-line)" }}>
-                <h2 className="text-sm font-bold" style={{ color: "var(--color-ink)" }}>Ist → Ziel im Vergleich</h2>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                  style={{ background: "var(--color-brand-light)", color: "var(--color-brand-dark)" }}>
-                  {Math.max(pains.length, outcomes.length) + 1} Aspekte
+            <div style={{ background: "white", borderRadius: 20, border: "1px solid #e8e5e0", overflow: "hidden" }}>
+              <div style={{ padding: "20px 24px", borderBottom: "1px solid #e8e5e0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <h2 style={{ fontSize: 15, fontWeight: 700, color: "#111827", margin: 0 }}>Ist → Ziel</h2>
+                <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "#f0fdf4", color: "#16a34a" }}>
+                  {Math.max(pains.length, outcomes.length)} Aspekte
                 </span>
               </div>
-              <div className="grid grid-cols-2">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
                 {/* Ist */}
-                <div className="p-5 border-r" style={{ borderColor: "var(--color-line)", background: "#fefefe" }}>
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="w-2 h-2 rounded-full" style={{ background: "#dc2626", flexShrink: 0 }}></span>
-                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#dc2626" }}>Ist-Zustand</span>
+                <div style={{ padding: "24px", borderRight: "1px solid #e8e5e0" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", flexShrink: 0, display: "inline-block" }}></span>
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#ef4444" }}>Ist-Zustand</span>
                   </div>
-                  <p className="text-sm font-medium mb-4 pb-4 leading-relaxed" style={{ color: "var(--color-ink)", borderBottom: "1px solid var(--color-line)" }}>
+                  <p style={{ fontSize: 14, lineHeight: 1.7, color: "#374151", margin: "0 0 20px", paddingBottom: 20, borderBottom: "1px solid #f3f4f6" }}>
                     {now.summary || "—"}
                   </p>
-                  <div className="space-y-3">
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {pains.map((p, i) => (
-                      <div key={i} className="flex gap-3">
-                        <span className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: "#fca5a5" }}></span>
-                        <p className="text-xs leading-relaxed" style={{ color: "var(--color-ink-2)" }}>{p}</p>
+                      <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#fca5a5", flexShrink: 0, marginTop: 6 }}></span>
+                        <p style={{ fontSize: 13, lineHeight: 1.6, color: "#6b7280", margin: 0 }}>{p}</p>
                       </div>
                     ))}
                   </div>
                 </div>
                 {/* Ziel */}
-                <div className="p-5" style={{ background: "#fefffe" }}>
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="w-2 h-2 rounded-full" style={{ background: "var(--color-brand)", flexShrink: 0 }}></span>
-                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--color-brand)" }}>Ziel-Zustand</span>
+                <div style={{ padding: "24px", background: "#fafffe" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#16a34a", flexShrink: 0, display: "inline-block" }}></span>
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#16a34a" }}>Ziel-Zustand</span>
                   </div>
-                  <p className="text-sm font-medium mb-4 pb-4 leading-relaxed" style={{ color: "var(--color-ink)", borderBottom: "1px solid var(--color-line)" }}>
+                  <p style={{ fontSize: 14, lineHeight: 1.7, color: "#374151", margin: "0 0 20px", paddingBottom: 20, borderBottom: "1px solid #f3f4f6" }}>
                     {goal.summary || "—"}
                   </p>
-                  <div className="space-y-3">
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {outcomes.map((o, i) => (
-                      <div key={i} className="flex gap-3">
-                        <span className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: "#86efac" }}></span>
-                        <p className="text-xs leading-relaxed" style={{ color: "var(--color-ink-2)" }}>{o}</p>
+                      <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#86efac", flexShrink: 0, marginTop: 6 }}></span>
+                        <p style={{ fontSize: 13, lineHeight: 1.6, color: "#6b7280", margin: 0 }}>{o}</p>
                       </div>
                     ))}
                   </div>
@@ -196,79 +173,49 @@ function ConceptContent() {
               </div>
             </div>
 
-            {/* Steps */}
-            <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: "var(--color-line)" }}>
-              <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--color-line)" }}>
-                <h2 className="text-sm font-bold" style={{ color: "var(--color-ink)" }}>Transformationsschritte</h2>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                  style={{ background: "var(--color-brand-light)", color: "var(--color-brand-dark)" }}>
-                  {steps.length} Schritte
-                </span>
-              </div>
-              <div className="divide-y" style={{ borderColor: "var(--color-line)" }}>
-                {steps.map((s, i) => (
-                  <div key={i} className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                        style={{ background: "var(--color-brand)" }}>{i + 1}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="text-sm font-semibold" style={{ color: "var(--color-ink)" }}>{s.title}</span>
-                          {s.effort && (
-                            <span className="text-xs px-2 py-0.5 rounded font-mono" style={{ background: "var(--color-canvas)", border: "1px solid var(--color-line)", color: "var(--color-ink-3)" }}>{s.effort}</span>
+            {/* Transformation Steps */}
+            {steps.length > 0 && (
+              <div style={{ background: "white", borderRadius: 20, border: "1px solid #e8e5e0", overflow: "hidden" }}>
+                <div style={{ padding: "20px 24px", borderBottom: "1px solid #e8e5e0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, color: "#111827", margin: 0 }}>Transformationsschritte</h2>
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "#f0fdf4", color: "#16a34a" }}>{steps.length} Schritte</span>
+                </div>
+                <div>
+                  {steps.map((s, i) => (
+                    <div key={i} style={{ borderBottom: i < steps.length - 1 ? "1px solid #f3f4f6" : "none" }}>
+                      <div style={{ padding: "20px 24px", display: "flex", gap: 16, alignItems: "flex-start" }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 10, background: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "white", flexShrink: 0 }}>
+                          {i + 1}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+                            <span style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{s.title}</span>
+                            {s.effort && (
+                              <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: "#f3f4f6", color: "#6b7280", fontFamily: "monospace" }}>{s.effort}</span>
+                            )}
+                          </div>
+                          {s.business_value && (
+                            <p style={{ fontSize: 13, color: "#16a34a", fontWeight: 500, margin: "0 0 8px" }}>↗ {s.business_value}</p>
+                          )}
+                          {s.description && (
+                            <button onClick={() => setOpenStep(openStep === i ? null : i)}
+                              style={{ fontSize: 13, color: "#9ca3af", background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 500 }}>
+                              {openStep === i ? "▾ Details ausblenden" : "▸ Details anzeigen"}
+                            </button>
+                          )}
+                          {openStep === i && (
+                            <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#f8f7f4" }}>
+                              <p style={{ fontSize: 13, lineHeight: 1.7, color: "#4b5563", margin: "0 0 12px" }}>{s.description}</p>
+                              {s.implementation_ideas?.length ? (
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                  {s.implementation_ideas.map((idea, j) => (
+                                    <span key={j} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 8, background: "white", border: "1px solid #e5e7eb", color: "#6b7280" }}>{idea}</span>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
                           )}
                         </div>
-                        {s.business_value && (
-                          <p className="text-xs font-medium mb-1" style={{ color: "var(--color-brand)" }}>
-                            ↗ {truncate(s.business_value, 80)}
-                          </p>
-                        )}
-                        {s.description && (
-                          <button onClick={() => setOpenStep(openStep === i ? null : i)}
-                            className="text-xs font-medium mt-1" style={{ color: "var(--color-brand)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                            {openStep === i ? "▾ Details ausblenden" : "▸ Details anzeigen"}
-                          </button>
-                        )}
-                        {openStep === i && (
-                          <div className="mt-3 p-3 rounded-lg" style={{ background: "var(--color-canvas)" }}>
-                            <p className="text-xs leading-relaxed mb-2" style={{ color: "var(--color-ink-2)" }}>{s.description}</p>
-                            {s.implementation_ideas?.length ? (
-                              <div className="flex flex-wrap gap-1.5">
-                                {s.implementation_ideas.map((idea, j) => (
-                                  <span key={j} className="text-xs px-2 py-0.5 rounded"
-                                    style={{ background: "white", border: "1px solid var(--color-line)", color: "var(--color-ink-2)" }}>{idea}</span>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* User Stories */}
-            {stories.length > 0 && (
-              <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: "var(--color-line)" }}>
-                <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--color-line)" }}>
-                  <h2 className="text-sm font-bold" style={{ color: "var(--color-ink)" }}>User Stories</h2>
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" }}>
-                    Product Owner
-                  </span>
-                </div>
-                <div className="divide-y" style={{ borderColor: "var(--color-line)" }}>
-                  {stories.map((s, i) => (
-                    <div key={i} className="p-4 flex gap-3">
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-                        style={{ background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" }}>{s.size || "M"}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold mb-1" style={{ color: "var(--color-ink)" }}>{s.title}</p>
-                        <p className="text-xs leading-relaxed mb-1.5" style={{ color: "var(--color-ink-2)" }}>{s.story}</p>
-                        {s.acceptance_criteria && (
-                          <p className="text-xs font-medium" style={{ color: "var(--color-brand)" }}>✓ {s.acceptance_criteria}</p>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -276,25 +223,26 @@ function ConceptContent() {
               </div>
             )}
 
-            {/* Business Value */}
-            {(bv.manual_effort || bv.error_rate || bv.cost_savings) && (
-              <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: "var(--color-line)" }}>
-                <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--color-line)" }}>
-                  <h2 className="text-sm font-bold" style={{ color: "var(--color-ink)" }}>Business Value</h2>
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "var(--color-brand-light)", color: "var(--color-brand-dark)" }}>ROI-Übersicht</span>
+            {/* User Stories */}
+            {stories.length > 0 && (
+              <div style={{ background: "white", borderRadius: 20, border: "1px solid #e8e5e0", overflow: "hidden" }}>
+                <div style={{ padding: "20px 24px", borderBottom: "1px solid #e8e5e0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, color: "#111827", margin: 0 }}>User Stories</h2>
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" }}>Product Owner</span>
                 </div>
-                <div className="grid grid-cols-3 divide-x p-0" style={{ borderColor: "var(--color-line)" }}>
-                  {[
-                    { label: "Zeitersparnis", val: bv.manual_effort, sub: "Manuelle Aufwände", bg: "var(--color-brand-light)", tc: "var(--color-brand-dark)", border: "var(--color-brand-mid)" },
-                    { label: "Fehlerrate", val: bv.error_rate, sub: "Reduzierung", bg: "#fef2f2", tc: "#dc2626", border: "#fca5a5" },
-                    { label: "Kostenersparnis", val: bv.cost_savings, sub: "Pro Jahr", bg: "#eff6ff", tc: "#1d4ed8", border: "#93c5fd" },
-                  ].filter(x => x.val).map(x => (
-                    <div key={x.label} className="p-5" style={{ background: x.bg, borderBottom: `3px solid ${x.border}` }}>
-                      <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: x.tc, opacity: 0.7 }}>{x.label}</p>
-                      <p className="text-xl font-extrabold leading-none mb-1.5" style={{ color: x.tc, letterSpacing: "-0.02em" }}>
-                        {truncate(x.val, 20)}
-                      </p>
-                      <p className="text-xs" style={{ color: "var(--color-ink-3)" }}>{x.sub}</p>
+                <div>
+                  {stories.map((s, i) => (
+                    <div key={i} style={{ padding: "20px 24px", borderBottom: i < stories.length - 1 ? "1px solid #f3f4f6" : "none", display: "flex", gap: 16 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: "#fffbeb", border: "1px solid #fde68a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#92400e", flexShrink: 0 }}>
+                        {s.size || "M"}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: "0 0 6px" }}>{s.title}</p>
+                        <p style={{ fontSize: 13, lineHeight: 1.6, color: "#6b7280", margin: "0 0 8px" }}>{s.story}</p>
+                        {s.acceptance_criteria && (
+                          <p style={{ fontSize: 13, color: "#16a34a", fontWeight: 500, margin: 0 }}>✓ {s.acceptance_criteria}</p>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -311,7 +259,7 @@ function ConceptContent() {
 export default function ConceptPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-canvas)" }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8f7f4" }}>
         <div className="thinking-spinner" style={{ width: 28, height: 28 }} />
       </div>
     }>
