@@ -172,7 +172,7 @@ export default function ChatPage() {
                     </div>
                     <div style={{ maxWidth: "70%", display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start" }}>
                       <span style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 5, fontWeight: 500 }}>{isUser ? "Du" : "BI Agent"}</span>
-                      <div style={{ fontSize: 13.5, lineHeight: 1.65, color: "var(--text)", ...(isUser ? { background: "var(--text)", color: "#fff", padding: "10px 16px", borderRadius: "14px 14px 4px 14px" } : { background: "#fff", border: "1px solid var(--border)", padding: "12px 16px", borderRadius: "4px 14px 14px 14px" }) }}>
+                      <div style={{ fontSize: 13.5, lineHeight: 1.65, ...(isUser ? { background: "var(--text)", color: "#fff", padding: "10px 16px", borderRadius: "14px 14px 4px 14px" } : { background: "#fff", border: "1px solid var(--border)", padding: "12px 16px", borderRadius: "4px 14px 14px 14px", color: "var(--text)" }) }}>
                         <div className="prose-chat" dangerouslySetInnerHTML={{ __html: md(content) }} />
                       </div>
                       {choices.length > 0 && <ChoiceChips choices={choices} onSelect={send} />}
