@@ -4,6 +4,22 @@ import { useState } from "react";
 import { Message } from "@/lib/api";
 import { timeStr } from "@/lib/utils";
 
+// Normalise message.content: backend may return an array of content blocks
+function toText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((b: unknown) => {
+        if (typeof b === "string") return b;
+        if (b && typeof b === "object" && "text" in b && typeof (b as { text: unknown }).text === "string")
+          return (b as { text: string }).text;
+        return "";
+      })
+      .join("");
+  }
+  return "";
+}
+
 function formatMarkdown(text: string): string {
   return text
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
@@ -26,8 +42,8 @@ export function ChatMessage({ message, onChoiceSelect }: Props) {
   const [choicePicked, setChoicePicked] = useState<string | null>(null);
   const isUser = message.role === "user";
 
-  // Extract choices block
-  let content = message.content;
+  // Extract choices block — normalise content (may be array of blocks from backend)
+  let content = toText(message.content);
   let choices: string[] = [];
   const choiceMatch = content.match(/\[\[CHOICES:\s*([\s\S]*?)\]\]/i);
   if (choiceMatch) {

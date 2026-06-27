@@ -144,7 +144,8 @@ export interface Profile {
 
 export interface Message {
   role: "user" | "assistant";
-  content: string;
+  // Backend may return an array of Anthropic content blocks instead of a plain string
+  content: string | Array<{ type: string; text?: string; [key: string]: unknown }>;
 }
 
 export interface Session {

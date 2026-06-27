@@ -11,6 +11,23 @@ import { cn } from "@/lib/utils";
 const PHASES = ["Verstehe die Frage…","Analysiere Aspekte…","Formuliere Antwort…","Überprüfe…"];
 const PHASES_R = ["Recherchiere Quellen…","Analysiere Ergebnisse…","Vergleiche Optionen…","Formuliere Antwort…"];
 
+// Normalise message.content: backend may return an array of content blocks
+// (from the Anthropic SDK) instead of a plain string.
+function toText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((b: unknown) => {
+        if (typeof b === "string") return b;
+        if (b && typeof b === "object" && "text" in b && typeof (b as { text: unknown }).text === "string")
+          return (b as { text: string }).text;
+        return "";
+      })
+      .join("");
+  }
+  return "";
+}
+
 function md(text: string) {
   return text
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
@@ -91,7 +108,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex bg-gray-50" style={{ height: "100vh", overflow: "hidden" }}>
-      <Sidebar />
+      <Sidebar currentPath="/chat" />
 
       <div className="flex-1 flex flex-col bg-white" style={{ overflow: "hidden" }}>
 
@@ -149,7 +166,7 @@ export default function ChatPage() {
             <div className="max-w-3xl mx-auto px-6 py-6 space-y-6">
               {store.messages.map((m, i) => {
                 const isUser = m.role === "user";
-                let content = m.content;
+                let content = toText(m.content);
                 let choices: string[] = [];
                 const cm = content.match(/\[\[CHOICES:\s*([\s\S]*?)\]\]/i);
                 if (cm) { choices = cm[1].split("|").map(s => s.trim()).filter(Boolean); content = content.replace(cm[0], "").trim(); }
