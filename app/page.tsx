@@ -15,8 +15,10 @@ export default function Root() {
   }, [session, loading, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="thinking-spinner" />
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-3">
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg"
+        style={{ background: "var(--green)", fontFamily: "Georgia,serif" }}>B</div>
+      <div className="thinking-spinner" style={{ width: 20, height: 20 }} />
     </div>
   );
 }

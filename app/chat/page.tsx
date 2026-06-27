@@ -91,7 +91,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex bg-gray-50" style={{ height: "100vh", overflow: "hidden" }}>
-      <Sidebar currentPath="/chat" />
+      <Sidebar />
 
       <div className="flex-1 flex flex-col bg-white" style={{ overflow: "hidden" }}>
 

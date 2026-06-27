@@ -46,7 +46,7 @@ function DashboardContent() {
 
   return (
     <div style={S.page}>
-      <Sidebar currentPath="/dashboard" />
+      <Sidebar />
       <div style={S.main}>
         <div style={S.topbar}>
           <div style={{ display: "flex", gap: 2, background: "var(--bg)", padding: 3, borderRadius: 9, border: "1px solid var(--border)" }}>

@@ -1,11 +1,11 @@
 "use client";
 
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { Message, Session, Project } from "@/lib/api";
 import { newSessionId } from "@/lib/utils";
 
 interface ChatStore {
-  // current session
   sessionId: string;
   sessionTitle: string;
   messages: Message[];
@@ -16,9 +16,8 @@ interface ChatStore {
   sending: boolean;
   mode: "chat" | "research";
   guidedProject: boolean;
-  thinkingPhase: string;
+  historyLoaded: boolean;
 
-  // actions
   setSessionId: (id: string) => void;
   setSessionTitle: (t: string) => void;
   setMessages: (m: Message[]) => void;
@@ -30,42 +29,57 @@ interface ChatStore {
   setSending: (b: boolean) => void;
   setMode: (m: "chat" | "research") => void;
   setGuidedProject: (b: boolean) => void;
-  setThinkingPhase: (p: string) => void;
+  setHistoryLoaded: (b: boolean) => void;
   newChat: () => void;
 }
 
-export const useChatStore = create<ChatStore>((set) => ({
-  sessionId: newSessionId(),
-  sessionTitle: "Neue Konversation",
-  messages: [],
-  history: [],
-  projects: [],
-  projectSessions: {},
-  activeProjectId: null,
-  sending: false,
-  mode: "chat",
-  guidedProject: false,
-  thinkingPhase: "",
-
-  setSessionId: (id) => set({ sessionId: id }),
-  setSessionTitle: (t) => set({ sessionTitle: t }),
-  setMessages: (m) => set({ messages: m }),
-  addMessage: (m) => set((s) => ({ messages: [...s.messages, m] })),
-  setHistory: (h) => set({ history: h }),
-  setProjects: (p) => set({ projects: p }),
-  setProjectSessions: (pid, s) =>
-    set((state) => ({ projectSessions: { ...state.projectSessions, [pid]: s } })),
-  setActiveProject: (id) => set({ activeProjectId: id }),
-  setSending: (b) => set({ sending: b }),
-  setMode: (m) => set({ mode: m }),
-  setGuidedProject: (b) => set({ guidedProject: b }),
-  setThinkingPhase: (p) => set({ thinkingPhase: p }),
-  newChat: () =>
-    set({
+export const useChatStore = create<ChatStore>()(
+  persist(
+    (set) => ({
       sessionId: newSessionId(),
       sessionTitle: "Neue Konversation",
       messages: [],
-      guidedProject: false,
+      history: [],
+      projects: [],
+      projectSessions: {},
       activeProjectId: null,
+      sending: false,
+      mode: "chat",
+      guidedProject: false,
+      historyLoaded: false,
+
+      setSessionId: (id) => set({ sessionId: id }),
+      setSessionTitle: (t) => set({ sessionTitle: t }),
+      setMessages: (m) => set({ messages: m }),
+      addMessage: (m) => set((s) => ({ messages: [...s.messages, m] })),
+      setHistory: (h) => set({ history: h }),
+      setProjects: (p) => set({ projects: p }),
+      setProjectSessions: (pid, s) =>
+        set((state) => ({ projectSessions: { ...state.projectSessions, [pid]: s } })),
+      setActiveProject: (id) => set({ activeProjectId: id }),
+      setSending: (b) => set({ sending: b }),
+      setMode: (m) => set({ mode: m }),
+      setGuidedProject: (b) => set({ guidedProject: b }),
+      setHistoryLoaded: (b) => set({ historyLoaded: b }),
+      newChat: () =>
+        set({
+          sessionId: newSessionId(),
+          sessionTitle: "Neue Konversation",
+          messages: [],
+          guidedProject: false,
+          activeProjectId: null,
+        }),
     }),
-}));
+    {
+      name: "bi-agent-chat",
+      // Only persist these — NOT sending/historyLoaded which are transient
+      partialize: (state) => ({
+        sessionId: state.sessionId,
+        sessionTitle: state.sessionTitle,
+        messages: state.messages,
+        mode: state.mode,
+        activeProjectId: state.activeProjectId,
+      }),
+    }
+  )
+);
