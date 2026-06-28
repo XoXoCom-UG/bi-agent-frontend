@@ -327,47 +327,130 @@ export default function ChatPage() {
         {/* Messages / Welcome */}
         <div className="flex-1 overflow-y-auto">
           {store.messages.length === 0 && !store.sending ? (
-            <div className="flex items-center justify-center min-h-full px-4 py-12">
-              <div className="w-full max-w-xl text-center animate-in">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-5 shadow-lg"
-                  style={{ background: "var(--green)", fontFamily: "Georgia,serif" }}>B</div>
-                <Badge variant="default" className="mb-3">IT Consulting Agent</Badge>
-                <h2 className="text-2xl md:text-3xl font-extrabold text-zinc-900 dark:text-zinc-50 mb-2 tracking-tight">
-                  Was möchtest du lösen?
-                </h2>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
-                  Stell eine Frage oder starte ein geführtes Projekt.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 text-left">
-                  {[
-                    { icon: <MessageSquare className="w-5 h-5 text-zinc-400" strokeWidth={1.5} />, title: "Chat starten", desc: "Direkter Zugang zur IT-Wissensbasis. Frag alles.", action: () => inputRef.current?.focus() },
-                    { icon: <Zap className="w-5 h-5 text-amber-500" strokeWidth={1.5} />, title: "Projekt starten", desc: "Geführtes Interview → Transformation Concept → Roadmap.", action: () => { store.setGuidedProject(true); inputRef.current?.focus(); } },
-                  ].map((c, idx) => (
-                    <motion.div key={c.title}
-                      initial={{ opacity: 0, y: 10 }}
+            <div className="relative flex flex-col items-center justify-center min-h-full px-6 py-16 overflow-hidden">
+
+              {/* Ambient background glow */}
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <motion.div
+                  animate={{ scale: [1, 1.08, 1], opacity: [0.06, 0.11, 0.06] }}
+                  transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
+                  className="w-[600px] h-[400px] rounded-full"
+                  style={{ background: "radial-gradient(ellipse, #16a34a, transparent 70%)" }}
+                />
+              </div>
+
+              <div className="relative w-full max-w-lg text-center">
+
+                {/* Logo wordmark */}
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", duration: 0.6, bounce: 0.1 }}
+                  className="flex items-center justify-center gap-2.5 mb-10"
+                >
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md shadow-green-600/25"
+                    style={{ background: "var(--green)", fontFamily: "Georgia, serif" }}
+                  >B</div>
+                  <span
+                    className="text-2xl font-bold text-zinc-900 dark:text-zinc-50"
+                    style={{ letterSpacing: "-0.04em", fontFamily: "inherit" }}
+                  >matfit.ai</span>
+                </motion.div>
+
+                {/* Headline */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", duration: 0.55, bounce: 0.05, delay: 0.08 }}
+                >
+                  <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-green-600 mb-4">
+                    KI-gestützte IT-Beratung
+                  </p>
+                  <h2
+                    className="text-[32px] md:text-[40px] font-extrabold text-zinc-900 dark:text-zinc-50 leading-[1.1] mb-4"
+                    style={{ letterSpacing: "-0.03em" }}
+                  >
+                    Was möchtest du<br />
+                    <span className="text-green-600">heute lösen?</span>
+                  </h2>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-10 leading-relaxed">
+                    Transformation Concepts. Roadmaps. IT-Know-how.<br className="hidden sm:block" />
+                    Alles auf Basis echter Beratungserfahrung.
+                  </p>
+                </motion.div>
+
+                {/* Action cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8 text-left">
+                  {([
+                    {
+                      icon: <MessageSquare className="w-4 h-4" strokeWidth={1.5} />,
+                      label: "Chat starten",
+                      sub: "Frag alles — IT-Architektur, Tools, Strategie.",
+                      cta: "Frage stellen →",
+                      accent: false,
+                      action: () => inputRef.current?.focus(),
+                    },
+                    {
+                      icon: <Zap className="w-4 h-4" strokeWidth={1.5} />,
+                      label: "Projekt starten",
+                      sub: "Geführtes Interview → Concept → Roadmap.",
+                      cta: "Jetzt starten →",
+                      accent: true,
+                      action: () => { store.setGuidedProject(true); inputRef.current?.focus(); },
+                    },
+                  ] as const).map((c, idx) => (
+                    <motion.div
+                      key={c.label}
+                      initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ type: "spring", duration: 0.45, bounce: 0.05, delay: idx * 0.06 }}
-                      whileHover={{ y: -2, transition: BTN_SPRING }}
-                      whileTap={{ scale: 0.98, transition: BTN_SPRING }}
+                      transition={{ type: "spring", duration: 0.5, bounce: 0.06, delay: 0.18 + idx * 0.07 }}
+                      whileHover={{ y: -3, transition: BTN_SPRING }}
+                      whileTap={{ scale: 0.975, transition: BTN_SPRING }}
                       onClick={c.action}
-                      className="p-5 cursor-pointer rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800/60 hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-700 transition-shadow duration-200"
+                      className={cn(
+                        "relative cursor-pointer rounded-2xl p-5 overflow-hidden border transition-shadow duration-200 hover:shadow-lg",
+                        c.accent
+                          ? "bg-green-600 border-green-500 hover:shadow-green-500/20"
+                          : "bg-white dark:bg-zinc-800/80 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-zinc-200/60 dark:hover:shadow-black/20"
+                      )}
                     >
-                      <div className="mb-3">{c.icon}</div>
-                      <p className="font-semibold text-sm text-zinc-900 dark:text-zinc-50 mb-1">{c.title}</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">{c.desc}</p>
+                      {c.accent && (
+                        <div className="absolute inset-0 pointer-events-none"
+                          style={{ background: "radial-gradient(ellipse 80% 60% at 0% 0%, rgba(255,255,255,0.12), transparent)" }} />
+                      )}
+                      <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center mb-4",
+                        c.accent ? "bg-white/20 text-white" : "bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400")}>
+                        {c.icon}
+                      </div>
+                      <p className={cn("font-semibold text-sm mb-1.5", c.accent ? "text-white" : "text-zinc-900 dark:text-zinc-50")}>
+                        {c.label}
+                      </p>
+                      <p className={cn("text-xs leading-relaxed mb-4", c.accent ? "text-green-100" : "text-zinc-500 dark:text-zinc-400")}>
+                        {c.sub}
+                      </p>
+                      <span className={cn("text-xs font-semibold", c.accent ? "text-white/80" : "text-green-600")}>
+                        {c.cta}
+                      </span>
                     </motion.div>
                   ))}
                 </div>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {["Cloud Migration", "Make.com vs Zapier?", "IT-Sicherheit", "ERP-Auswahl"].map(p => (
+
+                {/* Topic chips */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.38, duration: 0.4 }}
+                  className="flex flex-wrap gap-2 justify-center"
+                >
+                  <span className="text-xs text-zinc-400 self-center mr-1">Probier:</span>
+                  {["Cloud Migration", "Make.com vs Zapier", "IT-Sicherheitsaudit", "ERP-Auswahl", "DevOps einführen"].map(p => (
                     <Btn key={p}
                       onClick={() => { setInput(p); inputRef.current?.focus(); }}
-                      className="px-3.5 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-400 hover:border-green-300 dark:hover:border-green-700 hover:text-green-800 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/40 transition-colors duration-150"
-                    >
-                      {p}
-                    </Btn>
+                      className="px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[12px] text-zinc-600 dark:text-zinc-400 hover:border-green-300 dark:hover:border-green-700 hover:text-green-700 dark:hover:text-green-400 hover:bg-green-50/60 dark:hover:bg-green-950/30 transition-colors duration-150"
+                    >{p}</Btn>
                   ))}
-                </div>
+                </motion.div>
               </div>
             </div>
           ) : (
