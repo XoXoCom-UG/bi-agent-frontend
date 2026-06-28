@@ -154,28 +154,56 @@ function StepCard({ step, index }: { step: NonNullable<RoadmapData["phases"]>[0]
       />
 
       {/* Header row */}
-      <button
-        className="w-full text-left px-5 py-4 flex items-start gap-3 group"
-        onClick={() => setOpen(o => !o)}
-      >
-        <motion.span
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ type: "spring", duration: 0.3, bounce: 0.1 }}
-          className="mt-0.5 flex-shrink-0 text-zinc-300 group-hover:text-zinc-500 transition-colors"
+      <div className="w-full text-left px-4 py-3.5 flex items-center gap-3">
+        {/* Done toggle — prominent left checkbox */}
+        <button
+          onClick={e => { e.stopPropagation(); setDone(d => !d); }}
+          className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+            done
+              ? "border-green-500 bg-green-500"
+              : "border-zinc-300 dark:border-zinc-600 hover:border-green-400"
+          }`}
         >
-          <ChevronDown className="w-4 h-4" strokeWidth={1.5} />
-        </motion.span>
-        <span className={`flex-1 text-sm font-semibold leading-snug ${done ? "text-zinc-400 dark:text-zinc-600 line-through" : "text-zinc-900 dark:text-zinc-50"}`}>
-          {step.title}
-        </span>
-        <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
+          <AnimatePresence>
+            {done && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                transition={{ type: "spring", duration: 0.2, bounce: 0.4 }}
+              >
+                <Check className="w-3 h-3 text-white" strokeWidth={2.5} />
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+
+        {/* Expand button + title */}
+        <button
+          className="flex-1 flex items-center gap-2 text-left group"
+          onClick={() => setOpen(o => !o)}
+        >
+          <span className={`flex-1 text-sm font-semibold leading-snug ${done ? "text-zinc-400 dark:text-zinc-600 line-through" : "text-zinc-900 dark:text-zinc-50"}`}>
+            {step.title}
+          </span>
+          <motion.span
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={{ type: "spring", duration: 0.3, bounce: 0.1 }}
+            className="flex-shrink-0 text-zinc-300 group-hover:text-zinc-500 transition-colors"
+          >
+            <ChevronDown className="w-4 h-4" strokeWidth={1.5} />
+          </motion.span>
+        </button>
+
+        {/* Right actions */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {step.effort && (
             <span className="text-xs font-mono text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 rounded-md px-2 py-0.5">
               {step.effort}
             </span>
           )}
           <button
-            onClick={copy}
+            onClick={e => { e.stopPropagation(); copy(); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-300 dark:text-zinc-600 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-150"
           >
             <motion.span
@@ -190,14 +218,8 @@ function StepCard({ step, index }: { step: NonNullable<RoadmapData["phases"]>[0]
               }
             </motion.span>
           </button>
-          <button
-            onClick={() => setDone(d => !d)}
-            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-150 ${done ? "text-green-500 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 dark:hover:bg-green-900/40" : "text-zinc-300 dark:text-zinc-600 hover:text-green-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={done ? 2 : 1.5} />
-          </button>
         </div>
-      </button>
+      </div>
 
       {/* Expandable body */}
       <AnimatePresence initial={false}>
@@ -264,6 +286,79 @@ function StepCard({ step, index }: { step: NonNullable<RoadmapData["phases"]>[0]
           </motion.div>
         )}
       </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// ── Roadmap loading overlay ───────────────────────────────────────────────────
+const RM_PHASES = [
+  { text: "Lese und verstehe deine Konversation...", ms: 0 },
+  { text: "Identifiziere Transformationsphasen...", ms: 3500 },
+  { text: "Plane konkrete Umsetzungsschritte...", ms: 7000 },
+  { text: "Wähle die besten Tools aus...", ms: 10500 },
+  { text: "Berechne Aufwände und Prioritäten...", ms: 14000 },
+  { text: "Erstelle die finale Roadmap...", ms: 17000 },
+];
+
+function RoadmapLoading() {
+  const [current, setCurrent] = useState(0);
+  const [done, setDone] = useState<number[]>([]);
+
+  useEffect(() => {
+    const timers = RM_PHASES.map((m, i) =>
+      setTimeout(() => {
+        setCurrent(i);
+        if (i > 0) setDone(prev => [...prev, i - 1]);
+      }, m.ms)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex flex-col items-center justify-center py-24 px-8"
+    >
+      <motion.div
+        className="w-14 h-14 rounded-2xl bg-green-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-green-600/20 mb-12"
+        animate={{ scale: [1, 1.05, 1] }}
+        transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+        style={{ fontFamily: "Georgia, serif" }}
+      >
+        B
+      </motion.div>
+      <div className="flex flex-col gap-4 w-full max-w-xs">
+        {RM_PHASES.map((m, i) => {
+          if (i > current) return null;
+          const isDone = done.includes(i);
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ type: "spring", duration: 0.5, bounce: 0.1 }}
+              className="flex items-start gap-3"
+            >
+              <div className="mt-0.5 flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                {isDone ? (
+                  <CheckCircle2 className="w-4 h-4 text-green-500" strokeWidth={2} />
+                ) : (
+                  <motion.span
+                    animate={{ scale: [1, 1.25, 1] }}
+                    transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+                    className="w-2.5 h-2.5 rounded-full bg-green-500 block"
+                  />
+                )}
+              </div>
+              <p className={`text-sm leading-snug ${isDone ? "text-zinc-400 line-through" : "text-zinc-800 dark:text-zinc-200 font-medium"}`}>
+                {m.text}
+              </p>
+            </motion.div>
+          );
+        })}
+      </div>
+      <p className="text-xs text-zinc-400 mt-10">Das dauert typischerweise 15–30 Sekunden</p>
     </motion.div>
   );
 }
@@ -486,17 +581,7 @@ function DashboardContent() {
                 <div className="max-w-2xl mx-auto px-6 py-8">
 
                   {/* Loading */}
-                  {rmLoading && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-center py-20"
-                    >
-                      <div className="thinking-spinner mx-auto mb-4" style={{ width: 28, height: 28 }} />
-                      <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">KI generiert die Roadmap...</p>
-                      <p className="text-xs text-zinc-400">Beim ersten Mal dauert es einen Moment.</p>
-                    </motion.div>
-                  )}
+                  {rmLoading && <RoadmapLoading />}
 
                   {roadmap && !rmLoading && (
                     <div className="flex flex-col gap-10">
@@ -510,26 +595,23 @@ function DashboardContent() {
                         >
                           <p className="text-xs tracking-widest text-zinc-400 uppercase mb-4">Ablauf</p>
                           {/* Premium horizontal timeline */}
-                          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm overflow-x-auto">
-                            <div className="flex items-start gap-0 min-w-max">
+                          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm">
+                            <div className="flex flex-wrap gap-x-2 gap-y-4">
                               {roadmap.phases.flatMap(ph => ph.steps).map((step, i, arr) => (
-                                <div key={step.id} className="flex items-start">
+                                <div key={step.id} className="flex items-center gap-1.5">
                                   <motion.div
                                     initial={{ opacity: 0, y: 6 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ type: "spring", duration: 0.4, bounce: 0.1, delay: i * 0.05 }}
-                                    className="flex flex-col items-center gap-2"
+                                    className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2"
                                   >
-                                    <div className="w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-zinc-900 text-xs font-bold flex-shrink-0 shadow-sm">
+                                    <div className="w-6 h-6 rounded-full bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-zinc-900 text-[11px] font-bold flex-shrink-0">
                                       {i + 1}
                                     </div>
-                                    <p className="text-xs text-zinc-600 dark:text-zinc-400 text-center max-w-[72px] leading-tight font-medium">{step.title}</p>
+                                    <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-tight font-medium max-w-[90px]">{step.title}</p>
                                   </motion.div>
                                   {i < arr.length - 1 && (
-                                    <div className="flex items-center mx-2 mt-3.5">
-                                      <div className="w-8 h-px bg-zinc-200 dark:bg-zinc-700" />
-                                      <ArrowRight className="w-3 h-3 text-zinc-300 dark:text-zinc-600 -ml-1.5 flex-shrink-0" strokeWidth={2} />
-                                    </div>
+                                    <ArrowRight className="w-3 h-3 text-zinc-300 dark:text-zinc-600 flex-shrink-0" strokeWidth={2} />
                                   )}
                                 </div>
                               ))}

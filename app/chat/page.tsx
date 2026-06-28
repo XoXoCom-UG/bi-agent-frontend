@@ -381,7 +381,7 @@ export default function ChatPage() {
                 return (
                   <div key={i} className={cn("flex gap-3 animate-in", isUser && "flex-row-reverse")}>
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5"
-                      style={{ background: isUser ? "#18181b" : "var(--green)", fontFamily: isUser ? "inherit" : "Georgia,serif" }}>
+                      style={{ background: isUser ? "#15803d" : "var(--green)", fontFamily: isUser ? "inherit" : "Georgia,serif" }}>
                       {isUser ? "U" : "A"}
                     </div>
                     <div className={cn("flex flex-col min-w-0", isUser ? "items-end max-w-[78%]" : "items-start flex-1")}>
@@ -389,7 +389,7 @@ export default function ChatPage() {
                       <div className={cn(
                         "leading-relaxed",
                         isUser
-                          ? "bg-zinc-900 dark:bg-zinc-700 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-[13px]"
+                          ? "bg-green-600 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm text-[13px]"
                           : "bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200 px-5 py-4 rounded-2xl rounded-tl-sm w-full"
                       )}
                         dangerouslySetInnerHTML={{ __html: md(content) }} />
