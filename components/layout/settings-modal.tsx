@@ -1,0 +1,220 @@
+"use client";
+import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
+import { X, User, Palette, Sun, Moon, Monitor } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { useAuth } from "@/lib/auth-context";
+import { cn } from "@/lib/utils";
+
+type Tab = "profil" | "darstellung";
+
+export function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [tab, setTab] = useState<Tab>("profil");
+  const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
+  const [name, setName] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (open) setName(localStorage.getItem("matfit_name") || "");
+  }, [open]);
+
+  function saveName() {
+    localStorage.setItem("matfit_name", name.trim());
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1800);
+  }
+
+  const TABS: { id: Tab; label: string; Icon: React.ElementType }[] = [
+    { id: "profil",       label: "Profil",       Icon: User    },
+    { id: "darstellung",  label: "Darstellung",  Icon: Palette },
+  ];
+
+  const THEMES = [
+    { value: "light",  label: "Hell",    Icon: Sun     },
+    { value: "dark",   label: "Dunkel",  Icon: Moon    },
+    { value: "system", label: "Auto",    Icon: Monitor },
+  ];
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            onClick={onClose}
+          />
+
+          {/* Modal */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 10 }}
+              transition={{ type: "spring", duration: 0.38, bounce: 0.08 }}
+              className="pointer-events-auto w-full bg-white rounded-2xl shadow-2xl shadow-black/20 border border-zinc-200 overflow-hidden flex"
+              style={{ maxWidth: 680, height: 460 }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Left nav */}
+              <div className="w-48 bg-zinc-50 border-r border-zinc-200 flex flex-col p-3 shrink-0">
+                {/* Brand */}
+                <div className="flex items-center gap-2 px-2 py-2.5 mb-4">
+                  <div className="w-7 h-7 rounded-lg bg-green-600 flex items-center justify-center text-white font-bold text-xs shrink-0"
+                    style={{ fontFamily: "Georgia,serif" }}>M</div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-xs text-zinc-900 leading-none">matfit.ai</p>
+                    <p className="text-xs text-zinc-400 mt-0.5">Einstellungen</p>
+                  </div>
+                </div>
+
+                {TABS.map(t => (
+                  <motion.button
+                    key={t.id}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setTab(t.id)}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm mb-0.5 font-medium text-left transition-colors duration-150",
+                      tab === t.id
+                        ? "bg-white text-zinc-900 shadow-sm border border-zinc-100"
+                        : "text-zinc-500 hover:bg-white/70 hover:text-zinc-700"
+                    )}
+                  >
+                    <t.Icon className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
+                    {t.label}
+                  </motion.button>
+                ))}
+              </div>
+
+              {/* Right content */}
+              <div className="flex-1 flex flex-col min-w-0">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
+                  <h2 className="text-sm font-semibold text-zinc-900">
+                    {tab === "profil" ? "Profil" : "Darstellung"}
+                  </h2>
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={onClose}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors duration-150"
+                  >
+                    <X className="w-4 h-4" strokeWidth={2} />
+                  </motion.button>
+                </div>
+
+                {/* Tab content */}
+                <div className="flex-1 overflow-y-auto">
+                  <AnimatePresence mode="wait">
+                    {tab === "profil" && (
+                      <motion.div
+                        key="profil"
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -8 }}
+                        transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+                        className="p-6 space-y-5"
+                      >
+                        {/* Avatar preview */}
+                        <div className="flex items-center gap-4 pb-5 border-b border-zinc-100">
+                          <div className="w-14 h-14 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-xl font-bold text-green-700 shrink-0">
+                            {name ? name[0].toUpperCase() : (user?.email?.[0]?.toUpperCase() ?? "U")}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-zinc-900 truncate">
+                              {name || user?.email?.split("@")[0] || "Kein Name"}
+                            </p>
+                            <p className="text-xs text-zinc-400">{user?.email}</p>
+                            <p className="text-xs text-green-600 font-medium mt-0.5">IT Consultant · matfit.ai</p>
+                          </div>
+                        </div>
+
+                        {/* Name field */}
+                        <div>
+                          <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2 block">
+                            Anzeigename
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              value={name}
+                              onChange={e => setName(e.target.value)}
+                              onKeyDown={e => e.key === "Enter" && saveName()}
+                              placeholder="Dein Name"
+                              className="flex-1 h-9 rounded-lg border border-zinc-200 px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 transition-all duration-150"
+                            />
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={saveName}
+                              className={cn(
+                                "h-9 px-4 rounded-lg text-xs font-semibold transition-all duration-200 min-w-[90px]",
+                                saved
+                                  ? "bg-green-600 text-white"
+                                  : "bg-zinc-900 text-white hover:bg-zinc-700"
+                              )}
+                            >
+                              {saved ? "✓ Gespeichert" : "Speichern"}
+                            </motion.button>
+                          </div>
+                        </div>
+
+                        {/* Email (read-only) */}
+                        <div>
+                          <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2 block">
+                            E-Mail
+                          </label>
+                          <div className="h-9 rounded-lg border border-zinc-100 bg-zinc-50 px-3 flex items-center">
+                            <span className="text-sm text-zinc-500">{user?.email || "—"}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {tab === "darstellung" && (
+                      <motion.div
+                        key="darstellung"
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -8 }}
+                        transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+                        className="p-6"
+                      >
+                        <div className="flex items-center justify-between py-4 border-b border-zinc-100">
+                          <div>
+                            <p className="text-sm font-medium text-zinc-900">Design</p>
+                            <p className="text-xs text-zinc-400 mt-0.5">Hell, dunkel oder Systemeinstellung</p>
+                          </div>
+                          <div className="flex gap-1.5 bg-zinc-100 rounded-xl p-1">
+                            {THEMES.map(opt => (
+                              <motion.button
+                                key={opt.value}
+                                whileTap={{ scale: 0.93 }}
+                                onClick={() => setTheme(opt.value)}
+                                className={cn(
+                                  "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150",
+                                  theme === opt.value
+                                    ? "bg-white shadow-sm text-zinc-900"
+                                    : "text-zinc-500 hover:text-zinc-700"
+                                )}
+                              >
+                                <opt.Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+                                {opt.label}
+                              </motion.button>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
