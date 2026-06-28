@@ -9,9 +9,19 @@
   --green-dark: #15803d;
 }
 
+/* ── Dark mode base ─────────────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; }
 
+html { background-color: #fafafa; }
+html.dark { background-color: #09090b; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  background-color: #fafafa;
+}
+html.dark body { background-color: #09090b; color: #fafafa; }
+
+/* ── Spinner ────────────────────────────────────────────────────────────────── */
 @keyframes thinking-spin { to { transform: rotate(360deg); } }
 .thinking-spinner {
   width: 14px; height: 14px; flex-shrink: 0;
@@ -21,43 +31,39 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans
   animation: thinking-spin 0.7s linear infinite;
   display: inline-block;
 }
+html.dark .thinking-spinner { border-color: #3f3f46; border-top-color: var(--green); }
 
+/* ── Fade up ────────────────────────────────────────────────────────────────── */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .animate-in { animation: fade-up 0.2s ease-out; }
 
+/* ── Concept animations ─────────────────────────────────────────────────────── */
 @keyframes concept-in {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.concept-fade-in {
-  animation: concept-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
+.concept-fade-in { animation: concept-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .concept-fade-in-1 { animation-delay: 0ms; }
 .concept-fade-in-2 { animation-delay: 80ms; }
 .concept-fade-in-3 { animation-delay: 160ms; }
-.concept-section {
-  animation: concept-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
+.concept-section   { animation: concept-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 @keyframes deck-card-in {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.deck-card {
-  animation: deck-card-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
+.deck-card { animation: deck-card-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 @keyframes slide-from-right {
   from { opacity: 0; transform: translateX(24px); }
   to   { opacity: 1; transform: translateX(0); }
 }
-.roadmap-panel {
-  animation: slide-from-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
+.roadmap-panel { animation: slide-from-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
+/* ── Choice chips ───────────────────────────────────────────────────────────── */
 .choice-chip {
   padding: 7px 14px;
   border-radius: 10px;
@@ -69,19 +75,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans
   cursor: pointer;
   transition: all 0.15s;
 }
-.choice-chip:hover:not(:disabled) {
-  border-color: var(--green);
-  background: var(--green-light);
-  color: var(--green-dark);
-}
-.choice-chip.chosen {
-  background: var(--green);
-  color: white;
-  border-color: transparent;
-  font-weight: 500;
-}
+html.dark .choice-chip { border-color: #3f3f46; background: #27272a; color: #a1a1aa; }
+.choice-chip:hover:not(:disabled) { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+html.dark .choice-chip:hover:not(:disabled) { background: #052e16; color: #4ade80; }
+.choice-chip.chosen { background: var(--green); color: white; border-color: transparent; font-weight: 500; }
 .choice-chip:disabled:not(.chosen) { opacity: 0.4; cursor: default; }
 
+/* ── Chat prose ─────────────────────────────────────────────────────────────── */
 .prose-chat p { margin-bottom: 6px; }
 .prose-chat p:last-child { margin-bottom: 0; }
 .prose-chat strong { font-weight: 600; }
@@ -90,3 +90,4 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans
 .prose-chat li { margin-bottom: 3px; font-size: 13px; line-height: 1.6; }
 .prose-chat h4 { font-weight: 600; margin: 10px 0 4px; }
 .prose-chat code { font-size: 12px; font-family: monospace; background: #f3f4f6; padding: 1px 5px; border-radius: 4px; }
+html.dark .prose-chat code { background: #27272a; color: #d4d4d8; }

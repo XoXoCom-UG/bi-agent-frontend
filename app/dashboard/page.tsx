@@ -143,7 +143,7 @@ function StepCard({ step, index }: { step: NonNullable<RoadmapData["phases"]>[0]
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ type: "spring", duration: 0.4, bounce: 0.05, delay: index * 0.07 }}
-      className={`relative bg-white border rounded-xl shadow-sm transition-all duration-200 ${done ? "border-green-200 bg-green-50/30" : "border-zinc-200 hover:shadow-md"}`}
+      className={`relative bg-white dark:bg-zinc-900 border rounded-xl shadow-sm transition-all duration-200 ${done ? "border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/20" : "border-zinc-200 dark:border-zinc-800 hover:shadow-md"}`}
     >
       {/* Timeline dot */}
       <motion.span
@@ -165,18 +165,18 @@ function StepCard({ step, index }: { step: NonNullable<RoadmapData["phases"]>[0]
         >
           <ChevronDown className="w-4 h-4" strokeWidth={1.5} />
         </motion.span>
-        <span className={`flex-1 text-sm font-semibold leading-snug ${done ? "text-zinc-400 line-through" : "text-zinc-900"}`}>
+        <span className={`flex-1 text-sm font-semibold leading-snug ${done ? "text-zinc-400 dark:text-zinc-600 line-through" : "text-zinc-900 dark:text-zinc-50"}`}>
           {step.title}
         </span>
         <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
           {step.effort && (
-            <span className="text-xs font-mono text-zinc-400 border border-zinc-200 rounded-md px-2 py-0.5">
+            <span className="text-xs font-mono text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 rounded-md px-2 py-0.5">
               {step.effort}
             </span>
           )}
           <button
             onClick={copy}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-300 hover:text-zinc-600 hover:bg-zinc-100 transition-colors duration-150"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-300 dark:text-zinc-600 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-150"
           >
             <motion.span
               key={copied ? "check" : "copy"}
@@ -192,7 +192,7 @@ function StepCard({ step, index }: { step: NonNullable<RoadmapData["phases"]>[0]
           </button>
           <button
             onClick={() => setDone(d => !d)}
-            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-150 ${done ? "text-green-500 bg-green-50 hover:bg-green-100" : "text-zinc-300 hover:text-green-500 hover:bg-zinc-100"}`}
+            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-150 ${done ? "text-green-500 bg-green-50 dark:bg-green-950/40 hover:bg-green-100 dark:hover:bg-green-900/40" : "text-zinc-300 dark:text-zinc-600 hover:text-green-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
           >
             <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={done ? 2 : 1.5} />
           </button>
@@ -209,12 +209,12 @@ function StepCard({ step, index }: { step: NonNullable<RoadmapData["phases"]>[0]
             transition={{ type: "spring", duration: 0.35, bounce: 0.05 }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 border-t border-zinc-100 pt-4">
+            <div className="px-5 pb-5 border-t border-zinc-100 dark:border-zinc-800 pt-4">
               {step.what && (
-                <p className="text-sm text-zinc-600 leading-relaxed mb-2">{step.what}</p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed mb-2">{step.what}</p>
               )}
               {step.why && (
-                <p className="text-xs text-zinc-400 mb-4">
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-4">
                   <span className="font-semibold text-green-600">Warum: </span>{step.why}
                 </p>
               )}
@@ -227,10 +227,10 @@ function StepCard({ step, index }: { step: NonNullable<RoadmapData["phases"]>[0]
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ type: "spring", duration: 0.3, bounce: 0.05, delay: ti * 0.05 }}
-                      className="bg-zinc-50 border border-zinc-100 rounded-lg p-3.5"
+                      className="bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-lg p-3.5"
                     >
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-semibold text-zinc-900 flex-1">{tool.name}</span>
+                        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex-1">{tool.name}</span>
                         {tool.verdict && (
                           <span className={`text-xs font-medium border rounded-full px-2 py-0.5 ${verdictStyle(tool.verdict)}`}>
                             {tool.verdict}
@@ -238,20 +238,20 @@ function StepCard({ step, index }: { step: NonNullable<RoadmapData["phases"]>[0]
                         )}
                       </div>
                       {tool.why && (
-                        <p className="text-xs text-zinc-500 leading-relaxed mb-2.5">{tool.why}</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed mb-2.5">{tool.why}</p>
                       )}
                       {(tool.pros?.length || tool.cons?.length) && (
                         <div className="grid grid-cols-2 gap-3">
                           {tool.pros?.length ? (
                             <div>
                               <p className="text-xs font-semibold text-green-600 uppercase tracking-widest mb-1.5">Dafür</p>
-                              {tool.pros.map((p, i) => <p key={i} className="text-xs text-zinc-500 mb-1">· {p}</p>)}
+                              {tool.pros.map((p, i) => <p key={i} className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">· {p}</p>)}
                             </div>
                           ) : null}
                           {tool.cons?.length ? (
                             <div>
                               <p className="text-xs font-semibold text-amber-600 uppercase tracking-widest mb-1.5">Dagegen</p>
-                              {tool.cons.map((c, i) => <p key={i} className="text-xs text-zinc-500 mb-1">· {c}</p>)}
+                              {tool.cons.map((c, i) => <p key={i} className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">· {c}</p>)}
                             </div>
                           ) : null}
                         </div>
@@ -296,20 +296,20 @@ function DashboardContent() {
   }
 
   if (loading || !token) return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-900">
       <div className="thinking-spinner" style={{ width: 24, height: 24 }} />
     </div>
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-50">
+    <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950">
       <Sidebar currentPath="/dashboard" />
 
       <div className="flex-1 flex flex-col overflow-hidden relative">
 
         {/* Topbar */}
-        <div className="h-14 bg-white border-b border-zinc-200 flex items-center px-6 gap-3 flex-shrink-0">
-          <h1 className="text-sm font-semibold text-zinc-900">Roadmap</h1>
+        <div className="h-14 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-6 gap-3 flex-shrink-0">
+          <h1 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Roadmap</h1>
         </div>
 
         {/* Deck */}
@@ -321,8 +321,8 @@ function DashboardContent() {
               transition={{ type: "spring", duration: 0.4, bounce: 0 }}
               className="mb-6"
             >
-              <h2 className="text-xl font-bold tracking-tight text-zinc-900 mb-1">Deck</h2>
-              <p className="text-sm text-zinc-500">Alle Konversationen. Öffne Concept oder Roadmap.</p>
+              <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-1">Deck</h2>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Alle Konversationen. Öffne Concept oder Roadmap.</p>
             </motion.div>
 
             {/* Skeleton */}
@@ -334,9 +334,9 @@ function DashboardContent() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.06 }}
-                    className="bg-white border border-zinc-200 rounded-xl h-[88px] overflow-hidden"
+                    className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl h-[88px] overflow-hidden"
                   >
-                    <div className="h-full bg-gradient-to-r from-zinc-100 via-zinc-50 to-zinc-100 animate-pulse" />
+                    <div className="h-full bg-gradient-to-r from-zinc-100 via-zinc-50 to-zinc-100 dark:from-zinc-700 dark:via-zinc-800 dark:to-zinc-700 animate-pulse" />
                   </motion.div>
                 ))}
               </div>
@@ -348,13 +348,13 @@ function DashboardContent() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: "spring", duration: 0.5, bounce: 0.1 }}
-                className="bg-white border border-zinc-200 rounded-xl shadow-sm px-10 py-16 text-center"
+                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm px-10 py-16 text-center"
               >
-                <div className="w-11 h-11 rounded-xl bg-zinc-100 flex items-center justify-center mx-auto mb-4">
-                  <MessageSquare className="w-5 h-5 text-zinc-400" strokeWidth={1.5} />
+                <div className="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="w-5 h-5 text-zinc-400 dark:text-zinc-500" strokeWidth={1.5} />
                 </div>
-                <h3 className="text-base font-semibold text-zinc-900 mb-2">Noch keine Konversationen</h3>
-                <p className="text-sm text-zinc-500 mb-5">Starte einen Chat und komm dann hierher zurück.</p>
+                <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Noch keine Konversationen</h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Starte einen Chat und komm dann hierher zurück.</p>
                 <MagneticButton
                   onClick={() => router.push("/chat")}
                   className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 rounded-lg px-5 py-2.5 inline-flex items-center gap-2"
@@ -371,14 +371,14 @@ function DashboardContent() {
                 <SpotlightCard
                   key={row.session_id}
                   delay={i * 0.055}
-                  className="bg-white border border-zinc-200 rounded-xl shadow-sm"
+                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm"
                 >
                   <div className="px-5 pt-4 pb-3 flex items-start gap-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-zinc-900 mb-0.5 leading-snug">
+                      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-0.5 leading-snug">
                         {row.title || "Konversation"}
                       </h3>
-                      <p className="text-xs text-zinc-400 font-mono">
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500 font-mono">
                         {row.message_count} Nachrichten · {new Date(row.saved_at).toLocaleDateString("de", { month: "short", day: "numeric" })}
                       </p>
                     </div>
@@ -390,12 +390,12 @@ function DashboardContent() {
                     )}
                   </div>
 
-                  <div className="px-4 pb-3.5 flex items-center gap-2 border-t border-zinc-100 pt-2.5">
+                  <div className="px-4 pb-3.5 flex items-center gap-2 border-t border-zinc-100 dark:border-zinc-800 pt-2.5">
                     {/* Outline buttons */}
                     <motion.button
                       whileTap={{ scale: 0.96 }}
                       onClick={() => { store.setSessionId(row.session_id); router.push("/chat"); }}
-                      className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-900 transition-colors duration-150 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50"
+                      className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors duration-150 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                     >
                       <MessageSquare className="w-3.5 h-3.5" strokeWidth={1.5} />
                       Chat
@@ -404,7 +404,7 @@ function DashboardContent() {
                     <motion.button
                       whileTap={{ scale: 0.96 }}
                       onClick={() => router.push(`/concept?session=${row.session_id}`)}
-                      className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-900 transition-colors duration-150 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50"
+                      className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors duration-150 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                     >
                       <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
                       Concept
@@ -422,7 +422,7 @@ function DashboardContent() {
                           Roadmap öffnen
                         </MagneticButton>
                       ) : (
-                        <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-300 border border-zinc-100 rounded-lg px-3.5 py-1.5 cursor-not-allowed">
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-300 dark:text-zinc-600 border border-zinc-100 dark:border-zinc-800 rounded-lg px-3.5 py-1.5 cursor-not-allowed">
                           <Map className="w-3.5 h-3.5" strokeWidth={1.5} />
                           Roadmap
                         </span>
@@ -444,26 +444,26 @@ function DashboardContent() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
               transition={{ type: "spring", duration: 0.45, bounce: 0.08 }}
-              className="absolute inset-0 bg-zinc-50 z-20 flex flex-col overflow-hidden"
+              className="absolute inset-0 bg-zinc-50 dark:bg-zinc-950 z-20 flex flex-col overflow-hidden"
             >
               {/* Roadmap topbar */}
-              <div className="h-14 bg-white border-b border-zinc-200 flex items-center px-6 gap-3 flex-shrink-0">
+              <div className="h-14 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-6 gap-3 flex-shrink-0">
                 <motion.button
                   whileTap={{ scale: 0.96 }}
                   onClick={() => { setRoadmap(null); setRmSession(null); }}
-                  className="flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900 transition-colors duration-150 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50"
+                  className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors duration-150 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" strokeWidth={1.5} />
                   Deck
                 </motion.button>
-                <h2 className="flex-1 text-sm font-semibold text-zinc-900 truncate">
+                <h2 className="flex-1 text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">
                   {roadmap?.title || "Roadmap"}
                 </h2>
                 {rmSession && (
                   <motion.button
                     whileTap={{ scale: 0.96 }}
                     onClick={() => openRoadmap(rmSession)}
-                    className="flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900 transition-colors duration-150 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50"
+                    className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors duration-150 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                   >
                     <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />
                     Neu generieren
@@ -483,7 +483,7 @@ function DashboardContent() {
                       className="text-center py-20"
                     >
                       <div className="thinking-spinner mx-auto mb-4" style={{ width: 28, height: 28 }} />
-                      <p className="text-sm font-medium text-zinc-700 mb-1">KI generiert die Roadmap...</p>
+                      <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">KI generiert die Roadmap...</p>
                       <p className="text-xs text-zinc-400">Beim ersten Mal dauert es einen Moment.</p>
                     </motion.div>
                   )}
@@ -498,23 +498,32 @@ function DashboardContent() {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ type: "spring", duration: 0.4, bounce: 0 }}
                         >
-                          <p className="text-xs tracking-widest text-zinc-400 uppercase mb-3">Ablauf</p>
-                          <div className="bg-white border border-zinc-200 rounded-xl p-4 flex flex-wrap gap-2 items-center shadow-sm">
-                            {roadmap.phases.flatMap(ph => ph.steps).map((step, i, arr) => (
-                              <span key={step.id} className="flex items-center gap-2">
-                                <motion.span
-                                  initial={{ opacity: 0, scale: 0.8 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  transition={{ type: "spring", duration: 0.3, bounce: 0.1, delay: i * 0.04 }}
-                                  className="text-xs font-medium text-zinc-700 bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-1.5"
-                                >
-                                  {step.title}
-                                </motion.span>
-                                {i < arr.length - 1 && (
-                                  <ArrowRight className="w-3.5 h-3.5 text-zinc-300 flex-shrink-0" strokeWidth={1.5} />
-                                )}
-                              </span>
-                            ))}
+                          <p className="text-xs tracking-widest text-zinc-400 uppercase mb-4">Ablauf</p>
+                          {/* Premium horizontal timeline */}
+                          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm overflow-x-auto">
+                            <div className="flex items-start gap-0 min-w-max">
+                              {roadmap.phases.flatMap(ph => ph.steps).map((step, i, arr) => (
+                                <div key={step.id} className="flex items-start">
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ type: "spring", duration: 0.4, bounce: 0.1, delay: i * 0.05 }}
+                                    className="flex flex-col items-center gap-2"
+                                  >
+                                    <div className="w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-zinc-900 text-xs font-bold flex-shrink-0 shadow-sm">
+                                      {i + 1}
+                                    </div>
+                                    <p className="text-xs text-zinc-600 dark:text-zinc-400 text-center max-w-[72px] leading-tight font-medium">{step.title}</p>
+                                  </motion.div>
+                                  {i < arr.length - 1 && (
+                                    <div className="flex items-center mx-2 mt-3.5">
+                                      <div className="w-8 h-px bg-zinc-200 dark:bg-zinc-700" />
+                                      <ArrowRight className="w-3 h-3 text-zinc-300 dark:text-zinc-600 -ml-1.5 flex-shrink-0" strokeWidth={2} />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </motion.div>
                       )}
@@ -528,17 +537,17 @@ function DashboardContent() {
                           transition={{ type: "spring", duration: 0.4, bounce: 0, delay: pi * 0.08 }}
                         >
                           <div className="flex items-center gap-3 mb-2">
-                            <span className="text-xs font-mono font-bold bg-zinc-900 text-white rounded-full px-2.5 py-0.5">
+                            <span className="text-xs font-mono font-bold bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full px-2.5 py-0.5">
                               Phase {pi + 1}
                             </span>
-                            <h3 className="text-base font-semibold text-zinc-900 tracking-tight">{ph.name}</h3>
+                            <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">{ph.name}</h3>
                           </div>
                           {ph.goal && (
-                            <p className="text-sm text-zinc-500 mb-5 ml-px">{ph.goal}</p>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5 ml-px">{ph.goal}</p>
                           )}
 
                           {/* Timeline */}
-                          <div className="border-l-2 border-zinc-200 pl-6 ml-1.5 flex flex-col gap-3">
+                          <div className="border-l-2 border-zinc-200 dark:border-zinc-700 pl-6 ml-1.5 flex flex-col gap-3">
                             {ph.steps.map((step, si) => (
                               <StepCard key={step.id} step={step} index={si} />
                             ))}
