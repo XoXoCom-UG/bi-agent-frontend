@@ -43,11 +43,11 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 
 export function Badge({ variant = "default", className, children, ...props }: BadgeProps) {
   const variants: Record<BadgeVariant, string> = {
-    default: "bg-green-50 text-green-700 border-green-200",
-    secondary: "bg-gray-100 text-gray-600 border-gray-200",
-    outline: "bg-white text-gray-700 border-gray-200",
-    success: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    destructive: "bg-red-50 text-red-700 border-red-200",
+    default: "bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800",
+    secondary: "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700",
+    outline: "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700",
+    success: "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800",
+    destructive: "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800",
   };
   return (
     <span className={cn("inline-flex items-center border rounded-full px-2.5 py-0.5 text-xs font-semibold", variants[variant], className)} {...props}>
@@ -102,12 +102,12 @@ export function Avatar({ initials, size = "md", className }: { initials: string;
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 export function TabGroup({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("flex bg-gray-100 rounded-lg p-0.5 gap-0.5", className)}>{children}</div>;
+  return <div className={cn("flex bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5 gap-0.5", className)}>{children}</div>;
 }
 export function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button onClick={onClick}
-      className={cn("px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all", active ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700")}>
+      className={cn("px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all", active ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 shadow-sm" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200")}>
       {children}
     </button>
   );
