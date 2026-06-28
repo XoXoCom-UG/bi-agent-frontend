@@ -4,14 +4,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api, ConceptData } from "@/lib/api";
+import { Sidebar } from "@/components/layout/sidebar";
 import {
   Clock, AlertTriangle, TrendingDown, Zap,
-  ChevronDown, ChevronRight, CheckCircle2, FileText, ArrowLeft,
+  ChevronRight, CheckCircle2, FileText, MessageSquare,
 } from "lucide-react";
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "motion/react";
+import { motion, AnimatePresence, useSpring } from "motion/react";
 
 // ── Magnetic button ───────────────────────────────────────────────────────────
-function MagneticButton({
+function MagBtn({
   children, onClick, className, disabled, type = "button",
 }: {
   children: React.ReactNode;
@@ -109,25 +110,21 @@ function GeneratingOverlay() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.35 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-white"
+      transition={{ duration: 0.3 }}
+      className="absolute inset-0 z-30 flex items-center justify-center bg-white"
     >
-      {/* Subtle background pulse */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
         animate={{ opacity: [0.04, 0.08, 0.04] }}
         transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-        style={{
-          background: "radial-gradient(ellipse 60% 50% at 50% 50%, #16a34a, transparent)",
-        }}
+        style={{ background: "radial-gradient(ellipse 60% 50% at 50% 50%, #16a34a, transparent)" }}
       />
 
       <div className="relative w-full max-w-sm px-8">
-        {/* Animated logo mark */}
         <div className="flex justify-center mb-14">
           <motion.div
             className="w-14 h-14 rounded-2xl bg-green-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-green-600/25"
-            animate={{ scale: [1, 1.06, 1], boxShadow: ["0 8px 24px rgba(22,163,74,0.25)", "0 12px 36px rgba(22,163,74,0.4)", "0 8px 24px rgba(22,163,74,0.25)"] }}
+            animate={{ scale: [1, 1.06, 1] }}
             transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
             style={{ fontFamily: "Georgia, serif" }}
           >
@@ -135,13 +132,11 @@ function GeneratingOverlay() {
           </motion.div>
         </div>
 
-        {/* Messages */}
         <div className="flex flex-col gap-4">
           {G_MESSAGES.map((m, i) => {
             if (i > current) return null;
             const isDone = done.includes(i);
             const isCurrent = i === current;
-
             return (
               <motion.div
                 key={i}
@@ -152,40 +147,24 @@ function GeneratingOverlay() {
               >
                 <div className="mt-0.5 flex-shrink-0 w-5 h-5 flex items-center justify-center">
                   {isDone ? (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", duration: 0.3, bounce: 0.4 }}
-                    >
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", duration: 0.3, bounce: 0.4 }}>
                       <CheckCircle2 className="w-4 h-4 text-green-500" strokeWidth={2} />
                     </motion.div>
                   ) : isCurrent ? (
-                    <motion.div
-                      animate={{ scale: [1, 1.3, 1] }}
-                      transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
-                      className="w-2 h-2 rounded-full bg-green-600"
-                    />
+                    <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+                      className="w-2 h-2 rounded-full bg-green-600" />
                   ) : null}
                 </div>
-
                 <span className={`text-sm leading-relaxed ${isDone ? "text-zinc-400" : isCurrent ? "text-zinc-900 font-medium" : "text-zinc-400"}`}>
-                  {isCurrent
-                    ? <Typewriter text={m.text} speed={46} />
-                    : m.text
-                  }
+                  {isCurrent ? <Typewriter text={m.text} speed={46} /> : m.text}
                 </span>
               </motion.div>
             );
           })}
         </div>
 
-        {/* Bottom hint */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          className="mt-12 text-center text-xs text-zinc-400"
-        >
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
+          className="mt-12 text-center text-xs text-zinc-400">
           Das dauert typischerweise 15–30 Sekunden
         </motion.p>
       </div>
@@ -195,9 +174,9 @@ function GeneratingOverlay() {
 
 // ── KPI meta ──────────────────────────────────────────────────────────────────
 const KPI_META = [
-  { key: "manual_effort",  label: "Zeitersparnis",    sub: "Manuelle Aufwände", Icon: Clock },
-  { key: "error_rate",     label: "Fehlerrate",        sub: "Reduzierung",       Icon: AlertTriangle },
-  { key: "cost_savings",   label: "Kostenersparnis",   sub: "Pro Jahr",          Icon: TrendingDown },
+  { key: "manual_effort", label: "Zeitersparnis",   sub: "Manuelle Aufwände", Icon: Clock },
+  { key: "error_rate",    label: "Fehlerrate",       sub: "Reduzierung",       Icon: AlertTriangle },
+  { key: "cost_savings",  label: "Kostenersparnis",  sub: "Pro Jahr",          Icon: TrendingDown },
 ] as const;
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -248,280 +227,254 @@ function ConceptContent() {
     .map(m => ({ ...m, val: (bv as Record<string, string | undefined>)[m.key] }))
     .filter(k => k.val);
 
+  const hasMessages = store.messages.length > 0;
+
   if (loading || !token) return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="thinking-spinner" style={{ width: 28, height: 28 }} />
+    <div className="flex bg-white" style={{ height: "100vh" }}>
+      <div className="w-60 border-r border-zinc-200 shrink-0" />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="thinking-spinner" style={{ width: 28, height: 28 }} />
+      </div>
     </div>
   );
 
   return (
-    <>
-      {/* Generating overlay */}
-      <AnimatePresence>{generating && <GeneratingOverlay />}</AnimatePresence>
+    <div className="flex bg-white" style={{ height: "100vh", overflow: "hidden" }}>
+      <Sidebar currentPath="/concept" />
 
-      <div className="min-h-screen bg-white">
+      <div className="flex-1 flex flex-col relative" style={{ overflow: "hidden" }}>
+        {/* Generating overlay */}
+        <AnimatePresence>{generating && <GeneratingOverlay />}</AnimatePresence>
 
-        {/* ── Navbar ─────────────────────────────────────────────────────── */}
-        <nav className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-zinc-200 flex items-center gap-2.5 px-6 h-14">
-          <MagneticButton
-            onClick={() => router.push("/chat")}
-            className="flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900 transition-colors duration-150 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" strokeWidth={1.5} />
-            Chat
-          </MagneticButton>
-
-          <span className="flex-1 text-sm font-medium text-zinc-900 truncate">
-            {concept?.title || "Transformation Concept"}
-          </span>
+        {/* Topbar */}
+        <header className="flex items-center gap-2.5 px-5 h-14 border-b border-zinc-100 shrink-0 bg-white">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-zinc-900 truncate">
+              {concept?.title || "Transformation Concept"}
+            </p>
+            {concept && (
+              <p className="text-xs text-zinc-400">{steps.length} Schritte · {stories.length} User Stories</p>
+            )}
+          </div>
 
           {concept && (
-            <span className="text-xs text-zinc-400 hidden sm:block tracking-wide">Bereit</span>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50 transition-colors duration-150"
+            >
+              <FileText className="w-3.5 h-3.5" strokeWidth={1.5} />
+              PDF
+            </motion.button>
           )}
 
-          <motion.button
-            whileTap={{ scale: 0.96 }}
-            className="text-sm text-zinc-600 hover:text-zinc-900 transition-colors duration-150 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50"
-          >
-            Bearbeiten
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.96 }}
-            className="flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900 transition-colors duration-150 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50"
-          >
-            <FileText className="w-3.5 h-3.5" strokeWidth={1.5} />
-            PDF
-          </motion.button>
-
-          <MagneticButton
+          <MagBtn
             onClick={() => router.push(`/dashboard?session=${sessionId}`)}
-            className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 rounded-lg px-4 py-1.5"
+            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 rounded-lg px-4 py-1.5 shadow-sm shadow-green-600/20"
           >
             Roadmap →
-          </MagneticButton>
-        </nav>
+          </MagBtn>
+        </header>
 
-        {/* ── Content ────────────────────────────────────────────────────── */}
-        <div className="max-w-4xl mx-auto px-6 py-12 pb-24">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-4xl mx-auto px-6 py-10 pb-20">
 
-          {/* Page header */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", duration: 0.5, bounce: 0 }}
-            className="mb-10 pb-8 border-b border-zinc-100"
-          >
-            <p className="text-xs tracking-widest text-zinc-400 uppercase mb-4">
-              Transformation Concept
-            </p>
-            <h1 className="text-4xl font-bold tracking-tight text-zinc-900 mb-3">
-              {concept?.title || "Noch kein Concept generiert"}
-            </h1>
-            {concept && (
-              <p className="text-sm text-zinc-500">
-                {steps.length} Transformationsschritte · {stories.length} User Stories
-              </p>
-            )}
-          </motion.div>
-
-          {/* ── Empty state ──────────────────────────────────────────────── */}
-          {!concept && (
+            {/* Page header */}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", duration: 0.55, bounce: 0.08, delay: 0.1 }}
-              className="relative overflow-hidden bg-white rounded-2xl border border-zinc-200 shadow-sm px-10 py-20 text-center"
+              transition={{ type: "spring", duration: 0.5, bounce: 0 }}
+              className="mb-8 pb-7 border-b border-zinc-100"
             >
-              {/* Subtle background glow */}
-              <div className="absolute inset-0 pointer-events-none"
-                style={{ background: "radial-gradient(ellipse 70% 50% at 50% 100%, rgba(22,163,74,0.04), transparent)" }} />
-
-              <motion.div
-                animate={{ y: [0, -4, 0] }}
-                transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                className="w-14 h-14 rounded-2xl bg-zinc-50 border border-zinc-200 flex items-center justify-center mx-auto mb-6"
-              >
-                <Zap className="w-6 h-6 text-zinc-400" strokeWidth={1.5} />
-              </motion.div>
-
-              <h3 className="text-lg font-semibold text-zinc-900 mb-3">Concept generieren</h3>
-              <p className="text-sm text-zinc-500 max-w-sm mx-auto mb-8 leading-relaxed">
-                Die KI analysiert deine Konversation und erstellt ein strukturiertes Transformation Concept mit Business Value, Schritten und User Stories.
-              </p>
-
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-sm text-red-500 mb-5 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5 inline-block"
-                >
-                  {error}
-                </motion.p>
-              )}
-
-              <MagneticButton
-                onClick={generate}
-                disabled={generating}
-                className="inline-flex items-center gap-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-zinc-300 transition-colors duration-150 rounded-xl px-7 py-3.5 shadow-md shadow-green-600/20 hover:shadow-lg hover:shadow-green-600/30"
-              >
-                <Zap className="w-4 h-4" strokeWidth={1.5} />
-                {generating ? "Generiere…" : "Concept generieren"}
-              </MagneticButton>
-
-              {/* Feature hints */}
-              <div className="mt-10 grid grid-cols-3 gap-4 text-left max-w-sm mx-auto">
-                {[
-                  { icon: Clock, label: "Business Value", sub: "ROI & Zeitersparnis" },
-                  { icon: Zap, label: "Schritte", sub: "Klarer Aktionsplan" },
-                  { icon: CheckCircle2, label: "User Stories", sub: "Für dein Team" },
-                ].map(({ icon: Icon, label, sub }) => (
-                  <div key={label} className="flex flex-col items-center text-center gap-1.5">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-50 border border-zinc-200 flex items-center justify-center">
-                      <Icon className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
-                    </div>
-                    <p className="text-xs font-semibold text-zinc-700">{label}</p>
-                    <p className="text-xs text-zinc-400">{sub}</p>
-                  </div>
-                ))}
-              </div>
+              <p className="text-xs tracking-widest text-zinc-400 uppercase mb-3">Transformation Concept</p>
+              <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
+                {concept?.title || "Noch kein Concept generiert"}
+              </h1>
             </motion.div>
-          )}
 
-          {/* ── Concept loaded ───────────────────────────────────────────── */}
-          {concept && (
-            <div className="flex flex-col gap-5">
-
-              {/* KPI cards */}
-              {kpiItems.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {kpiItems.map(({ label, val, sub, Icon }, i) => (
-                    <motion.div
-                      key={label}
-                      initial={{ opacity: 0, y: 14 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ type: "spring", duration: 0.5, bounce: 0.08, delay: i * 0.08 }}
-                      whileHover={{ y: -2 }}
-                      className="bg-white border border-zinc-200 rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow duration-200 cursor-default"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-xs tracking-widest text-zinc-500 uppercase">{label}</p>
-                        <Icon className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
-                      </div>
-                      <p className="text-2xl font-bold text-zinc-900 tracking-tight leading-none mb-1.5 break-words">
-                        {val}
-                      </p>
-                      <p className="text-xs text-zinc-400">{sub}</p>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-
-              {/* Ist → Ziel */}
+            {/* ── Empty state ─────────────────────────────────────────────── */}
+            {!concept && (
               <motion.div
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ type: "spring", duration: 0.5, bounce: 0, delay: 0.12 }}
-                className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden"
+                transition={{ type: "spring", duration: 0.55, bounce: 0.08, delay: 0.1 }}
               >
-                <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-zinc-900">Ist → Ziel</h2>
-                  <span className="text-xs text-zinc-400">
-                    {Math.max(pains.length, outcomes.length)} Aspekte
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2">
-                  <div className="p-6 border-b sm:border-b-0 sm:border-r border-zinc-200">
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="w-2 h-2 rounded-full bg-zinc-300 flex-shrink-0" />
-                      <span className="text-xs tracking-widest text-zinc-400 uppercase">Ist-Zustand</span>
-                    </div>
-                    {now.summary && (
-                      <p className="text-sm leading-relaxed text-zinc-500 mb-5 pb-5 border-b border-zinc-100">{now.summary}</p>
+                {!hasMessages ? (
+                  <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm px-10 py-16 text-center relative overflow-hidden">
+                    <div className="absolute inset-0 pointer-events-none"
+                      style={{ background: "radial-gradient(ellipse 70% 50% at 50% 100%, rgba(22,163,74,0.04), transparent)" }} />
+                    <motion.div
+                      animate={{ y: [0, -4, 0] }}
+                      transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                      className="w-14 h-14 rounded-2xl bg-zinc-50 border border-zinc-200 flex items-center justify-center mx-auto mb-6"
+                    >
+                      <MessageSquare className="w-6 h-6 text-zinc-400" strokeWidth={1.5} />
+                    </motion.div>
+                    <h3 className="text-lg font-semibold text-zinc-900 mb-2">Erst mit dem Agenten chatten</h3>
+                    <p className="text-sm text-zinc-500 max-w-sm mx-auto mb-8 leading-relaxed">
+                      Starte ein Gespräch mit dem BI Agent über deine IT-Situation. Dann generiert die KI hier ein strukturiertes Concept.
+                    </p>
+                    <MagBtn
+                      onClick={() => router.push("/chat")}
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-zinc-900 hover:bg-zinc-800 transition-colors duration-150 rounded-xl px-6 py-3 shadow-md"
+                    >
+                      <MessageSquare className="w-4 h-4" strokeWidth={1.5} />
+                      Chat öffnen
+                    </MagBtn>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm px-10 py-16 text-center relative overflow-hidden">
+                    <div className="absolute inset-0 pointer-events-none"
+                      style={{ background: "radial-gradient(ellipse 70% 50% at 50% 100%, rgba(22,163,74,0.04), transparent)" }} />
+                    <motion.div
+                      animate={{ y: [0, -4, 0] }}
+                      transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                      className="w-14 h-14 rounded-2xl bg-zinc-50 border border-zinc-200 flex items-center justify-center mx-auto mb-6"
+                    >
+                      <Zap className="w-6 h-6 text-zinc-400" strokeWidth={1.5} />
+                    </motion.div>
+                    <h3 className="text-lg font-semibold text-zinc-900 mb-2">Concept generieren</h3>
+                    <p className="text-sm text-zinc-500 max-w-sm mx-auto mb-8 leading-relaxed">
+                      Die KI analysiert deine Konversation und erstellt ein strukturiertes Transformation Concept mit Business Value, Schritten und User Stories.
+                    </p>
+                    {error && (
+                      <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-red-500 mb-5 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5 inline-block">
+                        {error}
+                      </motion.p>
                     )}
-                    <div className="flex flex-col gap-3">
-                      {pains.map((p, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, x: -6 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ type: "spring", duration: 0.35, bounce: 0, delay: 0.15 + i * 0.05 }}
-                          className="flex gap-2.5 items-start"
-                        >
-                          <span className="w-2 h-2 rounded-full bg-zinc-200 flex-shrink-0 mt-1.5" />
-                          <p className="text-sm leading-relaxed text-zinc-500">{p}</p>
-                        </motion.div>
+                    <MagBtn
+                      onClick={generate}
+                      disabled={generating}
+                      className="inline-flex items-center gap-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-zinc-300 transition-colors duration-150 rounded-xl px-7 py-3.5 shadow-md shadow-green-600/20"
+                    >
+                      <Zap className="w-4 h-4" strokeWidth={1.5} />
+                      Concept generieren
+                    </MagBtn>
+                    <div className="mt-10 grid grid-cols-3 gap-4 max-w-xs mx-auto">
+                      {[
+                        { icon: Clock,        label: "Business Value", sub: "ROI & Zeit" },
+                        { icon: Zap,          label: "Schritte",       sub: "Aktionsplan" },
+                        { icon: CheckCircle2, label: "User Stories",   sub: "Für dein Team" },
+                      ].map(({ icon: Icon, label, sub }) => (
+                        <div key={label} className="flex flex-col items-center text-center gap-1.5">
+                          <div className="w-8 h-8 rounded-lg bg-zinc-50 border border-zinc-200 flex items-center justify-center">
+                            <Icon className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
+                          </div>
+                          <p className="text-xs font-semibold text-zinc-700">{label}</p>
+                          <p className="text-xs text-zinc-400">{sub}</p>
+                        </div>
                       ))}
                     </div>
                   </div>
-                  <div className="p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="w-2 h-2 rounded-full bg-zinc-700 flex-shrink-0" />
-                      <span className="text-xs tracking-widest text-zinc-900 uppercase">Ziel-Zustand</span>
-                    </div>
-                    {goal.summary && (
-                      <p className="text-sm leading-relaxed text-zinc-700 mb-5 pb-5 border-b border-zinc-100">{goal.summary}</p>
-                    )}
-                    <div className="flex flex-col gap-3">
-                      {outcomes.map((o, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, x: 6 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ type: "spring", duration: 0.35, bounce: 0, delay: 0.15 + i * 0.05 }}
-                          className="flex gap-2.5 items-start"
-                        >
-                          <span className="w-2 h-2 rounded-full bg-zinc-400 flex-shrink-0 mt-1.5" />
-                          <p className="text-sm leading-relaxed text-zinc-700">{o}</p>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                )}
               </motion.div>
+            )}
 
-              {/* Transformation Steps */}
-              {steps.length > 0 && (
+            {/* ── Concept content ──────────────────────────────────────────── */}
+            {concept && (
+              <div className="flex flex-col gap-5">
+
+                {kpiItems.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {kpiItems.map(({ label, val, sub, Icon }, i) => (
+                      <motion.div
+                        key={label}
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ type: "spring", duration: 0.5, bounce: 0.08, delay: i * 0.08 }}
+                        whileHover={{ y: -2 }}
+                        className="bg-white border border-zinc-200 rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow duration-200 cursor-default"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <p className="text-xs tracking-widest text-zinc-500 uppercase">{label}</p>
+                          <Icon className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
+                        </div>
+                        <p className="text-2xl font-bold text-zinc-900 tracking-tight leading-none mb-1.5 break-words">{val}</p>
+                        <p className="text-xs text-zinc-400">{sub}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ type: "spring", duration: 0.5, bounce: 0, delay: 0.2 }}
+                  transition={{ type: "spring", duration: 0.5, bounce: 0, delay: 0.12 }}
                   className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden"
                 >
                   <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-zinc-900">Transformationsschritte</h2>
-                    <span className="text-xs text-zinc-400">{steps.length} Schritte</span>
+                    <h2 className="text-base font-semibold text-zinc-900">Ist → Ziel</h2>
+                    <span className="text-xs text-zinc-400">{Math.max(pains.length, outcomes.length)} Aspekte</span>
                   </div>
-                  <div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2">
+                    <div className="p-6 border-b sm:border-b-0 sm:border-r border-zinc-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="w-2 h-2 rounded-full bg-zinc-300 flex-shrink-0" />
+                        <span className="text-xs tracking-widest text-zinc-400 uppercase">Ist-Zustand</span>
+                      </div>
+                      {now.summary && <p className="text-sm leading-relaxed text-zinc-500 mb-4 pb-4 border-b border-zinc-100">{now.summary}</p>}
+                      <div className="flex flex-col gap-3">
+                        {pains.map((p, i) => (
+                          <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
+                            transition={{ type: "spring", duration: 0.35, bounce: 0, delay: 0.15 + i * 0.05 }}
+                            className="flex gap-2.5 items-start">
+                            <span className="w-2 h-2 rounded-full bg-zinc-200 flex-shrink-0 mt-1.5" />
+                            <p className="text-sm leading-relaxed text-zinc-500">{p}</p>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="w-2 h-2 rounded-full bg-zinc-700 flex-shrink-0" />
+                        <span className="text-xs tracking-widest text-zinc-900 uppercase">Ziel-Zustand</span>
+                      </div>
+                      {goal.summary && <p className="text-sm leading-relaxed text-zinc-700 mb-4 pb-4 border-b border-zinc-100">{goal.summary}</p>}
+                      <div className="flex flex-col gap-3">
+                        {outcomes.map((o, i) => (
+                          <motion.div key={i} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }}
+                            transition={{ type: "spring", duration: 0.35, bounce: 0, delay: 0.15 + i * 0.05 }}
+                            className="flex gap-2.5 items-start">
+                            <span className="w-2 h-2 rounded-full bg-zinc-400 flex-shrink-0 mt-1.5" />
+                            <p className="text-sm leading-relaxed text-zinc-700">{o}</p>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {steps.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: "spring", duration: 0.5, bounce: 0, delay: 0.2 }}
+                    className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden"
+                  >
+                    <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
+                      <h2 className="text-base font-semibold text-zinc-900">Transformationsschritte</h2>
+                      <span className="text-xs text-zinc-400">{steps.length} Schritte</span>
+                    </div>
                     {steps.map((s, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
+                      <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                         transition={{ delay: 0.22 + i * 0.06 }}
-                        className={i < steps.length - 1 ? "border-b border-zinc-100" : ""}
-                      >
-                        <button
+                        className={i < steps.length - 1 ? "border-b border-zinc-100" : ""}>
+                        <motion.button
+                          whileTap={{ scale: 0.99 }}
                           className="w-full text-left px-6 py-5 flex gap-4 items-start hover:bg-zinc-50/70 transition-colors duration-150"
                           onClick={() => setOpenStep(openStep === i ? null : i)}
                         >
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5"
-                          >
+                          <motion.div whileHover={{ scale: 1.05 }}
+                            className="w-7 h-7 rounded-lg bg-zinc-900 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5">
                             {i + 1}
                           </motion.div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2.5 flex-wrap mb-1.5">
+                            <div className="flex items-center gap-2.5 flex-wrap mb-1">
                               <span className="text-sm font-semibold text-zinc-900">{s.title}</span>
-                              {s.effort && (
-                                <span className="text-xs px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-500 font-mono">
-                                  {s.effort}
-                                </span>
-                              )}
+                              {s.effort && <span className="text-xs px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-500 font-mono">{s.effort}</span>}
                             </div>
-                            {s.business_value && (
-                              <p className="text-xs text-green-600 font-medium">{s.business_value}</p>
-                            )}
+                            {s.business_value && <p className="text-xs text-green-600 font-medium">{s.business_value}</p>}
                           </div>
                           <motion.span
                             animate={{ rotate: openStep === i ? 90 : 0 }}
@@ -530,8 +483,7 @@ function ConceptContent() {
                           >
                             <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
                           </motion.span>
-                        </button>
-
+                        </motion.button>
                         <AnimatePresence initial={false}>
                           {openStep === i && (
                             <motion.div
@@ -542,19 +494,15 @@ function ConceptContent() {
                               className="overflow-hidden"
                             >
                               <div className="px-6 pb-5 pt-1 ml-11">
-                                {s.description && (
-                                  <p className="text-sm leading-relaxed text-zinc-600 mb-3">{s.description}</p>
-                                )}
+                                {s.description && <p className="text-sm leading-relaxed text-zinc-600 mb-3">{s.description}</p>}
                                 {s.implementation_ideas?.length ? (
                                   <div className="flex flex-wrap gap-2">
                                     {s.implementation_ideas.map((idea, j) => (
-                                      <motion.span
-                                        key={j}
+                                      <motion.span key={j}
                                         initial={{ opacity: 0, scale: 0.92 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         transition={{ delay: j * 0.04, type: "spring", duration: 0.3 }}
-                                        className="text-xs px-2.5 py-1 rounded-md bg-zinc-50 border border-zinc-200 text-zinc-500"
-                                      >
+                                        className="text-xs px-2.5 py-1 rounded-md bg-zinc-50 border border-zinc-200 text-zinc-500">
                                         {idea}
                                       </motion.span>
                                     ))}
@@ -566,39 +514,30 @@ function ConceptContent() {
                         </AnimatePresence>
                       </motion.div>
                     ))}
-                  </div>
-                </motion.div>
-              )}
+                  </motion.div>
+                )}
 
-              {/* User Stories */}
-              {stories.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ type: "spring", duration: 0.5, bounce: 0, delay: 0.28 }}
-                  className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden"
-                >
-                  <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-zinc-900">User Stories</h2>
-                    <span className="text-xs text-zinc-400">Product Owner</span>
-                  </div>
-                  <div>
+                {stories.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: "spring", duration: 0.5, bounce: 0, delay: 0.28 }}
+                    className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden"
+                  >
+                    <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
+                      <h2 className="text-base font-semibold text-zinc-900">User Stories</h2>
+                      <span className="text-xs text-zinc-400">Product Owner</span>
+                    </div>
                     {stories.map((s, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
+                      <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                         transition={{ delay: 0.3 + i * 0.06 }}
-                        className={`px-6 py-5 flex gap-4 ${i < stories.length - 1 ? "border-b border-zinc-100" : ""}`}
-                      >
-                        <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          className="w-7 h-7 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-xs font-semibold text-zinc-600 flex-shrink-0 mt-0.5"
-                        >
+                        className={`px-6 py-5 flex gap-4 ${i < stories.length - 1 ? "border-b border-zinc-100" : ""}`}>
+                        <motion.div whileHover={{ scale: 1.05 }}
+                          className="w-7 h-7 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-xs font-semibold text-zinc-600 flex-shrink-0 mt-0.5">
                           {s.size || "M"}
                         </motion.div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-zinc-900 mb-1.5">{s.title}</p>
+                          <p className="text-sm font-semibold text-zinc-900 mb-1">{s.title}</p>
                           <p className="text-sm leading-relaxed text-zinc-500 mb-2">{s.story}</p>
                           {s.acceptance_criteria && (
                             <p className="text-xs text-green-600 font-medium flex items-center gap-1.5">
@@ -609,23 +548,25 @@ function ConceptContent() {
                         </div>
                       </motion.div>
                     ))}
-                  </div>
-                </motion.div>
-              )}
-
-            </div>
-          )}
+                  </motion.div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
 export default function ConceptPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="thinking-spinner" style={{ width: 28, height: 28 }} />
+      <div className="flex bg-white" style={{ height: "100vh" }}>
+        <div className="w-60 border-r border-zinc-200 shrink-0" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="thinking-spinner" style={{ width: 28, height: 28 }} />
+        </div>
       </div>
     }>
       <ConceptContent />

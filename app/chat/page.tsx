@@ -5,8 +5,9 @@ import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api } from "@/lib/api";
 import { Sidebar } from "@/components/layout/sidebar";
-import { Button, Badge, Card, TabGroup, Tab } from "@/components/ui";
+import { Badge, Card, TabGroup, Tab } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
 
 const PHASES = ["Verstehe die Frage…","Analysiere Aspekte…","Formuliere Antwort…","Überprüfe…"];
 const PHASES_R = ["Recherchiere Quellen…","Analysiere Ergebnisse…","Vergleiche Optionen…","Formuliere Antwort…"];
@@ -119,12 +120,14 @@ export default function ChatPage() {
             {turns > 0 && <p className="text-xs text-gray-400">{turns} turns</p>}
           </div>
           {store.guidedProject && <Badge variant="default">⚡ Geführter Modus</Badge>}
-          <Button variant="outline" size="sm" onClick={() => router.push(`/concept?session=${store.sessionId}`)}>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => router.push(`/concept?session=${store.sessionId}`)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 rounded-lg px-3.5 py-1.5 shadow-sm shadow-green-600/20">
             ⚡ Concept
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}>
+          </motion.button>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => router.push("/dashboard")}
+            className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-900 border border-zinc-200 hover:bg-zinc-50 transition-colors duration-150 rounded-lg px-3.5 py-1.5">
             🗺 Roadmap
-          </Button>
+          </motion.button>
         </header>
 
         {/* Messages / Welcome */}
@@ -142,22 +145,34 @@ export default function ChatPage() {
                   {[
                     { icon: "💬", title: "Chat starten", desc: "Direkter Zugang zur IT-Wissensbasis. Frag alles.", action: () => inputRef.current?.focus() },
                     { icon: "⚡", title: "Projekt starten", desc: "Geführtes Interview → Transformation Concept → Roadmap.", action: () => { store.setGuidedProject(true); inputRef.current?.focus(); } },
-                  ].map(c => (
-                    <Card key={c.title} className="p-5 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-green-200"
-                      onClick={c.action} style={{ cursor: "pointer" }}>
+                  ].map((c, i) => (
+                    <motion.div key={c.title}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ type: "spring", duration: 0.45, bounce: 0.1, delay: i * 0.06 }}
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={c.action}
+                      className="p-5 cursor-pointer rounded-xl border border-zinc-200 bg-white hover:shadow-md hover:border-green-200 transition-shadow duration-200"
+                    >
                       <div className="text-2xl mb-3">{c.icon}</div>
-                      <p className="font-bold text-sm text-gray-900 mb-1">{c.title}</p>
-                      <p className="text-xs text-gray-500 leading-relaxed">{c.desc}</p>
-                    </Card>
+                      <p className="font-bold text-sm text-zinc-900 mb-1">{c.title}</p>
+                      <p className="text-xs text-zinc-500 leading-relaxed">{c.desc}</p>
+                    </motion.div>
                   ))}
                 </div>
 
                 <div className="flex flex-wrap gap-2 justify-center">
-                  {["Cloud Migration", "Make.com vs Zapier?", "IT-Sicherheit", "ERP-Auswahl"].map(p => (
-                    <button key={p} onClick={() => { setInput(p); inputRef.current?.focus(); }}
-                      className="px-3.5 py-1.5 rounded-full border border-gray-200 bg-white text-xs text-gray-600 hover:border-green-300 hover:text-green-800 hover:bg-green-50 transition-all">
+                  {["Cloud Migration", "Make.com vs Zapier?", "IT-Sicherheit", "ERP-Auswahl"].map((p, i) => (
+                    <motion.button key={p}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: "spring", duration: 0.35, bounce: 0.2, delay: 0.15 + i * 0.04 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => { setInput(p); inputRef.current?.focus(); }}
+                      className="px-3.5 py-1.5 rounded-full border border-zinc-200 bg-white text-xs text-zinc-600 hover:border-green-300 hover:text-green-800 hover:bg-green-50 transition-colors duration-150">
                       {p}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
@@ -224,11 +239,13 @@ export default function ChatPage() {
                 placeholder="Ask anything… (Enter to send)"
                 className="flex-1 bg-transparent border-none resize-none text-sm text-gray-900 outline-none leading-relaxed placeholder:text-gray-400"
                 style={{ minHeight: 26, maxHeight: 180, fontFamily: "inherit" }} />
-              <button onClick={() => send(input)} disabled={!input.trim() || store.sending}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 transition-all border-none"
-                style={{ background: input.trim() && !store.sending ? "var(--green)" : "#e5e7eb", color: input.trim() && !store.sending ? "white" : "#9ca3af", cursor: input.trim() && !store.sending ? "pointer" : "default" }}>
+              <motion.button
+                whileTap={input.trim() && !store.sending ? { scale: 0.9 } : {}}
+                onClick={() => send(input)} disabled={!input.trim() || store.sending}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 transition-colors duration-150 border-none"
+                style={{ background: input.trim() && !store.sending ? "#16a34a" : "#e5e7eb", color: input.trim() && !store.sending ? "white" : "#9ca3af", cursor: input.trim() && !store.sending ? "pointer" : "default" }}>
                 ↑
-              </button>
+              </motion.button>
             </div>
           </div>
         </footer>
