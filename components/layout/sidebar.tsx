@@ -1,20 +1,25 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { cn, dateStr } from "@/lib/utils";
-import { MessageSquare, Zap, LayoutDashboard, Plus, ChevronRight, Search, Settings } from "lucide-react";
+import {
+  MessageSquare, Zap, LayoutDashboard, Plus, ChevronRight,
+  Search, Settings, Check, X, Folder, FolderOpen,
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SettingsModal } from "./settings-modal";
+
+const BTN_SPRING = { type: "spring", stiffness: 500, damping: 30 } as const;
 
 function PressBtn({ children, onClick, className, title, disabled }: {
   children: React.ReactNode; onClick?: () => void; className?: string; title?: string; disabled?: boolean;
 }) {
   return (
-    <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.96 }}
-      transition={{ type: "spring", stiffness: 400, damping: 28 }}
+    <motion.button whileHover={disabled ? {} : { y: -1 }} whileTap={disabled ? {} : { scale: 0.96 }}
+      transition={BTN_SPRING}
       onClick={onClick} title={title} disabled={disabled} className={className}>
       {children}
     </motion.button>
@@ -27,7 +32,7 @@ function NavItem({ icon: Icon, label, active, onClick }: {
   return (
     <motion.button whileTap={{ scale: 0.97 }}
       whileHover={{ x: active ? 0 : 1 }}
-      transition={{ type: "spring", stiffness: 400, damping: 28 }}
+      transition={BTN_SPRING}
       onClick={onClick}
       className={cn(
         "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors duration-150 mb-0.5 text-left font-medium",
@@ -48,13 +53,19 @@ function NavItem({ icon: Icon, label, active, onClick }: {
 }
 
 export function Sidebar({ currentPath }: { currentPath?: string }) {
-  const { token, user, signOut } = useAuth();
+  const { token, user } = useAuth();
   const store = useChatStore();
   const router = useRouter();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [displayName, setDisplayName] = useState("");
+
+  // Inline project creation
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [newProjName, setNewProjName] = useState("");
+  const [projSaving, setProjSaving] = useState(false);
+  const projInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setDisplayName(localStorage.getItem("matfit_name") || "");
@@ -71,6 +82,14 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
     api.getProjects(token).then(d => store.setProjects(d.projects)).catch(() => {});
   }, [token]);
 
+  // Auto-focus input when form opens
+  useEffect(() => {
+    if (creatingProject) {
+      const t = setTimeout(() => projInputRef.current?.focus(), 60);
+      return () => clearTimeout(t);
+    }
+  }, [creatingProject]);
+
   async function loadChat(sid: string) {
     if (!token) return;
     try {
@@ -79,6 +98,7 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
       store.setMessages(s.messages ?? []); router.push("/chat");
     } catch {}
   }
+
   async function toggleProject(pid: string) {
     const n = new Set(expanded);
     if (n.has(pid)) { n.delete(pid); setExpanded(n); return; }
@@ -87,10 +107,31 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
       try { const d = await api.getProjectSessions(token!, pid); store.setProjectSessions(pid, d.sessions); } catch {}
     }
   }
-  async function newProject() {
-    const name = prompt("Projektname:");
-    if (!name?.trim() || !token) return;
-    try { const p = await api.createProject(token, name.trim()); store.setProjects([p, ...store.projects]); store.setActiveProject(p.project_id); } catch {}
+
+  async function refreshProjectSessions(pid: string) {
+    try { const d = await api.getProjectSessions(token!, pid); store.setProjectSessions(pid, d.sessions); } catch {}
+  }
+
+  async function submitNewProject() {
+    if (!newProjName.trim() || !token || projSaving) return;
+    setProjSaving(true);
+    try {
+      const p = await api.createProject(token, newProjName.trim());
+      store.setProjects([p, ...store.projects]);
+      store.setActiveProject(p.project_id);
+      setExpanded(prev => new Set([...prev, p.project_id]));
+      setNewProjName(""); setCreatingProject(false);
+    } catch {} finally { setProjSaving(false); }
+  }
+
+  function cancelNewProject() {
+    setNewProjName(""); setCreatingProject(false);
+  }
+
+  function startChatInProject(pid: string) {
+    store.newChat();
+    store.setActiveProject(pid);
+    router.push("/chat");
   }
 
   const q = search.toLowerCase();
@@ -102,7 +143,7 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <aside className="flex flex-col bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 shrink-0 relative z-20" style={{ width: 240, height: "100vh" }}>
 
-        {/* Text logo — no icon */}
+        {/* Logo */}
         <div className="flex items-center gap-2.5 px-4 py-4 border-b border-zinc-100 dark:border-zinc-800">
           <motion.button whileHover={{ opacity: 0.8 }} onClick={() => router.push("/chat")} className="flex items-center gap-px leading-none">
             <span className="font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-50">matfit</span>
@@ -112,8 +153,14 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
 
         {/* New chat */}
         <div className="p-3 pb-2">
-          <PressBtn onClick={() => { store.newChat(); router.push("/chat"); }}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-lg text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 shadow-sm shadow-green-600/20">
+          <PressBtn
+            onClick={() => {
+              store.newChat();
+              if (store.activeProjectId) store.setActiveProject(null);
+              router.push("/chat");
+            }}
+            className="w-full flex items-center justify-center gap-2 h-9 rounded-lg text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 shadow-sm shadow-green-600/20"
+          >
             <Plus className="w-4 h-4" strokeWidth={2} />Neuer Chat
           </PressBtn>
         </div>
@@ -147,56 +194,199 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
         <div className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
           {!q && (
             <>
-              <div className="flex items-center justify-between px-2 pt-1 pb-1.5">
+              {/* ── Projects header ── */}
+              <div className="flex items-center justify-between px-2 pt-1 pb-1">
                 <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Projekte</p>
-                <motion.button whileTap={{ scale: 0.88 }} onClick={newProject}
-                  className="w-5 h-5 rounded-md flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950 transition-colors duration-150">
+                <motion.button
+                  whileTap={{ scale: 0.88 }}
+                  onClick={() => { setCreatingProject(true); setNewProjName(""); }}
+                  className="w-5 h-5 rounded-md flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950 transition-colors duration-150"
+                >
                   <Plus className="w-3.5 h-3.5" strokeWidth={2} />
                 </motion.button>
               </div>
-              {store.projects.length === 0 && <p className="text-xs text-zinc-400 px-2 py-1">Noch keine Projekte.</p>}
-              {store.projects.map(p => (
-                <div key={p.project_id}>
-                  <motion.button whileTap={{ scale: 0.98 }} onClick={() => toggleProject(p.project_id)}
-                    className={cn("w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors duration-150",
-                      store.activeProjectId === p.project_id
-                        ? "bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-300"
-                        : "hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-400")}>
-                    <span className="text-xs text-green-600">◆</span>
-                    <span className="flex-1 text-xs font-medium truncate">{p.name}</span>
-                    <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded">{p.chats}</span>
-                    <motion.span animate={{ rotate: expanded.has(p.project_id) ? 90 : 0 }} transition={{ type: "spring", duration: 0.28, bounce: 0.1 }}>
-                      <ChevronRight className="w-3 h-3 text-zinc-400" strokeWidth={1.5} />
-                    </motion.span>
-                  </motion.button>
-                  <AnimatePresence>
-                    {expanded.has(p.project_id) && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }} transition={{ type: "spring", duration: 0.32, bounce: 0.05 }}
-                        className="overflow-hidden ml-3 pl-2.5 border-l border-green-200 dark:border-green-900 space-y-0.5 mt-0.5">
-                        {(store.projectSessions[p.project_id] ?? []).map(s => (
-                          <motion.button key={s.session_id} whileTap={{ scale: 0.97 }} onClick={() => loadChat(s.session_id)}
-                            className={cn("w-full flex flex-col px-2 py-1.5 rounded text-left transition-colors duration-150",
-                              store.sessionId === s.session_id
-                                ? "bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-300"
-                                : "hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400")}>
-                            <span className="text-xs font-medium truncate">{(s.title || "Untitled").slice(0, 26)}</span>
-                            <span className="text-xs text-zinc-400">{s.message_count} msg</span>
-                          </motion.button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              ))}
+
+              {/* ── Inline create form ── */}
+              <AnimatePresence>
+                {creatingProject && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-1 pb-2 pt-0.5">
+                      <div className="flex items-center gap-1 bg-zinc-50 dark:bg-zinc-800 border border-green-300 dark:border-green-700 rounded-lg px-2.5 py-1.5 shadow-sm shadow-green-500/10">
+                        <Folder className="w-3.5 h-3.5 text-green-500 flex-shrink-0" strokeWidth={1.5} />
+                        <input
+                          ref={projInputRef}
+                          value={newProjName}
+                          onChange={e => setNewProjName(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") submitNewProject();
+                            if (e.key === "Escape") cancelNewProject();
+                          }}
+                          placeholder="Projektname…"
+                          maxLength={48}
+                          className="flex-1 bg-transparent text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 outline-none min-w-0"
+                        />
+                        <motion.button
+                          whileTap={{ scale: 0.9 }}
+                          onClick={submitNewProject}
+                          disabled={!newProjName.trim() || projSaving}
+                          className={cn(
+                            "w-5 h-5 rounded flex items-center justify-center transition-colors duration-100 flex-shrink-0",
+                            newProjName.trim()
+                              ? "text-green-600 hover:bg-green-100 dark:hover:bg-green-900/40"
+                              : "text-zinc-300 dark:text-zinc-600 cursor-default"
+                          )}
+                        >
+                          <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.9 }}
+                          onClick={cancelNewProject}
+                          className="w-5 h-5 rounded flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors duration-100 flex-shrink-0"
+                        >
+                          <X className="w-3.5 h-3.5" strokeWidth={2} />
+                        </motion.button>
+                      </div>
+                      <p className="text-[10px] text-zinc-400 px-1 pt-1">Enter zum Speichern · Esc zum Abbrechen</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ── Project list ── */}
+              {store.projects.length === 0 && !creatingProject && (
+                <motion.p
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="text-xs text-zinc-400 px-2 py-1"
+                >
+                  Noch keine Projekte.
+                </motion.p>
+              )}
+
+              {store.projects.map(p => {
+                const isActive = store.activeProjectId === p.project_id;
+                const isExpanded = expanded.has(p.project_id);
+                const sessions = store.projectSessions[p.project_id] ?? [];
+
+                return (
+                  <div key={p.project_id}>
+                    <div className="group/proj relative">
+                      <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => toggleProject(p.project_id)}
+                        className={cn(
+                          "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors duration-150 pr-8",
+                          isActive
+                            ? "bg-green-50 dark:bg-green-950/60 text-green-800 dark:text-green-300"
+                            : "hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-400"
+                        )}
+                      >
+                        {isExpanded
+                          ? <FolderOpen className="w-3.5 h-3.5 flex-shrink-0 text-green-500" strokeWidth={1.5} />
+                          : <Folder className={cn("w-3.5 h-3.5 flex-shrink-0", isActive ? "text-green-600" : "text-zinc-400")} strokeWidth={1.5} />
+                        }
+                        <span className="flex-1 text-xs font-medium truncate">{p.name}</span>
+                        <span className="text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded flex-shrink-0">
+                          {p.chats}
+                        </span>
+                        <motion.span
+                          animate={{ rotate: isExpanded ? 90 : 0 }}
+                          transition={{ type: "spring", duration: 0.25, bounce: 0.1 }}
+                          className="flex-shrink-0"
+                        >
+                          <ChevronRight className="w-3 h-3 text-zinc-400" strokeWidth={1.5} />
+                        </motion.span>
+                      </motion.button>
+
+                      {/* New chat in project — appears on hover */}
+                      <motion.button
+                        whileTap={{ scale: 0.88 }}
+                        onClick={e => { e.stopPropagation(); startChatInProject(p.project_id); }}
+                        title="Neuer Chat in diesem Projekt"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 rounded flex items-center justify-center text-zinc-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40 transition-colors duration-100 opacity-0 group-hover/proj:opacity-100"
+                      >
+                        <Plus className="w-3 h-3" strokeWidth={2} />
+                      </motion.button>
+                    </div>
+
+                    {/* Expanded sessions */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ type: "spring", duration: 0.3, bounce: 0.04 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="ml-3 pl-2.5 border-l border-green-200 dark:border-green-900 mt-0.5 pb-1">
+                            {sessions.length === 0 ? (
+                              <div className="py-2 px-2 space-y-1.5">
+                                <p className="text-[10px] text-zinc-400">Noch keine Chats in diesem Projekt.</p>
+                                <motion.button
+                                  whileTap={{ scale: 0.97 }}
+                                  onClick={() => startChatInProject(p.project_id)}
+                                  className="flex items-center gap-1.5 text-[10px] font-semibold text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors duration-100"
+                                >
+                                  <Plus className="w-3 h-3" strokeWidth={2} />
+                                  Chat starten
+                                </motion.button>
+                              </div>
+                            ) : (
+                              <div className="space-y-0.5 pt-0.5">
+                                {sessions.map(s => (
+                                  <motion.button
+                                    key={s.session_id}
+                                    whileTap={{ scale: 0.97 }}
+                                    onClick={() => loadChat(s.session_id)}
+                                    className={cn(
+                                      "w-full flex flex-col px-2 py-1.5 rounded text-left transition-colors duration-150",
+                                      store.sessionId === s.session_id
+                                        ? "bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-300"
+                                        : "hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                                    )}
+                                  >
+                                    <span className="text-xs font-medium truncate">{(s.title || "Untitled").slice(0, 26)}</span>
+                                    <span className="text-[10px] text-zinc-400">{s.message_count} msg</span>
+                                  </motion.button>
+                                ))}
+                                <motion.button
+                                  whileTap={{ scale: 0.97 }}
+                                  onClick={() => startChatInProject(p.project_id)}
+                                  className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded text-left text-[10px] font-medium text-zinc-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150"
+                                >
+                                  <Plus className="w-3 h-3" strokeWidth={2} />
+                                  Neuer Chat
+                                </motion.button>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+
+              {/* ── Conversations header ── */}
               <div className="flex items-center justify-between px-2 pt-3 pb-1.5 border-t border-zinc-100 dark:border-zinc-800 mt-2">
                 <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Konversationen</p>
-                <span className="text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-full px-1.5 py-0.5">{loose.length}</span>
+                <span className="text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-full px-1.5 py-0.5">
+                  {loose.length}
+                </span>
               </div>
             </>
           )}
+
           {q && <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest px-2 pt-1 pb-1.5">Ergebnisse ({loose.length})</p>}
-          {loose.length === 0 && <p className="text-xs text-zinc-400 px-2 py-1">{q ? "Keine Chats gefunden." : "Noch keine Chats."}</p>}
+          {loose.length === 0 && (
+            <p className="text-xs text-zinc-400 px-2 py-1">{q ? "Keine Chats gefunden." : "Noch keine Chats."}</p>
+          )}
           {loose.map(s => (
             <motion.button key={s.session_id} whileTap={{ scale: 0.97 }} onClick={() => loadChat(s.session_id)}
               className={cn("w-full flex flex-col px-2 py-2 rounded-lg text-left transition-colors duration-150",
