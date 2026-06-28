@@ -64,9 +64,9 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
               {/* Left nav */}
               <div className="w-48 bg-zinc-50 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 flex flex-col p-3 shrink-0">
                 {/* Brand */}
-                <div className="flex items-center gap-px px-2 py-2.5 mb-4">
-                  <span className="font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-50">matfit</span>
-                  <span className="font-bold text-sm tracking-tight text-green-600">.ai</span>
+                <div className="flex items-center gap-px px-2 py-3 mb-4">
+                  <span className="font-bold text-lg tracking-tight text-zinc-900 dark:text-zinc-50">matfit</span>
+                  <span className="font-bold text-lg tracking-tight text-green-600">.ai</span>
                 </div>
 
                 {TABS.map(t => (

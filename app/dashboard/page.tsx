@@ -390,39 +390,48 @@ function DashboardContent() {
                     )}
                   </div>
 
-                  <div className="px-4 pb-3.5 flex items-center gap-2 border-t border-zinc-100 dark:border-zinc-800 pt-2.5">
-                    {/* Outline buttons */}
+                  <div className="px-4 pb-3.5 flex items-center gap-1.5 border-t border-zinc-100 dark:border-zinc-800 pt-2.5">
+                    {/* Icon ghost buttons */}
                     <motion.button
-                      whileTap={{ scale: 0.96 }}
+                      whileHover={{ y: -1 }} whileTap={{ scale: 0.94 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 28 }}
                       onClick={() => { store.setSessionId(row.session_id); router.push("/chat"); }}
-                      className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors duration-150 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                      title="Chat öffnen"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-150"
                     >
-                      <MessageSquare className="w-3.5 h-3.5" strokeWidth={1.5} />
-                      Chat
+                      <MessageSquare className="w-4 h-4" strokeWidth={1.5} />
                     </motion.button>
 
                     <motion.button
-                      whileTap={{ scale: 0.96 }}
+                      whileHover={{ y: -1 }} whileTap={{ scale: 0.94 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 28 }}
                       onClick={() => router.push(`/concept?session=${row.session_id}`)}
-                      className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors duration-150 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                      title="Concept öffnen"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-150 relative"
+                      style={{ color: row.has_concept ? "#16a34a" : undefined }}
                     >
-                      <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
-                      Concept
-                      {row.has_concept && <CheckCircle2 className="w-3 h-3 text-green-500" strokeWidth={2} />}
+                      <span className={row.has_concept ? "text-green-600" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200"}>
+                        <Zap className="w-4 h-4" strokeWidth={1.5} />
+                      </span>
+                      {row.has_concept && (
+                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900" />
+                      )}
                     </motion.button>
 
-                    {/* Magnetic CTA */}
+                    {/* Primary CTA */}
                     <div className="ml-auto">
                       {row.has_concept ? (
-                        <MagneticButton
+                        <motion.button
+                          whileHover={{ y: -1 }} whileTap={{ scale: 0.95 }}
+                          transition={{ type: "spring", stiffness: 400, damping: 28 }}
                           onClick={() => openRoadmap(row.session_id)}
-                          className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 rounded-lg px-3.5 py-1.5"
+                          className="flex items-center gap-2 text-xs font-semibold text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors duration-150 rounded-lg px-4 py-2"
                         >
                           <Map className="w-3.5 h-3.5" strokeWidth={1.5} />
-                          Roadmap öffnen
-                        </MagneticButton>
+                          Roadmap
+                        </motion.button>
                       ) : (
-                        <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-300 dark:text-zinc-600 border border-zinc-100 dark:border-zinc-800 rounded-lg px-3.5 py-1.5 cursor-not-allowed">
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-300 dark:text-zinc-600 px-2 py-1.5 cursor-not-allowed">
                           <Map className="w-3.5 h-3.5" strokeWidth={1.5} />
                           Roadmap
                         </span>
