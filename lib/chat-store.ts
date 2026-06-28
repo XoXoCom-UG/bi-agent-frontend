@@ -17,6 +17,7 @@ interface ChatStore {
   mode: "chat" | "research";
   guidedProject: boolean;
   thinkingPhase: string;
+  sidebarOpen: boolean;
 
   // actions
   setSessionId: (id: string) => void;
@@ -31,6 +32,7 @@ interface ChatStore {
   setMode: (m: "chat" | "research") => void;
   setGuidedProject: (b: boolean) => void;
   setThinkingPhase: (p: string) => void;
+  setSidebarOpen: (b: boolean) => void;
   newChat: () => void;
 }
 
@@ -46,6 +48,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   mode: "chat",
   guidedProject: false,
   thinkingPhase: "",
+  sidebarOpen: false,
 
   setSessionId: (id) => set({ sessionId: id }),
   setSessionTitle: (t) => set({ sessionTitle: t }),
@@ -60,6 +63,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   setMode: (m) => set({ mode: m }),
   setGuidedProject: (b) => set({ guidedProject: b }),
   setThinkingPhase: (p) => set({ thinkingPhase: p }),
+  setSidebarOpen: (b) => set({ sidebarOpen: b }),
   newChat: () =>
     set({
       sessionId: newSessionId(),

@@ -28,7 +28,7 @@ export default function LoginPage() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", background: "var(--bg)" }}>
       {/* Left panel */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 48px", borderRight: "1px solid var(--border)", background: "#fff" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 24px", borderRight: "1px solid var(--border)", background: "#fff", minWidth: 0 }}>
         <div style={{ maxWidth: 400, width: "100%" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 36 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--green)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 18, fontFamily: "Georgia,serif" }}>B</div>
@@ -63,8 +63,8 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
-      {/* Right panel — visual */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 48, background: "var(--bg)" }}>
+      {/* Right panel — hidden on mobile */}
+      <div className="hidden md:flex" style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 48, background: "var(--bg)" }}>
         <div style={{ maxWidth: 380, width: "100%" }}>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--green)", marginBottom: 16 }}>IT Consulting Agent</div>
           <h2 style={{ fontSize: 28, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.025em", lineHeight: 1.2, marginBottom: 16 }}>Transformation Concepts in Minuten, nicht Wochen.</h2>

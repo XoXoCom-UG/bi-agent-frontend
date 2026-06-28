@@ -12,6 +12,22 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { SettingsModal } from "./settings-modal";
 
+export function SidebarHamburger() {
+  const store = useChatStore();
+  return (
+    <button
+      onClick={() => store.setSidebarOpen(true)}
+      className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-150"
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect y="2" width="16" height="1.5" rx="0.75" fill="currentColor"/>
+        <rect y="7.25" width="16" height="1.5" rx="0.75" fill="currentColor"/>
+        <rect y="12.5" width="12" height="1.5" rx="0.75" fill="currentColor"/>
+      </svg>
+    </button>
+  );
+}
+
 const BTN_SPRING = { type: "spring", stiffness: 500, damping: 30 } as const;
 
 function PressBtn({ children, onClick, className, title, disabled }: {
@@ -56,6 +72,8 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
   const { token, user } = useAuth();
   const store = useChatStore();
   const router = useRouter();
+  const mobileOpen = store.sidebarOpen;
+  const closeMobile = () => store.setSidebarOpen(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -141,14 +159,34 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
   return (
     <>
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      <aside className="flex flex-col bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 shrink-0 relative z-20" style={{ width: 240, height: "100vh" }}>
+
+      {/* Mobile backdrop */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 bg-black/40 z-30 md:hidden"
+            onClick={closeMobile}
+          />
+        )}
+      </AnimatePresence>
+
+      <aside className={cn(
+        "flex flex-col bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 shrink-0 z-40 transition-transform duration-300",
+        "fixed inset-y-0 left-0 md:relative md:translate-x-0",
+        mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      )} style={{ width: 240, height: "100vh" }}>
 
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-4 py-4 border-b border-zinc-100 dark:border-zinc-800">
-          <motion.button whileHover={{ opacity: 0.8 }} onClick={() => router.push("/chat")} className="flex items-center gap-px leading-none">
+          <motion.button whileHover={{ opacity: 0.8 }} onClick={() => { router.push("/chat"); closeMobile(); }} className="flex items-center gap-px leading-none flex-1">
             <span className="font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-50">matfit</span>
             <span className="font-bold text-sm tracking-tight text-green-600">.ai</span>
           </motion.button>
+          <button onClick={closeMobile} className="md:hidden w-7 h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            <X className="w-4 h-4" strokeWidth={1.5} />
+          </button>
         </div>
 
         {/* New chat */}
@@ -184,7 +222,7 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
             { icon: Zap,           label: "Concept",   path: "/concept"   },
             { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
           ].map(({ icon, label, path }) => (
-            <NavItem key={path} icon={icon} label={label} active={currentPath === path} onClick={() => router.push(path)} />
+            <NavItem key={path} icon={icon} label={label} active={currentPath === path} onClick={() => { router.push(path); closeMobile(); }} />
           ))}
         </div>
 

@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api, DeckRow, RoadmapData } from "@/lib/api";
-import { Sidebar } from "@/components/layout/sidebar";
+import { Sidebar, SidebarHamburger } from "@/components/layout/sidebar";
 import {
   MessageSquare, Zap, Map, ArrowLeft, RefreshCw,
   ArrowRight, CheckCircle2, ChevronDown, Copy, Check,
@@ -308,7 +308,8 @@ function DashboardContent() {
       <div className="flex-1 flex flex-col overflow-hidden relative">
 
         {/* Topbar */}
-        <div className="h-14 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-6 gap-3 flex-shrink-0">
+        <div className="h-14 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-4 md:px-6 gap-3 flex-shrink-0">
+          <SidebarHamburger />
           <h1 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Roadmap</h1>
         </div>
 

@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api, ConceptData } from "@/lib/api";
-import { Sidebar } from "@/components/layout/sidebar";
+import { Sidebar, SidebarHamburger } from "@/components/layout/sidebar";
 import { dateStr } from "@/lib/utils";
 import {
   Clock, AlertTriangle, TrendingDown, Zap,
@@ -298,7 +298,8 @@ function ConceptContent() {
         <AnimatePresence>{generating && <GeneratingOverlay />}</AnimatePresence>
 
         {/* Topbar */}
-        <header className="flex items-center gap-2.5 px-5 h-14 border-b border-zinc-100 shrink-0 bg-white">
+        <header className="flex items-center gap-2.5 px-4 md:px-5 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
+          <SidebarHamburger />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-zinc-900 truncate">
               {concept?.title || (hasMessages ? store.sessionTitle : "Transformation Concept")}
