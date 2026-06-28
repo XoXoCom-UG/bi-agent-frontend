@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { Button, Badge, Avatar, Separator } from "@/components/ui";
 import { cn, dateStr } from "@/lib/utils";
+import { MessageSquare, Zap, LayoutDashboard } from "lucide-react";
 
 export function Sidebar({ currentPath }: { currentPath?: string }) {
   const { token, user, signOut } = useAuth();
@@ -72,17 +73,17 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
       <div className="px-3 py-2">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-2 mb-1.5">Navigation</p>
         {[
-          { icon: "💬", label: "Chat", path: "/chat" },
-          { icon: "⚡", label: "Transformation Concept", path: "/concept" },
-          { icon: "🗺", label: "Dashboard", path: "/dashboard" },
-        ].map(item => (
-          <button key={item.path} onClick={() => router.push(item.path)}
-            className={cn("w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all mb-0.5 text-left font-medium",
-              currentPath === item.path
+          { icon: MessageSquare, label: "Chat", path: "/chat" },
+          { icon: Zap, label: "Transformation Concept", path: "/concept" },
+          { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+        ].map(({ icon: Icon, label, path }) => (
+          <button key={path} onClick={() => router.push(path)}
+            className={cn("w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors duration-150 mb-0.5 text-left font-medium",
+              currentPath === path
                 ? "text-green-700 bg-green-50 border border-green-100"
                 : "text-gray-600 hover:bg-gray-50 hover:text-gray-900")}>
-            <span className="text-base">{item.icon}</span>
-            <span className="truncate">{item.label}</span>
+            <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
+            <span className="truncate">{label}</span>
           </button>
         ))}
       </div>

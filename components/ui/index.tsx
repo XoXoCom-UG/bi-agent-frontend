@@ -15,7 +15,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 export function Button({ variant = "default", size = "md", className, children, ...props }: ButtonProps) {
   const base = "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
   const variants: Record<BtnVariant, string> = {
-    default: "bg-green-500 text-white hover:bg-green-600 shadow-sm",
+    default: "bg-green-600 text-white hover:bg-green-700 shadow-sm active:scale-[0.98]",
     outline: "border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-sm",
     ghost: "hover:bg-gray-100 text-gray-700",
     secondary: "bg-gray-100 text-gray-700 hover:bg-gray-200",
@@ -114,14 +114,13 @@ export function Tab({ active, onClick, children }: { active: boolean; onClick: (
 }
 
 // ── KpiCard ──────────────────────────────────────────────────────────────────
-export function KpiCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent: string }) {
+export function KpiCard({ label, value, sub }: { label: string; value: string; sub?: string; accent?: string }) {
   return (
-    <Card className="overflow-hidden">
-      <div style={{ height: 3, background: accent }} />
-      <CardContent className="p-4">
-        <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">{label}</p>
-        <p className="text-2xl font-extrabold leading-none mb-1 truncate" style={{ color: accent, letterSpacing: "-0.025em" }}>{value}</p>
-        {sub && <p className="text-xs text-gray-400">{sub}</p>}
+    <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
+      <CardContent className="p-5">
+        <p className="text-xs tracking-widest uppercase text-zinc-500 mb-3">{label}</p>
+        <p className="text-2xl font-bold text-zinc-900 leading-none mb-1.5 tracking-tight break-words">{value}</p>
+        {sub && <p className="text-xs text-zinc-400">{sub}</p>}
       </CardContent>
     </Card>
   );

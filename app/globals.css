@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --green: #3d8b00;
-  --green-light: #edf7df;
-  --green-mid: #b8df7a;
-  --green-dark: #2d6e00;
+  --green: #16a34a;
+  --green-light: #f0fdf4;
+  --green-mid: #bbf7d0;
+  --green-dark: #15803d;
 }
 
 * { box-sizing: border-box; }
@@ -27,6 +27,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans
   to   { opacity: 1; transform: translateY(0); }
 }
 .animate-in { animation: fade-up 0.2s ease-out; }
+
+@keyframes concept-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.concept-fade-in {
+  animation: concept-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.concept-fade-in-1 { animation-delay: 0ms; }
+.concept-fade-in-2 { animation-delay: 80ms; }
+.concept-fade-in-3 { animation-delay: 160ms; }
+.concept-section {
+  animation: concept-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
 
 .choice-chip {
   padding: 7px 14px;
