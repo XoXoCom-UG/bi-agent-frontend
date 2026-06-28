@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api, DeckRow, RoadmapData } from "@/lib/api";
 import { Sidebar } from "@/components/layout/sidebar";
+import { MessageSquare, Zap, Map, ArrowLeft, RefreshCw, ArrowRight, CheckCircle2, ThumbsUp, AlertTriangle, Info } from "lucide-react";
 
 function DashboardContent() {
   const { token, loading } = useAuth();
@@ -22,7 +23,6 @@ function DashboardContent() {
     if (!token) return;
     api.getDeck(token, 200).then(d => { setDeck(d.deck); setDeckLoading(false); }).catch(() => setDeckLoading(false));
   }, [token]);
-
   useEffect(() => {
     const s = params.get("session");
     if (s && token) openRoadmap(s);
@@ -33,156 +33,301 @@ function DashboardContent() {
     try { const d = await api.generateRoadmap(token!, sid); setRoadmap(d.roadmap); } catch {} finally { setRmLoading(false); }
   }
 
-  const S = {
-    page: { display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)" } as React.CSSProperties,
-    main: { flex: 1, display: "flex", flexDirection: "column" as const, overflow: "hidden" },
-    topbar: { height: 52, background: "#fff", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 20px", gap: 12, flexShrink: 0 },
-    content: { flex: 1, overflowY: "auto" as const, padding: "24px 24px" },
-    card: { background: "#fff", border: "1px solid var(--border)", borderRadius: 14, marginBottom: 12, overflow: "hidden" } as React.CSSProperties,
-    btn: (p: boolean) => ({ padding: "6px 13px", borderRadius: 8, border: p ? "none" : "1px solid var(--border)", background: p ? "var(--green)" : "#fff", color: p ? "#fff" : "var(--text-2)", fontSize: 12, fontWeight: p ? 600 : 500, cursor: "pointer", fontFamily: "inherit" } as React.CSSProperties),
-  };
+  function verdictStyle(v: string) {
+    const l = v?.toLowerCase() ?? "";
+    if (l.includes("empf")) return { dot: "bg-green-500", badge: "bg-green-50 text-green-700 border-green-200" };
+    if (l.includes("vorsicht") || l.includes("nicht")) return { dot: "bg-amber-400", badge: "bg-amber-50 text-amber-700 border-amber-200" };
+    return { dot: "bg-blue-400", badge: "bg-blue-50 text-blue-700 border-blue-200" };
+  }
 
-  if (loading || !token) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}><div className="thinking-spinner" style={{ width: 24, height: 24 }} /></div>;
+  if (loading || !token) return (
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="thinking-spinner" style={{ width: 24, height: 24 }} />
+    </div>
+  );
 
   return (
-    <div style={S.page}>
+    <div className="flex h-screen overflow-hidden bg-zinc-50">
       <Sidebar currentPath="/dashboard" />
-      <div style={S.main}>
-        <div style={S.topbar}>
-          <div style={{ display: "flex", gap: 2, background: "var(--bg)", padding: 3, borderRadius: 9, border: "1px solid var(--border)" }}>
-            {[{ l: "Konversation", p: "/chat" }, { l: "Dashboard", p: "/dashboard" }].map(v => (
-              <button key={v.p} onClick={() => router.push(v.p)}
-                style={{ padding: "5px 13px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", background: v.p === "/dashboard" ? "#fff" : "transparent", color: v.p === "/dashboard" ? "var(--text)" : "var(--text-3)", boxShadow: v.p === "/dashboard" ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>
-                {v.l}
-              </button>
-            ))}
-          </div>
-          <h1 style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Dashboard</h1>
+
+      {/* Main area */}
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+
+        {/* Topbar */}
+        <div className="h-14 bg-white border-b border-zinc-200 flex items-center px-6 gap-3 flex-shrink-0">
+          <h1 className="text-sm font-semibold text-zinc-900">Roadmap</h1>
         </div>
 
-        {/* Roadmap overlay */}
-        {(roadmap || rmLoading) && (
-          <div style={{ position: "absolute", inset: 0, background: "var(--bg)", zIndex: 40, display: "flex", flexDirection: "column", overflow: "hidden", marginLeft: 220 }}>
-            <div style={{ height: 52, background: "#fff", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 24px", gap: 12, flexShrink: 0 }}>
-              <button style={S.btn(false)} onClick={() => { setRoadmap(null); setRmSession(null); }}>← Deck</button>
-              <h2 style={{ flex: 1, fontSize: 16, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.01em" }}>{roadmap?.title || "Roadmap"}</h2>
-              {rmSession && <button style={S.btn(false)} onClick={() => openRoadmap(rmSession)}>↻ Neu generieren</button>}
+        {/* Deck content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-3xl mx-auto">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold tracking-tight text-zinc-900 mb-1">Deck</h2>
+              <p className="text-sm text-zinc-500">Alle Konversationen auf einen Blick. Öffne Research, Concept oder Roadmap.</p>
             </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "24px", maxWidth: 920, margin: "0 auto", width: "100%" }}>
-              {rmLoading && (
-                <div style={{ textAlign: "center", padding: "60px 20px" }}>
-                  <div className="thinking-spinner" style={{ width: 28, height: 28, margin: "0 auto 14px" }} />
-                  <p style={{ color: "var(--text-2)", fontSize: 14, fontWeight: 500 }}>KI generiert die Roadmap…</p>
-                  <p style={{ color: "var(--text-3)", fontSize: 12, marginTop: 4 }}>Beim ersten Mal dauert es einen Moment.</p>
-                </div>
-              )}
-              {roadmap && !rmLoading && (
-                <>
-                  {/* Flow */}
-                  {roadmap.phases && (
-                    <div style={{ marginBottom: 28 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 12 }}>Ablauf</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: 16, background: "#fff", border: "1px solid var(--border)", borderRadius: 12 }}>
-                        {roadmap.phases.flatMap(ph => ph.steps).map((step, i, arr) => (
-                          <span key={step.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span style={{ padding: "5px 12px", borderRadius: 8, background: "var(--bg)", border: "1px solid var(--border)", fontSize: 12, color: "var(--text)" }}>{step.title}</span>
-                            {i < arr.length - 1 && <span style={{ color: "var(--green)", fontSize: 14, fontWeight: 600 }}>→</span>}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {/* Phases */}
-                  {roadmap.phases?.map((ph, pi) => (
-                    <div key={pi} style={{ marginBottom: 28 }}>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
-                        <span style={{ fontSize: 10, fontFamily: "monospace", background: "var(--green)", color: "#fff", borderRadius: 20, padding: "3px 10px", fontWeight: 700 }}>Phase {pi + 1}</span>
-                        <span style={{ fontSize: 19, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.01em" }}>{ph.name}</span>
-                      </div>
-                      <p style={{ fontSize: 13, color: "var(--text-3)", marginBottom: 14 }}>{ph.goal}</p>
-                      <div style={{ borderLeft: "2px solid var(--border)", paddingLeft: 20, marginLeft: 6 }}>
-                        {ph.steps.map(step => (
-                          <div key={step.id} style={{ position: "relative", background: "#fff", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 18px", marginBottom: 10 }}>
-                            <div style={{ position: "absolute", left: -27, top: 20, width: 10, height: 10, borderRadius: "50%", background: "var(--green)", boxShadow: "0 0 0 3px var(--bg)" }} />
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", flex: 1 }}>{step.title}</span>
-                              {step.effort && <span style={{ fontSize: 10, fontFamily: "monospace", border: "1px solid var(--border)", borderRadius: 5, padding: "2px 7px", color: "var(--text-3)" }}>{step.effort}</span>}
-                            </div>
-                            {step.what && <p style={{ fontSize: 13, color: "var(--text-2)", marginBottom: 5, lineHeight: 1.55 }}>{step.what}</p>}
-                            {step.why && <p style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 12 }}><strong style={{ color: "var(--green)" }}>Warum: </strong>{step.why}</p>}
-                            {step.tools?.map(tool => {
-                              const v = tool.verdict?.toLowerCase() ?? "";
-                              const vc = v.includes("empf") ? "#16a34a" : v.includes("vorsicht") ? "var(--red)" : "var(--blue)";
-                              const vbg = v.includes("empf") ? "#dcfce7" : v.includes("vorsicht") ? "var(--red-bg)" : "var(--blue-bg)";
-                              return (
-                                <div key={tool.name} style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 9, padding: "11px 13px", marginBottom: 8 }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{tool.name}</span>
-                                    <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", padding: "2px 8px", borderRadius: 20, background: vbg, color: vc }}>{tool.verdict}</span>
-                                  </div>
-                                  {tool.why && <p style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 7, lineHeight: 1.5 }}>{tool.why}</p>}
-                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                                    {tool.pros?.length ? <div><p style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.05em", color: "#16a34a", marginBottom: 4, fontWeight: 700 }}>Dafür</p>{tool.pros.map((p, i) => <p key={i} style={{ fontSize: 11, color: "var(--text-2)", marginBottom: 2 }}>· {p}</p>)}</div> : null}
-                                    {tool.cons?.length ? <div><p style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--red)", marginBottom: 4, fontWeight: 700 }}>Dagegen</p>{tool.cons.map((c, i) => <p key={i} style={{ fontSize: 11, color: "var(--text-2)", marginBottom: 2 }}>· {c}</p>)}</div> : null}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          </div>
-        )}
 
-        <div style={S.content}>
-          <div style={{ marginBottom: 20 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em", marginBottom: 4 }}>Deck</h2>
-            <p style={{ fontSize: 13, color: "var(--text-3)" }}>Alle Konversationen auf einen Blick. Öffne Research, Concept oder Roadmap.</p>
-          </div>
-          {deckLoading && <p style={{ color: "var(--text-3)", fontSize: 13 }}>Lade…</p>}
-          {!deckLoading && deck.length === 0 && (
-            <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 14, padding: "48px", textAlign: "center" }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>💬</div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>Noch keine Konversationen</h3>
-              <p style={{ fontSize: 13, color: "var(--text-3)", marginBottom: 20 }}>Starte einen Chat und komm dann hierher zurück.</p>
-              <button onClick={() => router.push("/chat")} style={{ padding: "8px 20px", borderRadius: 9, border: "none", background: "var(--green)", color: "#fff", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Chat starten</button>
-            </div>
-          )}
-          {deck.map(row => (
-            <div key={row.session_id} style={S.card}>
-              <div style={{ padding: "14px 18px 12px", borderBottom: "1px solid var(--bg)" }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 3, letterSpacing: "-0.01em" }}>{row.title || "Konversation"}</h3>
-                    <p style={{ fontSize: 11, color: "var(--text-3)", fontFamily: "monospace" }}>{row.message_count} Nachrichten · {new Date(row.saved_at).toLocaleDateString("de", { month: "short", day: "numeric" })}</p>
-                  </div>
-                  {row.has_concept && <span style={{ fontSize: 10, fontWeight: 600, background: "var(--green-light)", color: "var(--green-dark)", border: "1px solid var(--green-mid)", borderRadius: 20, padding: "2px 9px" }}>✓ Concept</span>}
-                </div>
+            {/* Loading */}
+            {deckLoading && (
+              <div className="flex flex-col gap-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="bg-white border border-zinc-200 rounded-xl h-[88px] animate-pulse" />
+                ))}
               </div>
-              <div style={{ display: "flex", gap: 8, padding: "10px 14px" }}>
-                <button style={S.btn(false)} onClick={() => { store.setSessionId(row.session_id); router.push("/chat"); }}>💬 Chat öffnen</button>
-                <button style={S.btn(false)} onClick={() => router.push(`/concept?session=${row.session_id}`)}>
-                  ⚡ Transformation Concept {row.has_concept && "✓"}
+            )}
+
+            {/* Empty state */}
+            {!deckLoading && deck.length === 0 && (
+              <div className="bg-white border border-zinc-200 rounded-xl shadow-sm px-10 py-16 text-center">
+                <div className="w-11 h-11 rounded-xl bg-zinc-100 flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="w-5 h-5 text-zinc-400" strokeWidth={1.5} />
+                </div>
+                <h3 className="text-base font-semibold text-zinc-900 mb-2">Noch keine Konversationen</h3>
+                <p className="text-sm text-zinc-500 mb-5">Starte einen Chat und komm dann hierher zurück.</p>
+                <button
+                  onClick={() => router.push("/chat")}
+                  className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 active:scale-[0.98] rounded-lg px-5 py-2.5"
+                >
+                  Chat starten
                 </button>
-                {row.has_concept ? (
-                  <button style={S.btn(true)} onClick={() => openRoadmap(row.session_id)}>🗺 Roadmap öffnen</button>
-                ) : (
-                  <button style={{ ...S.btn(false), opacity: 0.5, cursor: "not-allowed" }} disabled>🗺 Roadmap (braucht Concept)</button>
+              </div>
+            )}
+
+            {/* Deck rows */}
+            <div className="flex flex-col gap-2.5">
+              {deck.map((row, i) => (
+                <div
+                  key={row.session_id}
+                  className="deck-card bg-white border border-zinc-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
+                  style={{ animationDelay: `${i * 50}ms` }}
+                >
+                  {/* Card header */}
+                  <div className="px-5 pt-4 pb-3 flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-zinc-900 truncate mb-0.5">
+                        {row.title || "Konversation"}
+                      </h3>
+                      <p className="text-xs text-zinc-400 font-mono">
+                        {row.message_count} Nachrichten · {new Date(row.saved_at).toLocaleDateString("de", { month: "short", day: "numeric" })}
+                      </p>
+                    </div>
+                    {row.has_concept && (
+                      <span className="flex items-center gap-1 text-xs text-zinc-400 flex-shrink-0 mt-0.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500" strokeWidth={2} />
+                        Concept
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Card actions */}
+                  <div className="px-4 pb-3 flex items-center gap-2 border-t border-zinc-100 pt-2.5">
+                    <button
+                      onClick={() => { store.setSessionId(row.session_id); router.push("/chat"); }}
+                      className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-900 transition-colors duration-150 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50 active:scale-[0.98]"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      Chat öffnen
+                    </button>
+                    <button
+                      onClick={() => router.push(`/concept?session=${row.session_id}`)}
+                      className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-900 transition-colors duration-150 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50 active:scale-[0.98]"
+                    >
+                      <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      Transformation Concept
+                      {row.has_concept && <CheckCircle2 className="w-3 h-3 text-green-500" strokeWidth={2} />}
+                    </button>
+                    {row.has_concept ? (
+                      <button
+                        onClick={() => openRoadmap(row.session_id)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 active:scale-[0.98] rounded-lg px-3 py-1.5 ml-auto"
+                      >
+                        <Map className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        Roadmap öffnen
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        className="flex items-center gap-1.5 text-xs font-medium text-zinc-300 border border-zinc-100 rounded-lg px-3 py-1.5 ml-auto cursor-not-allowed"
+                      >
+                        <Map className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        Roadmap
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Roadmap overlay — positioned inside main, covers only content area */}
+        {(roadmap || rmLoading) && (
+          <div className="roadmap-panel absolute inset-0 bg-zinc-50 z-20 flex flex-col overflow-hidden">
+
+            {/* Roadmap topbar */}
+            <div className="h-14 bg-white border-b border-zinc-200 flex items-center px-6 gap-3 flex-shrink-0">
+              <button
+                onClick={() => { setRoadmap(null); setRmSession(null); }}
+                className="flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900 transition-colors duration-150 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50 active:scale-[0.98]"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" strokeWidth={1.5} />
+                Deck
+              </button>
+              <h2 className="flex-1 text-sm font-semibold text-zinc-900 truncate">
+                {roadmap?.title || "Roadmap"}
+              </h2>
+              {rmSession && (
+                <button
+                  onClick={() => openRoadmap(rmSession)}
+                  className="flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900 transition-colors duration-150 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50 active:scale-[0.98]"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  Neu generieren
+                </button>
+              )}
+            </div>
+
+            {/* Roadmap body */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-3xl mx-auto px-6 py-8">
+
+                {/* Loading */}
+                {rmLoading && (
+                  <div className="text-center py-20">
+                    <div className="thinking-spinner mx-auto mb-4" style={{ width: 28, height: 28 }} />
+                    <p className="text-sm font-medium text-zinc-700 mb-1">KI generiert die Roadmap...</p>
+                    <p className="text-xs text-zinc-400">Beim ersten Mal dauert es einen Moment.</p>
+                  </div>
+                )}
+
+                {roadmap && !rmLoading && (
+                  <div className="flex flex-col gap-8">
+
+                    {/* Flow strip */}
+                    {roadmap.phases && (
+                      <div>
+                        <p className="text-xs tracking-widest text-zinc-400 uppercase mb-3">Ablauf</p>
+                        <div className="bg-white border border-zinc-200 rounded-xl p-4 flex flex-wrap gap-2 items-center">
+                          {roadmap.phases.flatMap(ph => ph.steps).map((step, i, arr) => (
+                            <span key={step.id} className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-zinc-700 bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-1.5">
+                                {step.title}
+                              </span>
+                              {i < arr.length - 1 && (
+                                <ArrowRight className="w-3.5 h-3.5 text-zinc-300 flex-shrink-0" strokeWidth={1.5} />
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Phases */}
+                    {roadmap.phases?.map((ph, pi) => (
+                      <div key={pi}>
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="text-xs font-mono font-bold bg-zinc-900 text-white rounded-full px-2.5 py-0.5">
+                            Phase {pi + 1}
+                          </span>
+                          <h3 className="text-base font-semibold text-zinc-900 tracking-tight">{ph.name}</h3>
+                        </div>
+                        {ph.goal && (
+                          <p className="text-sm text-zinc-500 mb-4 ml-px">{ph.goal}</p>
+                        )}
+
+                        {/* Timeline */}
+                        <div className="border-l-2 border-zinc-200 pl-5 ml-1 flex flex-col gap-3">
+                          {ph.steps.map(step => (
+                            <div key={step.id} className="relative">
+                              {/* Timeline dot */}
+                              <span className="absolute -left-[25px] top-4 w-2.5 h-2.5 rounded-full bg-green-600 border-2 border-zinc-50" />
+
+                              <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-sm">
+                                <div className="flex items-start gap-2 mb-3">
+                                  <span className="flex-1 text-sm font-semibold text-zinc-900 leading-snug">{step.title}</span>
+                                  {step.effort && (
+                                    <span className="text-xs font-mono text-zinc-400 border border-zinc-200 rounded-md px-2 py-0.5 flex-shrink-0">
+                                      {step.effort}
+                                    </span>
+                                  )}
+                                </div>
+                                {step.what && (
+                                  <p className="text-sm text-zinc-600 leading-relaxed mb-2">{step.what}</p>
+                                )}
+                                {step.why && (
+                                  <p className="text-xs text-zinc-400 mb-4">
+                                    <span className="font-semibold text-green-600">Warum: </span>{step.why}
+                                  </p>
+                                )}
+
+                                {/* Tools */}
+                                {step.tools && step.tools.length > 0 && (
+                                  <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-zinc-100">
+                                    {step.tools.map(tool => {
+                                      const vs = verdictStyle(tool.verdict ?? "");
+                                      return (
+                                        <div key={tool.name} className="bg-zinc-50 border border-zinc-100 rounded-lg p-3.5">
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${vs.dot}`} />
+                                            <span className="text-sm font-semibold text-zinc-900 flex-1">{tool.name}</span>
+                                            {tool.verdict && (
+                                              <span className={`text-xs font-medium border rounded-full px-2 py-0.5 ${vs.badge}`}>
+                                                {tool.verdict}
+                                              </span>
+                                            )}
+                                          </div>
+                                          {tool.why && (
+                                            <p className="text-xs text-zinc-500 leading-relaxed mb-2.5">{tool.why}</p>
+                                          )}
+                                          {(tool.pros?.length || tool.cons?.length) && (
+                                            <div className="grid grid-cols-2 gap-3">
+                                              {tool.pros?.length ? (
+                                                <div>
+                                                  <p className="text-xs font-semibold text-green-600 uppercase tracking-widest mb-1.5">Dafür</p>
+                                                  {tool.pros.map((p, i) => (
+                                                    <p key={i} className="text-xs text-zinc-500 mb-1 leading-relaxed">· {p}</p>
+                                                  ))}
+                                                </div>
+                                              ) : null}
+                                              {tool.cons?.length ? (
+                                                <div>
+                                                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-widest mb-1.5">Dagegen</p>
+                                                  {tool.cons.map((c, i) => (
+                                                    <p key={i} className="text-xs text-zinc-500 mb-1 leading-relaxed">· {c}</p>
+                                                  ))}
+                                                </div>
+                                              ) : null}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 export default function DashboardPage() {
-  return <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}><div className="thinking-spinner" style={{ width: 24, height: 24 }} /></div>}><DashboardContent /></Suspense>;
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="thinking-spinner" style={{ width: 24, height: 24 }} />
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
+  );
 }

@@ -42,6 +42,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans
   animation: concept-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+@keyframes deck-card-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.deck-card {
+  animation: deck-card-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes slide-from-right {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.roadmap-panel {
+  animation: slide-from-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 .choice-chip {
   padding: 7px 14px;
   border-radius: 10px;
