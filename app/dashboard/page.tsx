@@ -286,6 +286,32 @@ function DashboardContent() {
   // Right-side discussion panel inside the roadmap view
   const [helpCtx, setHelpCtx] = useState<HelpContext | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  // Floating "discuss selection" button (same UX as the main chat)
+  const [selBtn, setSelBtn] = useState<{ x: number; y: number; text: string } | null>(null);
+  const rmBodyRef = useRef<HTMLDivElement>(null);
+
+  function handleRmMouseUp() {
+    const sel = window.getSelection();
+    const text = sel?.toString().trim() ?? "";
+    if (text.length < 9 || !sel || sel.rangeCount === 0) { setSelBtn(null); return; }
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    const el = rmBodyRef.current;
+    if (!el) return;
+    const host = el.getBoundingClientRect();
+    setSelBtn({
+      x: Math.min(rect.left - host.left + rect.width / 2, host.width - 130),
+      y: rect.top - host.top + el.scrollTop - 38,
+      text: text.slice(0, 600),
+    });
+  }
+
+  function askAboutSelection() {
+    if (!selBtn) return;
+    setHelpCtx({ quote: selBtn.text });
+    setHelpOpen(true);
+    setSelBtn(null);
+    window.getSelection()?.removeAllRanges();
+  }
 
   useEffect(() => { if (!loading && !token) router.replace("/login"); }, [token, loading]);
   useEffect(() => {
@@ -442,7 +468,25 @@ function DashboardContent() {
 
               {/* Roadmap body + discussion panel */}
               <div className="flex-1 flex min-h-0">
-                <div className="flex-1 overflow-y-auto">
+                <div ref={rmBodyRef} onMouseUp={handleRmMouseUp} className="flex-1 overflow-y-auto relative">
+
+                  {/* Floating button on text selection */}
+                  <AnimatePresence>
+                    {selBtn && (
+                      <motion.button
+                        initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 4, scale: 0.94 }}
+                        transition={{ type: "spring", duration: 0.25, bounce: 0.2 }}
+                        onClick={askAboutSelection}
+                        style={{ left: selBtn.x, top: Math.max(selBtn.y, 8) }}
+                        className="absolute z-30 flex items-center gap-1.5 text-xs font-semibold text-white bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 rounded-full px-3.5 py-2 shadow-lg -translate-x-1/2"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        Mit Agent diskutieren
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
                   {rmLoading && <RoadmapLoading />}
 
                   {roadmap && !rmLoading && (

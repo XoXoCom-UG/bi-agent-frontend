@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { api, Message } from "@/lib/api";
+import { md } from "@/lib/markdown";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { CheckCircle2, Circle, X, ArrowUp, Sparkles } from "lucide-react";
@@ -155,14 +156,38 @@ export function HelpChat({ token, projectId, context, onClose }: {
         )}
         {messages.map((m, i) => {
           const isUser = m.role === "user";
-          const text = toText(m.content);
+          let text = toText(m.content);
           if (!text.trim()) return null;
+          // The agent may offer quick choices — render them as tappable chips.
+          let choices: string[] = [];
+          const cm = text.match(/\[\[CHOICES:\s*([\s\S]*?)\]\]/i);
+          if (cm) {
+            choices = cm[1].split("|").map(s => s.trim()).filter(Boolean);
+            text = text.replace(cm[0], "").trim();
+          }
+          const isLast = i === messages.length - 1;
           return (
-            <div key={i} className={cn("text-[12px] leading-relaxed whitespace-pre-wrap rounded-xl px-3 py-2",
-              isUser
-                ? "bg-green-600 text-white ml-6"
-                : "bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 mr-2 border border-zinc-100 dark:border-zinc-700")}>
-              {text.replace(/\[\[CHOICES:[\s\S]*?\]\]/gi, "").trim()}
+            <div key={i}>
+              {isUser ? (
+                <div className="text-[12px] leading-relaxed whitespace-pre-wrap rounded-xl px-3 py-2 bg-green-600 text-white ml-6">
+                  {text}
+                </div>
+              ) : (
+                <div
+                  className="help-md text-[12px] leading-relaxed rounded-xl px-3 py-2 bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 mr-2 border border-zinc-100 dark:border-zinc-700 overflow-x-auto"
+                  dangerouslySetInnerHTML={{ __html: md(text) }}
+                />
+              )}
+              {!isUser && isLast && choices.length > 0 && !sending && (
+                <div className="flex flex-wrap gap-1.5 mt-2 mr-2">
+                  {choices.map(c => (
+                    <button key={c} onClick={() => send(c)}
+                      className="px-2.5 py-1 rounded-full border border-green-200 dark:border-green-800 bg-white dark:bg-zinc-900 text-[11px] text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/40 hover:border-green-400 transition-colors duration-150">
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}

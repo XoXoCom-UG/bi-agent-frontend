@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { cn, dateStr } from "@/lib/utils";
 import {
   Plus, ChevronRight,
-  Search, Settings, Check, X, Folder, FolderOpen, Trash2, LogOut,
+  Search, Settings, Check, X, Folder, FolderOpen, Trash2, LogOut, MessageCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SettingsModal } from "./settings-modal";
@@ -129,7 +129,15 @@ export function Sidebar() {
     router.push("/chat");
   }
 
-  async function deleteChat(sid: string, pid: string) {
+  // A loose chat outside any project — for quick, one-off questions.
+  function startQuickChat() {
+    store.newChat();
+    store.setActiveProject(null);
+    router.push("/chat");
+    closeMobile();
+  }
+
+  async function deleteChat(sid: string, pid: string | null = null) {
     if (!token) return;
     // Two-step inline confirm: first click arms, second click deletes
     if (confirmDelete !== sid) {
@@ -141,7 +149,7 @@ export function Sidebar() {
     try {
       await api.deleteSession(token, sid);
       store.setHistory(store.history.filter(s => s.session_id !== sid));
-      refreshProjectSessions(pid);
+      if (pid) refreshProjectSessions(pid);
       if (store.sessionId === sid) store.newChat();
     } catch {}
   }
@@ -152,6 +160,11 @@ export function Sidebar() {
 
   const q = search.toLowerCase();
   const visibleProjects = store.projects.filter(p => !q || p.name.toLowerCase().includes(q));
+  // Conversations that don't belong to any project (quick questions, old chats).
+  const looseChats = store.history
+    .filter(s => !s.project_id)
+    .filter(s => !q || (s.title || "").toLowerCase().includes(q))
+    .slice(0, 20);
   const initials = (displayName || user?.email || "U")[0].toUpperCase();
 
   return (
@@ -402,6 +415,61 @@ export function Sidebar() {
                   </div>
                 );
               })}
+
+          {/* ── Quick questions (chats outside any project) ── */}
+          <div className="flex items-center justify-between px-2 pt-4 pb-1">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Schnelle Fragen</p>
+            <motion.button
+              whileTap={{ scale: 0.88 }}
+              onClick={startQuickChat}
+              title="Schnelle Frage stellen — ohne Projekt"
+              className="w-5 h-5 rounded-md flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950 transition-colors duration-150"
+            >
+              <Plus className="w-3.5 h-3.5" strokeWidth={2} />
+            </motion.button>
+          </div>
+
+          {looseChats.length === 0 ? (
+            <button onClick={startQuickChat}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs text-zinc-400 hover:text-green-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150">
+              <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
+              Frag etwas — ohne Projekt
+            </button>
+          ) : (
+            <div className="space-y-0.5">
+              {looseChats.map(s => (
+                <div key={s.session_id} className="group/chat relative">
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => loadChat(s.session_id, null)}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors duration-150 pr-7",
+                      store.sessionId === s.session_id
+                        ? "bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-300"
+                        : "hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                    )}
+                  >
+                    <MessageCircle className="w-3.5 h-3.5 flex-shrink-0 text-zinc-400" strokeWidth={1.5} />
+                    <span className="flex-1 text-xs font-medium truncate">{(s.title || "Untitled").slice(0, 30)}</span>
+                    <span className="text-[10px] text-zinc-400 flex-shrink-0">{dateStr(s.saved_at)}</span>
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.88 }}
+                    onClick={e => { e.stopPropagation(); deleteChat(s.session_id); }}
+                    title={confirmDelete === s.session_id ? "Klicken zum Löschen" : "Chat löschen"}
+                    className={cn(
+                      "absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 rounded flex items-center justify-center transition-all duration-150",
+                      confirmDelete === s.session_id
+                        ? "opacity-100 text-white bg-red-500 hover:bg-red-600"
+                        : "opacity-0 group-hover/chat:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40"
+                    )}
+                  >
+                    <Trash2 className="w-3 h-3" strokeWidth={1.5} />
+                  </motion.button>
+                </div>
+              ))}
+            </div>
+          )}
 
         </div>
 
