@@ -162,6 +162,9 @@ export interface Project {
   name: string;
   chats: number;
   created_at: string;
+  // Consent flags the agent records in-chat; null = not asked yet
+  use_profile?: boolean | null;
+  use_other_projects?: boolean | null;
 }
 
 export interface DeckRow {
@@ -202,10 +205,16 @@ export interface TransformationRequest {
   refine_instruction?: string;
 }
 
+export interface GoalTableRow {
+  ziel: string;
+  tooling: string;
+  alternativen: string[];
+}
+
 export interface ConceptData {
   title?: string;
   now?: { summary?: string; pain_points?: string[] };
-  goal?: { summary?: string; outcomes?: string[] };
+  goal?: { summary?: string; outcomes?: string[]; table?: GoalTableRow[] };
   transformation_steps?: Array<{
     title: string;
     description?: string;

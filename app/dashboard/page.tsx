@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api, DeckRow, RoadmapData } from "@/lib/api";
 import { Sidebar, SidebarHamburger } from "@/components/layout/sidebar";
+import { HelpChat, HelpContext } from "@/components/layout/right-panel";
 import {
   MessageSquare, Zap, Map, ArrowLeft, RefreshCw,
   CheckCircle2, ChevronDown, Copy, Check,
@@ -60,7 +61,7 @@ function SpotlightCard({ children, className, delay = 0 }: {
 const RM_PHASES = [
   { text: "Lese und verstehe deine Konversation...", ms: 0 },
   { text: "Identifiziere Transformationsphasen...", ms: 3500 },
-  { text: "Plane konkrete Umsetzungsschritte...", ms: 7000 },
+  { text: "Plane konkrete Maßnahmen...", ms: 7000 },
   { text: "Wähle die besten Tools aus...", ms: 10500 },
   { text: "Berechne Aufwände und Prioritäten...", ms: 14000 },
   { text: "Erstelle die finale Roadmap...", ms: 17000 },
@@ -109,7 +110,11 @@ function RoadmapLoading() {
 }
 
 // ── Step card ─────────────────────────────────────────────────────────────────
-function StepCard({ step, index }: { step: NonNullable<RoadmapData["phases"]>[0]["steps"][0]; index: number }) {
+function StepCard({ step, index, onDiscuss }: {
+  step: NonNullable<RoadmapData["phases"]>[0]["steps"][0];
+  index: number;
+  onDiscuss?: (ctx: HelpContext) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -235,8 +240,19 @@ function StepCard({ step, index }: { step: NonNullable<RoadmapData["phases"]>[0]
                   ))}
                 </div>
               )}
-              {/* Footer: copy */}
-              <div className="flex justify-end mt-3">
+              {/* Footer: discuss (left) + copy (right) */}
+              <div className="flex items-center justify-between mt-3">
+                {onDiscuss ? (
+                  <button
+                    onClick={() => onDiscuss({
+                      quote: [step.title, step.what, (step.tools ?? []).map(t => t.name).join(", ")].filter(Boolean).join(" — "),
+                      question: "Welche Vor- und Nachteile hat dieser Vorschlag für mich, und welche Alternativen gibt es?",
+                    })}
+                    className="flex items-center gap-1.5 text-xs font-medium text-green-600 hover:text-green-700 dark:hover:text-green-400 transition-colors">
+                    <MessageSquare className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    Mit Agent diskutieren
+                  </button>
+                ) : <span />}
                 <button onClick={copy}
                   className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
                   <motion.span key={copied ? "c" : "n"} initial={{ scale: 0.8 }} animate={{ scale: 1 }}
@@ -267,6 +283,9 @@ function DashboardContent() {
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
   const [rmSession, setRmSession] = useState<string | null>(null);
   const [rmLoading, setRmLoading] = useState(false);
+  // Right-side discussion panel inside the roadmap view
+  const [helpCtx, setHelpCtx] = useState<HelpContext | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => { if (!loading && !token) router.replace("/login"); }, [token, loading]);
   useEffect(() => {
@@ -291,7 +310,7 @@ function DashboardContent() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950">
-      <Sidebar currentPath="/dashboard" />
+      <Sidebar />
 
       <div className="flex-1 flex flex-col overflow-hidden relative">
 
@@ -421,38 +440,78 @@ function DashboardContent() {
                 )}
               </div>
 
-              {/* Roadmap body */}
-              <div className="flex-1 overflow-y-auto">
-                {rmLoading && <RoadmapLoading />}
+              {/* Roadmap body + discussion panel */}
+              <div className="flex-1 flex min-h-0">
+                <div className="flex-1 overflow-y-auto">
+                  {rmLoading && <RoadmapLoading />}
 
-                {roadmap && !rmLoading && (
-                  <div className="max-w-2xl mx-auto px-5 md:px-8 py-8 flex flex-col gap-10">
-                    {roadmap.phases?.map((ph, pi) => (
-                      <motion.div key={pi}
-                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ type: "spring", duration: 0.4, bounce: 0, delay: pi * 0.07 }}>
+                  {roadmap && !rmLoading && (
+                    <div className="max-w-2xl mx-auto px-5 md:px-8 py-8 flex flex-col gap-10">
 
-                        {/* Phase header */}
-                        <div className="flex items-center gap-2.5 mb-1.5">
-                          <span className="text-[11px] font-bold bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full px-2.5 py-0.5 tracking-wide">
-                            Phase {pi + 1}
-                          </span>
-                          <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{ph.name}</h3>
-                        </div>
-                        {ph.goal && (
-                          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5 leading-relaxed">{ph.goal}</p>
-                        )}
-
-                        {/* Steps — clean list */}
-                        <div className="flex flex-col gap-2">
-                          {ph.steps.map((step, si) => (
-                            <StepCard key={step.id} step={step} index={si} />
-                          ))}
-                        </div>
+                      {/* Overview header — what this roadmap is about */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ type: "spring", duration: 0.4, bounce: 0 }}
+                        className="pb-6 border-b border-zinc-100 dark:border-zinc-800 -mb-2">
+                        <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-green-600 mb-2">Roadmap</p>
+                        <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-2 leading-tight">
+                          {roadmap.title || "Deine Roadmap"}
+                        </h2>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                          {roadmap.phases?.length ?? 0} Phasen · {roadmap.phases?.reduce((n, ph) => n + ph.steps.length, 0) ?? 0} Maßnahmen
+                          — hake ab, was erledigt ist, und diskutiere Tools & Alternativen direkt mit dem Agenten.
+                        </p>
                       </motion.div>
-                    ))}
-                  </div>
-                )}
+
+                      {roadmap.phases?.map((ph, pi) => (
+                        <motion.div key={pi}
+                          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                          transition={{ type: "spring", duration: 0.4, bounce: 0, delay: pi * 0.07 }}>
+
+                          {/* Phase header */}
+                          <div className="flex items-center gap-2.5 mb-1.5">
+                            <span className="text-[11px] font-bold bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full px-2.5 py-0.5 tracking-wide">
+                              Phase {pi + 1}
+                            </span>
+                            <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{ph.name}</h3>
+                          </div>
+                          {ph.goal && (
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5 leading-relaxed">{ph.goal}</p>
+                          )}
+
+                          {/* Steps — clean list */}
+                          <div className="flex flex-col gap-2">
+                            {ph.steps.map((step, si) => (
+                              <StepCard key={step.id} step={step} index={si}
+                                onDiscuss={ctx => { setHelpCtx(ctx); setHelpOpen(true); }} />
+                            ))}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Discussion panel — the agent refines things on the left while you chat here */}
+                <AnimatePresence>
+                  {helpOpen && (
+                    <motion.div
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: 320, opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      transition={{ type: "spring", duration: 0.35, bounce: 0 }}
+                      className="hidden md:flex flex-col shrink-0 border-l border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
+                      <div className="flex flex-col h-full" style={{ width: 320 }}>
+                        <HelpChat
+                          token={token}
+                          projectId={store.activeProjectId}
+                          context={helpCtx}
+                          onClose={() => { setHelpOpen(false); setHelpCtx(null); }}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           )}

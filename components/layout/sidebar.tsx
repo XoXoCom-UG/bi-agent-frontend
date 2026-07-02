@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { cn, dateStr } from "@/lib/utils";
 import {
-  MessageSquare, Zap, LayoutDashboard, Plus, ChevronRight,
+  Plus, ChevronRight,
   Search, Settings, Check, X, Folder, FolderOpen, Trash2, LogOut,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -42,33 +42,7 @@ function PressBtn({ children, onClick, className, title, disabled }: {
   );
 }
 
-function NavItem({ icon: Icon, label, active, onClick }: {
-  icon: React.ElementType; label: string; active: boolean; onClick: () => void;
-}) {
-  return (
-    <motion.button whileTap={{ scale: 0.97 }}
-      whileHover={{ x: active ? 0 : 1 }}
-      transition={BTN_SPRING}
-      onClick={onClick}
-      className={cn(
-        "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors duration-150 mb-0.5 text-left font-medium",
-        active
-          ? "text-green-700 bg-green-50 border border-green-100 dark:text-green-400 dark:bg-green-950 dark:border-green-900"
-          : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-      )}
-    >
-      <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
-      <span className="truncate">{label}</span>
-      {active && (
-        <motion.span initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} className="ml-auto">
-          <ChevronRight className="w-3 h-3 text-green-400" strokeWidth={2} />
-        </motion.span>
-      )}
-    </motion.button>
-  );
-}
-
-export function Sidebar({ currentPath }: { currentPath?: string }) {
+export function Sidebar() {
   const { token, user, signOut } = useAuth();
   const store = useChatStore();
   const router = useRouter();
@@ -109,11 +83,13 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
     }
   }, [creatingProject]);
 
-  async function loadChat(sid: string) {
+  async function loadChat(sid: string, pid: string | null = null) {
     if (!token) return;
     try {
       const s = await api.getSession(token, sid);
       store.setSessionId(sid); store.setSessionTitle(s.title || "Konversation");
+      // Keep the project context in sync so follow-up messages stay project-scoped.
+      store.setActiveProject(pid ?? s.project_id ?? null);
       store.setMessages(s.messages ?? []); router.push("/chat");
     } catch {}
   }
@@ -153,7 +129,7 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
     router.push("/chat");
   }
 
-  async function deleteChat(sid: string) {
+  async function deleteChat(sid: string, pid: string) {
     if (!token) return;
     // Two-step inline confirm: first click arms, second click deletes
     if (confirmDelete !== sid) {
@@ -165,6 +141,7 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
     try {
       await api.deleteSession(token, sid);
       store.setHistory(store.history.filter(s => s.session_id !== sid));
+      refreshProjectSessions(pid);
       if (store.sessionId === sid) store.newChat();
     } catch {}
   }
@@ -174,7 +151,7 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
   }
 
   const q = search.toLowerCase();
-  const loose = store.history.filter(s => !s.project_id).filter(s => !q || (s.title || "").toLowerCase().includes(q));
+  const visibleProjects = store.projects.filter(p => !q || p.name.toLowerCase().includes(q));
   const initials = (displayName || user?.email || "U")[0].toUpperCase();
 
   return (
@@ -210,17 +187,13 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
           </button>
         </div>
 
-        {/* New chat */}
+        {/* New project */}
         <div className="p-3 pb-2">
           <PressBtn
-            onClick={() => {
-              store.newChat();
-              if (store.activeProjectId) store.setActiveProject(null);
-              router.push("/chat");
-            }}
+            onClick={() => { setCreatingProject(true); setNewProjName(""); }}
             className="w-full flex items-center justify-center gap-2 h-9 rounded-lg text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 shadow-sm shadow-green-600/20"
           >
-            <Plus className="w-4 h-4" strokeWidth={2} />Neuer Chat
+            <Plus className="w-4 h-4" strokeWidth={2} />Neues Projekt
           </PressBtn>
         </div>
 
@@ -228,42 +201,26 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
         <div className="px-3 pb-2">
           <div className="flex items-center gap-2 h-8 rounded-lg border border-zinc-200 dark:border-zinc-700 px-2.5 bg-zinc-50 dark:bg-zinc-800 focus-within:border-zinc-300 dark:focus-within:border-zinc-600 transition-colors duration-150">
             <Search className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" strokeWidth={1.5} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Chats suchen…"
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Projekte suchen…"
               className="flex-1 bg-transparent text-xs text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 outline-none min-w-0" />
           </div>
         </div>
 
         <div className="h-px bg-zinc-100 dark:bg-zinc-800 mx-3" />
 
-        {/* Navigation */}
-        <div className="px-3 py-2">
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest px-2 mb-1.5">Navigation</p>
-          {[
-            { icon: MessageSquare, label: "Chat",      path: "/chat"      },
-            { icon: Zap,           label: "Concept",   path: "/concept"   },
-            { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-          ].map(({ icon, label, path }) => (
-            <NavItem key={path} icon={icon} label={label} active={currentPath === path} onClick={() => { router.push(path); closeMobile(); }} />
-          ))}
-        </div>
-
-        <div className="h-px bg-zinc-100 dark:bg-zinc-800 mx-3" />
-
-        {/* Sessions list */}
+        {/* Projects list */}
         <div className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
-          {!q && (
-            <>
-              {/* ── Projects header ── */}
-              <div className="flex items-center justify-between px-2 pt-1 pb-1">
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Projekte</p>
-                <motion.button
-                  whileTap={{ scale: 0.88 }}
-                  onClick={() => { setCreatingProject(true); setNewProjName(""); }}
-                  className="w-5 h-5 rounded-md flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950 transition-colors duration-150"
-                >
-                  <Plus className="w-3.5 h-3.5" strokeWidth={2} />
-                </motion.button>
-              </div>
+          {/* ── Projects header ── */}
+          <div className="flex items-center justify-between px-2 pt-1 pb-1">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Projekte</p>
+            <motion.button
+              whileTap={{ scale: 0.88 }}
+              onClick={() => { setCreatingProject(true); setNewProjName(""); }}
+              className="w-5 h-5 rounded-md flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950 transition-colors duration-150"
+            >
+              <Plus className="w-3.5 h-3.5" strokeWidth={2} />
+            </motion.button>
+          </div>
 
               {/* ── Inline create form ── */}
               <AnimatePresence>
@@ -318,16 +275,16 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
               </AnimatePresence>
 
               {/* ── Project list ── */}
-              {store.projects.length === 0 && !creatingProject && (
+              {visibleProjects.length === 0 && !creatingProject && (
                 <motion.p
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   className="text-xs text-zinc-400 px-2 py-1"
                 >
-                  Noch keine Projekte.
+                  {q ? "Keine Projekte gefunden." : "Noch keine Projekte."}
                 </motion.p>
               )}
 
-              {store.projects.map(p => {
+              {visibleProjects.map(p => {
                 const isActive = store.activeProjectId === p.project_id;
                 const isExpanded = expanded.has(p.project_id);
                 const sessions = store.projectSessions[p.project_id] ?? [];
@@ -399,20 +356,34 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
                             ) : (
                               <div className="space-y-0.5 pt-0.5">
                                 {sessions.map(s => (
-                                  <motion.button
-                                    key={s.session_id}
-                                    whileTap={{ scale: 0.97 }}
-                                    onClick={() => loadChat(s.session_id)}
-                                    className={cn(
-                                      "w-full flex flex-col px-2 py-1.5 rounded text-left transition-colors duration-150",
-                                      store.sessionId === s.session_id
-                                        ? "bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-300"
-                                        : "hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-                                    )}
-                                  >
-                                    <span className="text-xs font-medium truncate">{(s.title || "Untitled").slice(0, 26)}</span>
-                                    <span className="text-[10px] text-zinc-400">{s.message_count} msg</span>
-                                  </motion.button>
+                                  <div key={s.session_id} className="group/chat relative">
+                                    <motion.button
+                                      whileTap={{ scale: 0.97 }}
+                                      onClick={() => loadChat(s.session_id, p.project_id)}
+                                      className={cn(
+                                        "w-full flex flex-col px-2 py-1.5 rounded text-left transition-colors duration-150 pr-7",
+                                        store.sessionId === s.session_id
+                                          ? "bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-300"
+                                          : "hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                                      )}
+                                    >
+                                      <span className="text-xs font-medium truncate">{(s.title || "Untitled").slice(0, 26)}</span>
+                                      <span className="text-[10px] text-zinc-400">{dateStr(s.saved_at)} · {s.message_count} msg</span>
+                                    </motion.button>
+                                    <motion.button
+                                      whileTap={{ scale: 0.88 }}
+                                      onClick={e => { e.stopPropagation(); deleteChat(s.session_id, p.project_id); }}
+                                      title={confirmDelete === s.session_id ? "Klicken zum Löschen" : "Chat löschen"}
+                                      className={cn(
+                                        "absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 rounded flex items-center justify-center transition-all duration-150",
+                                        confirmDelete === s.session_id
+                                          ? "opacity-100 text-white bg-red-500 hover:bg-red-600"
+                                          : "opacity-0 group-hover/chat:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40"
+                                      )}
+                                    >
+                                      <Trash2 className="w-3 h-3" strokeWidth={1.5} />
+                                    </motion.button>
+                                  </div>
                                 ))}
                                 <motion.button
                                   whileTap={{ scale: 0.97 }}
@@ -432,46 +403,6 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
                 );
               })}
 
-              {/* ── Conversations header ── */}
-              <div className="flex items-center justify-between px-2 pt-3 pb-1.5 border-t border-zinc-100 dark:border-zinc-800 mt-2">
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Konversationen</p>
-                <span className="text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-full px-1.5 py-0.5">
-                  {loose.length}
-                </span>
-              </div>
-            </>
-          )}
-
-          {q && <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest px-2 pt-1 pb-1.5">Ergebnisse ({loose.length})</p>}
-          {loose.length === 0 && (
-            <p className="text-xs text-zinc-400 px-2 py-1">{q ? "Keine Chats gefunden." : "Noch keine Chats."}</p>
-          )}
-          {loose.map(s => (
-            <div key={s.session_id} className="group/chat relative">
-              <motion.button whileTap={{ scale: 0.97 }} onClick={() => loadChat(s.session_id)}
-                className={cn("w-full flex flex-col px-2 py-2 rounded-lg text-left transition-colors duration-150 pr-8",
-                  store.sessionId === s.session_id
-                    ? "bg-green-50 dark:bg-green-950 border-l-2 border-green-500 text-green-900 dark:text-green-300 pl-1.5"
-                    : "hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-400")}>
-                <span className="text-xs font-medium truncate">{(s.title || "Untitled").slice(0, 30)}</span>
-                <span className="text-xs text-zinc-400 mt-0.5">{dateStr(s.saved_at)} · {s.message_count} msg</span>
-              </motion.button>
-              {/* Delete — hover reveal, two-click confirm */}
-              <motion.button
-                whileTap={{ scale: 0.88 }}
-                onClick={e => { e.stopPropagation(); deleteChat(s.session_id); }}
-                title={confirmDelete === s.session_id ? "Klicken zum Löschen" : "Chat löschen"}
-                className={cn(
-                  "absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-150",
-                  confirmDelete === s.session_id
-                    ? "opacity-100 text-white bg-red-500 hover:bg-red-600"
-                    : "opacity-0 group-hover/chat:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40"
-                )}
-              >
-                <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
-              </motion.button>
-            </div>
-          ))}
         </div>
 
         {/* Footer */}

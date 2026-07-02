@@ -268,17 +268,19 @@ function ConceptContent() {
   const steps    = concept?.transformation_steps ?? [];
   const stories  = concept?.user_stories ?? [];
   const bv       = concept?.business_value_summary ?? {};
-  const now      = concept?.now ?? {};
-  const goal     = concept?.goal ?? {};
-  const pains    = now.pain_points ?? [];
-  const outcomes = goal.outcomes ?? [];
+  const now       = concept?.now ?? {};
+  const goal      = concept?.goal ?? {};
+  const pains     = now.pain_points ?? [];
+  const outcomes  = goal.outcomes ?? [];
+  const goalTable = goal.table ?? [];
 
   const kpiItems = KPI_META
     .map(m => ({ ...m, val: (bv as Record<string, string | undefined>)[m.key] }))
     .filter(k => k.val);
 
   const hasMessages = store.messages.length > 0;
-  const loose = store.history.filter(s => !s.project_id);
+  // All conversations (project chats included) can carry a concept.
+  const loose = store.history;
 
   if (loading || !token) return (
     <div className="flex bg-white" style={{ height: "100vh" }}>
@@ -291,7 +293,7 @@ function ConceptContent() {
 
   return (
     <div className="flex bg-white" style={{ height: "100vh", overflow: "hidden" }}>
-      <Sidebar currentPath="/concept" />
+      <Sidebar />
 
       <div className="flex-1 flex flex-col relative" style={{ overflow: "hidden" }}>
         {/* Generating overlay */}
@@ -305,7 +307,7 @@ function ConceptContent() {
               {concept?.title || (hasMessages ? store.sessionTitle : "Transformation Concept")}
             </p>
             {concept && (
-              <p className="text-xs text-zinc-400">{steps.length} Schritte · {stories.length} User Stories</p>
+              <p className="text-xs text-zinc-400">{steps.length} Maßnahmen · {stories.length} User Stories</p>
             )}
           </div>
 
@@ -517,6 +519,91 @@ function ConceptContent() {
             {concept && (
               <div className="flex flex-col gap-5">
 
+                {/* Ziel-Zustand FIRST — as a table: Ziel | Bestes Tooling | Alternativen */}
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", duration: 0.5, bounce: 0 }}
+                  className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden"
+                >
+                  <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
+                    <h2 className="text-base font-semibold text-zinc-900">Ziel-Zustand</h2>
+                    {goal.summary && <span className="text-xs text-zinc-400 truncate max-w-[50%]">{goal.summary}</span>}
+                  </div>
+                  {goalTable.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-zinc-50">
+                          <tr>
+                            {["Ziel-Zustand", "Annahme bestes Tooling", "Mögliche Alternativen"].map(h => (
+                              <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {goalTable.map((row, i) => (
+                            <tr key={i} className="border-t border-zinc-100 hover:bg-zinc-50/60 align-top">
+                              <td className="px-5 py-3.5 text-sm text-zinc-800 font-medium leading-snug">{row.ziel}</td>
+                              <td className="px-5 py-3.5 text-sm text-zinc-600 leading-snug">{row.tooling}</td>
+                              <td className="px-5 py-3.5">
+                                <ul className="space-y-1">
+                                  {(row.alternativen ?? []).map((a, j) => (
+                                    <li key={j} className="flex gap-2 items-start text-sm text-zinc-500 leading-snug">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 shrink-0 mt-1.5" />
+                                      {a}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <ul className="px-6 py-4 space-y-2">
+                      {outcomes.map((o, i) => (
+                        <li key={i} className="flex gap-2.5 items-start text-sm text-zinc-700 leading-snug">
+                          <span className="w-2 h-2 rounded-full bg-zinc-400 flex-shrink-0 mt-1.5" />
+                          {o}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </motion.div>
+
+                {/* Ist-Zustand as a compact table */}
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", duration: 0.5, bounce: 0, delay: 0.06 }}
+                  className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden"
+                >
+                  <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
+                    <h2 className="text-base font-semibold text-zinc-900">Ist-Zustand</h2>
+                    {now.summary && <span className="text-xs text-zinc-400 truncate max-w-[50%]">{now.summary}</span>}
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-zinc-50">
+                        <tr>
+                          <th className="px-5 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wide">Schwachpunkt heute</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pains.map((p, i) => (
+                          <tr key={i} className="border-t border-zinc-100 hover:bg-zinc-50/60">
+                            <td className="px-5 py-3 text-sm text-zinc-600 leading-snug flex gap-2.5 items-start">
+                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 shrink-0 mt-1.5" />
+                              {p}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </motion.div>
+
                 {kpiItems.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {kpiItems.map(({ label, val, sub, Icon }, i) => (
@@ -538,54 +625,6 @@ function ConceptContent() {
                     ))}
                   </div>
                 )}
-
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ type: "spring", duration: 0.5, bounce: 0, delay: 0.12 }}
-                  className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden"
-                >
-                  <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-                    <h2 className="text-base font-semibold text-zinc-900">Ist → Ziel</h2>
-                    <span className="text-xs text-zinc-400">{Math.max(pains.length, outcomes.length)} Aspekte</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2">
-                    <div className="p-6 border-b sm:border-b-0 sm:border-r border-zinc-200">
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="w-2 h-2 rounded-full bg-zinc-300 flex-shrink-0" />
-                        <span className="text-xs tracking-widest text-zinc-400 uppercase">Ist-Zustand</span>
-                      </div>
-                      {now.summary && <p className="text-sm leading-relaxed text-zinc-500 mb-4 pb-4 border-b border-zinc-100">{now.summary}</p>}
-                      <div className="flex flex-col gap-3">
-                        {pains.map((p, i) => (
-                          <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
-                            transition={{ type: "spring", duration: 0.35, bounce: 0, delay: 0.15 + i * 0.05 }}
-                            className="flex gap-2.5 items-start">
-                            <span className="w-2 h-2 rounded-full bg-zinc-200 flex-shrink-0 mt-1.5" />
-                            <p className="text-sm leading-relaxed text-zinc-500">{p}</p>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="p-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="w-2 h-2 rounded-full bg-zinc-700 flex-shrink-0" />
-                        <span className="text-xs tracking-widest text-zinc-900 uppercase">Ziel-Zustand</span>
-                      </div>
-                      {goal.summary && <p className="text-sm leading-relaxed text-zinc-700 mb-4 pb-4 border-b border-zinc-100">{goal.summary}</p>}
-                      <div className="flex flex-col gap-3">
-                        {outcomes.map((o, i) => (
-                          <motion.div key={i} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }}
-                            transition={{ type: "spring", duration: 0.35, bounce: 0, delay: 0.15 + i * 0.05 }}
-                            className="flex gap-2.5 items-start">
-                            <span className="w-2 h-2 rounded-full bg-zinc-400 flex-shrink-0 mt-1.5" />
-                            <p className="text-sm leading-relaxed text-zinc-700">{o}</p>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
 
                 {steps.length > 0 && (
                   <motion.div

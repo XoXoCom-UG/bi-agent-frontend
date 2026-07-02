@@ -5,12 +5,16 @@ import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api } from "@/lib/api";
 import { Sidebar, SidebarHamburger } from "@/components/layout/sidebar";
-import { Badge, TabGroup, Tab } from "@/components/ui";
+import { RightPanel, WorkflowStatus, HelpChat, HelpContext } from "@/components/layout/right-panel";
+import { Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
-import { Zap, Map, ArrowUp, MessageSquare, CheckCircle2, Copy, Check, RefreshCw } from "lucide-react";
+import {
+  Zap, Map, ArrowUp, MessageSquare, CheckCircle2, Copy, Check, RefreshCw,
+  Folder, Plus, PanelRight, LayoutDashboard,
+} from "lucide-react";
 
-// ── Phase lists (long, non-repeating within a response) ──────────────────────
+// ── Phase list (long, non-repeating within a response) ───────────────────────
 const PHASES_CHAT = [
   "Lese deine Frage…",
   "Verstehe den Kontext…",
@@ -19,16 +23,6 @@ const PHASES_CHAT = [
   "Strukturiere die Antwort…",
   "Überprüfe Vollständigkeit…",
   "Formuliere finale Antwort…",
-];
-const PHASES_RESEARCH = [
-  "Lese und verstehe deine Frage…",
-  "Identifiziere Kernthemen…",
-  "Recherchiere relevante Quellen…",
-  "Analysiere Ergebnisse…",
-  "Vergleiche Optionen und Ansätze…",
-  "Synthetisiere Erkenntnisse…",
-  "Formuliere Empfehlungen…",
-  "Überprüfe Vollständigkeit…",
 ];
 
 const BTN_SPRING = { type: "spring", stiffness: 500, damping: 30 } as const;
@@ -295,10 +289,38 @@ export default function ChatPage() {
   const [phaseIdx, setPhaseIdx] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Right panel: workflow status + interactive help chat
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [helpCtx, setHelpCtx] = useState<HelpContext | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [hasConcept, setHasConcept] = useState(false);
+  const [hasRoadmap, setHasRoadmap] = useState(false);
+
+  // Text selection → "discuss with agent" floating button
+  const msgListRef = useRef<HTMLDivElement>(null);
+  const [selBtn, setSelBtn] = useState<{ x: number; y: number; text: string } | null>(null);
+
+  // Inline project creation on the welcome screen
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [projName, setProjName] = useState("");
+  const [projSaving, setProjSaving] = useState(false);
+
   useEffect(() => { if (!loading && !token) router.replace("/login"); }, [token, loading]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [store.messages, store.sending]);
 
-  const allPhases = store.mode === "research" ? PHASES_RESEARCH : PHASES_CHAT;
+  // Track concept/roadmap existence for the workflow status
+  useEffect(() => {
+    if (!token || !store.sessionId || store.messages.length === 0) {
+      setHasConcept(false); setHasRoadmap(false);
+      return;
+    }
+    api.getConcept(token, store.sessionId).then(r => setHasConcept(!!r)).catch(() => setHasConcept(false));
+    api.getRoadmap(token, store.sessionId).then(r => setHasRoadmap(!!r?.roadmap)).catch(() => setHasRoadmap(false));
+  }, [token, store.sessionId, store.sending, store.messages.length]);
+
+  const activeProject = store.projects.find(p => p.project_id === store.activeProjectId) ?? null;
+
+  const allPhases = PHASES_CHAT;
 
   function startThinking() {
     store.setSending(true);
@@ -327,6 +349,8 @@ export default function ChatPage() {
       store.setSessionId(res.session_id);
       if (store.guidedProject) store.setGuidedProject(false);
       api.getHistory(token).then(d => store.setHistory(d.sessions)).catch(() => {});
+      // Refresh consent flags (the agent may have recorded permissions this turn)
+      api.getProjects(token).then(d => store.setProjects(d.projects)).catch(() => {});
     } catch (e: unknown) {
       store.addMessage({ role: "assistant", content: `**Fehler:** ${(e as Error).message}` });
     } finally { stopThinking(); }
@@ -349,7 +373,57 @@ export default function ChatPage() {
     } finally { stopThinking(); }
   }
 
+  async function createProjectAndStart() {
+    if (!projName.trim() || !token || projSaving) return;
+    setProjSaving(true);
+    try {
+      const p = await api.createProject(token, projName.trim());
+      store.setProjects([p, ...store.projects]);
+      store.newChat();
+      store.setActiveProject(p.project_id);
+      store.setGuidedProject(true);
+      setCreatingProject(false); setProjName("");
+      setTimeout(() => inputRef.current?.focus(), 80);
+    } catch {} finally { setProjSaving(false); }
+  }
+
+  // Selection inside the message list → floating "discuss" button
+  function handleMouseUp() {
+    const sel = window.getSelection();
+    const text = sel?.toString().trim() ?? "";
+    const container = msgListRef.current;
+    if (!sel || !container || text.length < 8 || !sel.anchorNode || !container.contains(sel.anchorNode)) {
+      setSelBtn(null);
+      return;
+    }
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    const parent = container.getBoundingClientRect();
+    setSelBtn({
+      x: rect.left - parent.left + rect.width / 2,
+      y: rect.top - parent.top + container.scrollTop,
+      text: text.slice(0, 600),
+    });
+  }
+
+  function askAboutSelection() {
+    if (!selBtn) return;
+    setHelpCtx({ quote: selBtn.text });
+    setHelpOpen(true); setPanelOpen(true);
+    setSelBtn(null);
+    window.getSelection()?.removeAllRanges();
+  }
+
   const turns = store.messages.filter(m => m.role === "user").length;
+  const permissionsDone = activeProject != null &&
+    (activeProject.use_profile != null || activeProject.use_other_projects != null);
+  const workflowSteps = [
+    { label: "Profil & Berechtigungen", detail: "Der Agent lernt dich kennen und fragt, welches Wissen er nutzen darf.", done: permissionsDone || hasConcept },
+    { label: "Interview & Projektdetails", detail: "Beantworte die Fragen zum Projekt — eine nach der anderen.", done: hasConcept || turns >= 3 },
+    { label: "Transformation Concept", detail: "Erstelle das Konzept mit Ist- und Ziel-Zustand.", done: hasConcept },
+    { label: "Roadmap & Dashboard", detail: "Generiere die Roadmap mit Phasen und Tools.", done: hasRoadmap },
+    { label: "Verfeinern & Diskutieren", detail: "Diskutiere Alternativen direkt mit dem Agenten.", done: false },
+  ];
+
   const canSend = !!input.trim() && !store.sending;
   const lastAssistantIdx = (() => {
     for (let i = store.messages.length - 1; i >= 0; i--)
@@ -365,36 +439,151 @@ export default function ChatPage() {
 
   return (
     <div className="flex bg-zinc-50 dark:bg-zinc-950" style={{ height: "100vh", overflow: "hidden" }}>
-      <Sidebar currentPath="/chat" />
+      <Sidebar />
 
       <div className="flex-1 flex flex-col bg-white dark:bg-zinc-900 min-w-0" style={{ overflow: "hidden" }}>
 
         {/* Topbar */}
         <header className="flex items-center gap-3 px-4 md:px-6 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
           <SidebarHamburger />
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 flex items-center gap-2">
+            {activeProject && (
+              <span className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/60 border border-green-100 dark:border-green-900 rounded-lg px-2 py-1 max-w-[160px]">
+                <Folder className="w-3 h-3 shrink-0" strokeWidth={1.5} />
+                <span className="truncate">{activeProject.name}</span>
+              </span>
+            )}
             <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">{store.sessionTitle}</p>
           </div>
           {store.guidedProject && <Badge variant="default" className="hidden sm:inline-flex">Geführter Modus</Badge>}
+          {store.messages.length > 0 && (
+            <>
+              <Btn
+                onClick={() => router.push(`/concept?session=${store.sessionId}`)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 rounded-lg px-3 md:px-3.5 py-2 shadow-sm shadow-green-600/20"
+              >
+                <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <span className="hidden sm:inline">Konzept</span>
+              </Btn>
+              <Btn
+                onClick={() => router.push("/dashboard")}
+                className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150 rounded-lg px-3 md:px-3.5 py-2"
+              >
+                <Map className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Btn>
+            </>
+          )}
           <Btn
-            onClick={() => router.push(`/concept?session=${store.sessionId}`)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 rounded-lg px-3 md:px-3.5 py-2 shadow-sm shadow-green-600/20"
+            onClick={() => setPanelOpen(o => !o)}
+            className={cn(
+              "hidden lg:flex items-center justify-center w-8 h-8 rounded-lg border transition-colors duration-150",
+              panelOpen
+                ? "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/60 border-green-100 dark:border-green-900"
+                : "text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            )}
           >
-            <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
-            <span className="hidden sm:inline">Concept</span>
-          </Btn>
-          <Btn
-            onClick={() => router.push("/dashboard")}
-            className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150 rounded-lg px-3 md:px-3.5 py-2"
-          >
-            <Map className="w-3.5 h-3.5" strokeWidth={1.5} />
-            <span className="hidden sm:inline">Roadmap</span>
+            <PanelRight className="w-4 h-4" strokeWidth={1.5} />
           </Btn>
         </header>
 
-        {/* Messages / Welcome */}
-        <div className="flex-1 overflow-y-auto">
-          {store.messages.length === 0 && !store.sending ? (
+        {/* Messages / Project hub / Welcome */}
+        <div className="flex-1 overflow-y-auto relative" ref={msgListRef} onMouseUp={handleMouseUp}>
+          {/* Floating "discuss selection" button */}
+          <AnimatePresence>
+            {selBtn && (
+              <motion.button
+                initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={BTN_SPRING}
+                onClick={askAboutSelection}
+                className="absolute z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-semibold shadow-lg -translate-x-1/2 -translate-y-full"
+                style={{ left: selBtn.x, top: selBtn.y - 8 }}
+              >
+                <MessageSquare className="w-3 h-3" strokeWidth={2} />
+                Mit Agent diskutieren
+              </motion.button>
+            )}
+          </AnimatePresence>
+
+          {store.messages.length === 0 && !store.sending && activeProject ? (
+            /* ── Project hub: the three buttons, centered ── */
+            <div className="flex flex-col items-center justify-center min-h-full px-6 py-16">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: "spring", duration: 0.5, bounce: 0.08 }}
+                className="w-full max-w-md text-center"
+              >
+                <div className="flex items-center justify-center gap-2 mb-3 text-green-600">
+                  <Folder className="w-4 h-4" strokeWidth={1.5} />
+                  <p className="text-[11px] font-semibold tracking-[0.16em] uppercase">Projekt</p>
+                </div>
+                <h2 className="text-[26px] font-extrabold text-zinc-900 dark:text-zinc-50 leading-tight mb-2"
+                  style={{ letterSpacing: "-0.02em" }}>
+                  {activeProject.name}
+                </h2>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8">
+                  Wie möchtest du weitermachen?
+                </p>
+                <div className="grid grid-cols-1 gap-3 text-left">
+                  {[
+                    {
+                      icon: <MessageSquare className="w-4 h-4" strokeWidth={1.5} />,
+                      label: "Starte Projekt",
+                      sub: "Geführtes Interview — der Agent lernt dich und dein Projekt kennen.",
+                      accent: true,
+                      action: () => { store.setGuidedProject(true); inputRef.current?.focus(); },
+                    },
+                    {
+                      icon: <Zap className="w-4 h-4" strokeWidth={1.5} />,
+                      label: "Konzept",
+                      sub: "Ist-Zustand, Ziel-Zustand & Tooling als strukturierte Tabellen.",
+                      accent: false,
+                      action: () => router.push(`/concept?session=${store.sessionId}`),
+                    },
+                    {
+                      icon: <LayoutDashboard className="w-4 h-4" strokeWidth={1.5} />,
+                      label: "Dashboard",
+                      sub: "Roadmap mit Phasen, Tools und Fortschritt.",
+                      accent: false,
+                      action: () => router.push("/dashboard"),
+                    },
+                  ].map((c, idx) => (
+                    <motion.button
+                      key={c.label}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ type: "spring", duration: 0.45, bounce: 0.06, delay: 0.08 + idx * 0.06 }}
+                      whileHover={{ y: -2, transition: BTN_SPRING }}
+                      whileTap={{ scale: 0.98, transition: BTN_SPRING }}
+                      onClick={c.action}
+                      className={cn(
+                        "flex items-center gap-4 rounded-2xl px-5 py-4 border text-left transition-shadow duration-200 hover:shadow-md",
+                        c.accent
+                          ? "bg-green-600 border-green-500 hover:shadow-green-500/20"
+                          : "bg-white dark:bg-zinc-800/80 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"
+                      )}
+                    >
+                      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                        c.accent ? "bg-white/20 text-white" : "bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400")}>
+                        {c.icon}
+                      </div>
+                      <div className="min-w-0">
+                        <p className={cn("font-semibold text-sm", c.accent ? "text-white" : "text-zinc-900 dark:text-zinc-50")}>
+                          {c.label}
+                        </p>
+                        <p className={cn("text-xs leading-relaxed", c.accent ? "text-green-100" : "text-zinc-500 dark:text-zinc-400")}>
+                          {c.sub}
+                        </p>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+          ) : store.messages.length === 0 && !store.sending ? (
             <div className="relative flex flex-col items-center justify-center min-h-full px-6 py-16 overflow-hidden">
 
               {/* Ambient background glow */}
@@ -448,24 +637,63 @@ export default function ChatPage() {
                   </p>
                 </motion.div>
 
+                {/* Inline project creation */}
+                <AnimatePresence>
+                  {creatingProject && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+                      className="overflow-hidden mb-4"
+                    >
+                      <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 border-2 border-green-400 dark:border-green-600 rounded-2xl px-4 py-3 shadow-sm text-left">
+                        <Folder className="w-4 h-4 text-green-500 shrink-0" strokeWidth={1.5} />
+                        <input
+                          autoFocus
+                          value={projName}
+                          onChange={e => setProjName(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") createProjectAndStart();
+                            if (e.key === "Escape") { setCreatingProject(false); setProjName(""); }
+                          }}
+                          placeholder="Wie heißt dein Projekt?"
+                          maxLength={48}
+                          className="flex-1 bg-transparent text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 outline-none min-w-0"
+                        />
+                        <button
+                          onClick={createProjectAndStart}
+                          disabled={!projName.trim() || projSaving}
+                          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shrink-0",
+                            projName.trim()
+                              ? "bg-green-600 hover:bg-green-700 text-white"
+                              : "bg-zinc-100 dark:bg-zinc-700 text-zinc-400 cursor-default")}
+                        >
+                          Los geht&apos;s
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Action cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8 text-left">
                   {([
                     {
+                      icon: <Plus className="w-4 h-4" strokeWidth={1.5} />,
+                      label: "Starte Projekt",
+                      sub: "Geführtes Interview → Konzept → Roadmap.",
+                      cta: "Jetzt starten →",
+                      accent: true,
+                      action: () => setCreatingProject(true),
+                    },
+                    {
                       icon: <MessageSquare className="w-4 h-4" strokeWidth={1.5} />,
-                      label: "Chat starten",
+                      label: "Schnelle Frage",
                       sub: "Frag alles — IT-Architektur, Tools, Strategie.",
                       cta: "Frage stellen →",
                       accent: false,
                       action: () => inputRef.current?.focus(),
-                    },
-                    {
-                      icon: <Zap className="w-4 h-4" strokeWidth={1.5} />,
-                      label: "Projekt starten",
-                      sub: "Geführtes Interview → Concept → Roadmap.",
-                      cta: "Jetzt starten →",
-                      accent: true,
-                      action: () => { store.setGuidedProject(true); inputRef.current?.focus(); },
                     },
                   ] as const).map((c, idx) => (
                     <motion.div
@@ -575,14 +803,12 @@ export default function ChatPage() {
         {/* Composer */}
         <footer className="shrink-0 px-4 md:px-8 lg:px-12 py-4 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <div className="max-w-5xl mx-auto w-full">
-            <div className="flex items-center gap-2 mb-2">
-              <TabGroup>
-                <Tab active={store.mode === "chat"} onClick={() => store.setMode("chat")}>Chat</Tab>
-                <Tab active={store.mode === "research"} onClick={() => store.setMode("research")}>Research</Tab>
-              </TabGroup>
-              <span className="flex-1" />
-              {turns > 0 && <Badge variant="secondary">{turns} turns</Badge>}
-            </div>
+            {/* Research is hidden for now — it becomes its own feature later. */}
+            {turns > 0 && (
+              <div className="flex items-center justify-end mb-2">
+                <Badge variant="secondary">{turns} turns</Badge>
+              </div>
+            )}
             <div className="flex gap-3 items-end bg-white dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700 rounded-2xl px-4 py-3 focus-within:border-green-400 dark:focus-within:border-green-600 focus-within:shadow-sm transition-all duration-150">
               <textarea ref={inputRef} value={input} rows={1}
                 onChange={e => setInput(e.target.value)}
@@ -608,6 +834,26 @@ export default function ChatPage() {
           </div>
         </footer>
       </div>
+
+      {/* Right panel: workflow status + interactive help */}
+      <RightPanel open={panelOpen}>
+        <WorkflowStatus steps={workflowSteps} />
+        {helpOpen && token ? (
+          <HelpChat
+            token={token}
+            projectId={store.activeProjectId}
+            context={helpCtx}
+            onClose={() => { setHelpOpen(false); setHelpCtx(null); }}
+          />
+        ) : (
+          <div className="px-4 py-3 border-t border-zinc-100 dark:border-zinc-800 mt-auto">
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Tipp: Markiere Text in einer Antwort, um Details oder Alternativen
+              direkt mit dem Agenten zu diskutieren.
+            </p>
+          </div>
+        )}
+      </RightPanel>
     </div>
   );
 }
