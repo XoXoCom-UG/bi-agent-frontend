@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
-import { X, User, Palette, Sun, Moon, Monitor } from "lucide-react";
+import { X, User, Palette, Sun, Moon, Monitor, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
@@ -11,9 +11,20 @@ type Tab = "profil" | "darstellung";
 export function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("profil");
   const { theme, setTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [name, setName] = useState("");
   const [saved, setSaved] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      await signOut();
+    } finally {
+      // Hard navigation clears all in-memory state (chat store, caches)
+      window.location.href = "/login";
+    }
+  }
 
   useEffect(() => {
     if (open) setName(localStorage.getItem("matfit_name") || "");
@@ -165,6 +176,25 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
                           <div className="h-9 rounded-lg border border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 flex items-center">
                             <span className="text-sm text-zinc-500 dark:text-zinc-400">{user?.email || "—"}</span>
                           </div>
+                        </div>
+
+                        {/* Logout */}
+                        <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                          <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2 block">
+                            Sitzung
+                          </label>
+                          <motion.button
+                            whileTap={{ scale: 0.97 }}
+                            onClick={handleLogout}
+                            disabled={loggingOut}
+                            className="flex items-center gap-2 h-9 px-4 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/30 hover:bg-red-50 dark:hover:bg-red-950/60 hover:border-red-300 dark:hover:border-red-800 transition-colors duration-150 disabled:opacity-60"
+                          >
+                            <LogOut className="w-3.5 h-3.5" strokeWidth={1.5} />
+                            {loggingOut ? "Wird abgemeldet…" : "Abmelden"}
+                          </motion.button>
+                          <p className="text-[11px] text-zinc-400 mt-2">
+                            Beendet deine Sitzung auf diesem Gerät.
+                          </p>
                         </div>
                       </motion.div>
                     )}

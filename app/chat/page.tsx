@@ -8,7 +8,7 @@ import { Sidebar, SidebarHamburger } from "@/components/layout/sidebar";
 import { Badge, TabGroup, Tab } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
-import { Zap, Map, ArrowUp, MessageSquare, CheckCircle2 } from "lucide-react";
+import { Zap, Map, ArrowUp, MessageSquare, CheckCircle2, Copy, Check, RefreshCw } from "lucide-react";
 
 // ── Phase lists (long, non-repeating within a response) ──────────────────────
 const PHASES_CHAT = [
@@ -34,12 +34,30 @@ const PHASES_RESEARCH = [
 const BTN_SPRING = { type: "spring", stiffness: 500, damping: 30 } as const;
 
 // ── Markdown renderer ─────────────────────────────────────────────────────────
+// SECURITY: all raw text is HTML-escaped BEFORE markdown parsing. The renderer
+// only ever emits tags it generates itself — user/model content can never
+// inject markup (XSS via dangerouslySetInnerHTML).
+function escapeHtml(t: string): string {
+  return t
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Only allow safe link protocols (blocks javascript:, data:, vbscript: …)
+function safeUrl(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : "#";
+}
+
 function inlineFmt(t: string): string {
   return t
     .replace(/`([^`]+)`/g, '<code class="bg-zinc-100 dark:bg-zinc-700 px-1 py-0.5 rounded text-[11.5px] font-mono text-zinc-800 dark:text-zinc-200">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em class='opacity-80'>$1</em>")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-green-600 underline underline-offset-2 hover:text-green-700" target="_blank" rel="noopener noreferrer">$1</a>');
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, label, url) =>
+      `<a href="${safeUrl(url)}" class="text-green-600 underline underline-offset-2 hover:text-green-700" target="_blank" rel="noopener noreferrer">${label}</a>`);
 }
 
 function renderTable(rows: string[]): string {
@@ -62,8 +80,8 @@ function renderTable(rows: string[]): string {
 }
 
 function md(raw: string): string {
-  // Normalize line endings (API may return \r\n)
-  const lines = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  // Escape ALL HTML first (XSS protection), then normalize line endings
+  const lines = escapeHtml(raw).replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   const out: string[] = [];
   let i = 0;
 
@@ -80,8 +98,7 @@ function md(raw: string): string {
         i++;
       }
       i++; // skip closing ```
-      const escaped = codeLines.join("\n")
-        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const escaped = codeLines.join("\n"); // already HTML-escaped globally
       out.push(
         `<pre class="bg-zinc-950 dark:bg-zinc-950 text-zinc-100 rounded-xl p-4 overflow-x-auto my-4 text-[12.5px] font-mono leading-relaxed border border-zinc-800"><code>${escaped}</code></pre>`
       );
@@ -238,6 +255,35 @@ function Btn({ children, onClick, className, disabled }: {
   );
 }
 
+// ── Message actions (copy / regenerate) ───────────────────────────────────────
+function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity duration-150">
+      <button
+        onClick={() => navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })}
+        title="Kopieren"
+        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-150"
+      >
+        {copied
+          ? <Check className="w-3 h-3 text-green-500" strokeWidth={2} />
+          : <Copy className="w-3 h-3" strokeWidth={1.5} />}
+        {copied ? "Kopiert" : "Kopieren"}
+      </button>
+      {onRegenerate && (
+        <button
+          onClick={onRegenerate}
+          title="Antwort neu generieren"
+          className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-150"
+        >
+          <RefreshCw className="w-3 h-3" strokeWidth={1.5} />
+          Neu generieren
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ChatPage() {
   const { token, loading } = useAuth();
@@ -286,8 +332,30 @@ export default function ChatPage() {
     } finally { stopThinking(); }
   }
 
+  async function regenerate() {
+    if (!token || store.sending) return;
+    // Drop trailing assistant message(s), resend the conversation
+    const msgs = [...store.messages];
+    while (msgs.length && msgs[msgs.length - 1].role === "assistant") msgs.pop();
+    if (!msgs.length) return;
+    store.setMessages(msgs);
+    startThinking();
+    try {
+      const res = await api.chat(token, { messages: msgs, session_id: store.sessionId, project_id: store.activeProjectId });
+      store.setMessages(res.messages);
+      store.setSessionId(res.session_id);
+    } catch (e: unknown) {
+      store.addMessage({ role: "assistant", content: `**Fehler:** ${(e as Error).message}` });
+    } finally { stopThinking(); }
+  }
+
   const turns = store.messages.filter(m => m.role === "user").length;
   const canSend = !!input.trim() && !store.sending;
+  const lastAssistantIdx = (() => {
+    for (let i = store.messages.length - 1; i >= 0; i--)
+      if (store.messages[i].role === "assistant") return i;
+    return -1;
+  })();
 
   if (loading || !token) return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
@@ -462,7 +530,7 @@ export default function ChatPage() {
                 const cm = content.match(/\[\[CHOICES:\s*([\s\S]*?)\]\]/i);
                 if (cm) { choices = cm[1].split("|").map(s => s.trim()).filter(Boolean); content = content.replace(cm[0], "").trim(); }
                 return (
-                  <div key={i} className={cn("flex gap-3 animate-in", isUser && "flex-row-reverse")}>
+                  <div key={i} className={cn("group/msg flex gap-3 animate-in", isUser && "flex-row-reverse")}>
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5"
                       style={{ background: isUser ? "#15803d" : "var(--green)", fontFamily: isUser ? "inherit" : "Georgia,serif" }}>
                       {isUser ? "U" : "A"}
@@ -476,6 +544,12 @@ export default function ChatPage() {
                           : "bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200 px-5 py-4 rounded-2xl rounded-tl-sm w-full"
                       )}
                         dangerouslySetInnerHTML={{ __html: md(content) }} />
+                      {!isUser && (
+                        <MsgActions
+                          text={content}
+                          onRegenerate={i === lastAssistantIdx && !store.sending ? regenerate : undefined}
+                        />
+                      )}
                       {choices.length > 0 && <ChoiceChips choices={choices} onSelect={send} />}
                     </div>
                   </div>

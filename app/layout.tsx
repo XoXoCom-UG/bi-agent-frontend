@@ -1,11 +1,32 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
-  title: "BI Agent — IT Consulting",
-  description: "AI-powered IT consulting and transformation planning",
+  title: {
+    default: "matfit.ai — IT Consulting Agent",
+    template: "%s · matfit.ai",
+  },
+  description:
+    "KI-gestützte IT-Beratung: Transformation Concepts, Roadmaps und fundiertes IT-Know-how in Minuten statt Wochen.",
+  applicationName: "matfit.ai",
+  robots: { index: false, follow: false }, // private app — keep out of search engines
+  openGraph: {
+    title: "matfit.ai — IT Consulting Agent",
+    description: "Transformation Concepts in Minuten, nicht Wochen.",
+    type: "website",
+    locale: "de_DE",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

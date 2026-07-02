@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { cn, dateStr } from "@/lib/utils";
 import {
   MessageSquare, Zap, LayoutDashboard, Plus, ChevronRight,
-  Search, Settings, Check, X, Folder, FolderOpen,
+  Search, Settings, Check, X, Folder, FolderOpen, Trash2, LogOut,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SettingsModal } from "./settings-modal";
@@ -69,7 +69,7 @@ function NavItem({ icon: Icon, label, active, onClick }: {
 }
 
 export function Sidebar({ currentPath }: { currentPath?: string }) {
-  const { token, user } = useAuth();
+  const { token, user, signOut } = useAuth();
   const store = useChatStore();
   const router = useRouter();
   const mobileOpen = store.sidebarOpen;
@@ -78,6 +78,7 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   // Inline project creation
   const [creatingProject, setCreatingProject] = useState(false);
@@ -150,6 +151,26 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
     store.newChat();
     store.setActiveProject(pid);
     router.push("/chat");
+  }
+
+  async function deleteChat(sid: string) {
+    if (!token) return;
+    // Two-step inline confirm: first click arms, second click deletes
+    if (confirmDelete !== sid) {
+      setConfirmDelete(sid);
+      setTimeout(() => setConfirmDelete(c => (c === sid ? null : c)), 2500);
+      return;
+    }
+    setConfirmDelete(null);
+    try {
+      await api.deleteSession(token, sid);
+      store.setHistory(store.history.filter(s => s.session_id !== sid));
+      if (store.sessionId === sid) store.newChat();
+    } catch {}
+  }
+
+  async function handleLogout() {
+    try { await signOut(); } finally { window.location.href = "/login"; }
   }
 
   const q = search.toLowerCase();
@@ -426,21 +447,37 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
             <p className="text-xs text-zinc-400 px-2 py-1">{q ? "Keine Chats gefunden." : "Noch keine Chats."}</p>
           )}
           {loose.map(s => (
-            <motion.button key={s.session_id} whileTap={{ scale: 0.97 }} onClick={() => loadChat(s.session_id)}
-              className={cn("w-full flex flex-col px-2 py-2 rounded-lg text-left transition-colors duration-150",
-                store.sessionId === s.session_id
-                  ? "bg-green-50 dark:bg-green-950 border-l-2 border-green-500 text-green-900 dark:text-green-300 pl-1.5"
-                  : "hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-400")}>
-              <span className="text-xs font-medium truncate">{(s.title || "Untitled").slice(0, 30)}</span>
-              <span className="text-xs text-zinc-400 mt-0.5">{dateStr(s.saved_at)} · {s.message_count} msg</span>
-            </motion.button>
+            <div key={s.session_id} className="group/chat relative">
+              <motion.button whileTap={{ scale: 0.97 }} onClick={() => loadChat(s.session_id)}
+                className={cn("w-full flex flex-col px-2 py-2 rounded-lg text-left transition-colors duration-150 pr-8",
+                  store.sessionId === s.session_id
+                    ? "bg-green-50 dark:bg-green-950 border-l-2 border-green-500 text-green-900 dark:text-green-300 pl-1.5"
+                    : "hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-400")}>
+                <span className="text-xs font-medium truncate">{(s.title || "Untitled").slice(0, 30)}</span>
+                <span className="text-xs text-zinc-400 mt-0.5">{dateStr(s.saved_at)} · {s.message_count} msg</span>
+              </motion.button>
+              {/* Delete — hover reveal, two-click confirm */}
+              <motion.button
+                whileTap={{ scale: 0.88 }}
+                onClick={e => { e.stopPropagation(); deleteChat(s.session_id); }}
+                title={confirmDelete === s.session_id ? "Klicken zum Löschen" : "Chat löschen"}
+                className={cn(
+                  "absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-150",
+                  confirmDelete === s.session_id
+                    ? "opacity-100 text-white bg-red-500 hover:bg-red-600"
+                    : "opacity-0 group-hover/chat:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40"
+                )}
+              >
+                <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </motion.button>
+            </div>
           ))}
         </div>
 
         {/* Footer */}
-        <div className="border-t border-zinc-100 dark:border-zinc-800 p-3 shrink-0">
+        <div className="border-t border-zinc-100 dark:border-zinc-800 p-3 shrink-0 flex items-center gap-1">
           <motion.button whileTap={{ scale: 0.97 }} onClick={() => setSettingsOpen(true)}
-            className="w-full flex items-center gap-2.5 rounded-xl px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150 group">
+            className="flex-1 flex items-center gap-2.5 rounded-xl px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150 group min-w-0">
             <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-green-800 dark:text-green-400 select-none"
               style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
               {initials}
@@ -449,9 +486,17 @@ export function Sidebar({ currentPath }: { currentPath?: string }) {
               <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">
                 {displayName || user?.email?.split("@")[0] || user?.email || "Profil"}
               </p>
-              <p className="text-xs text-zinc-400">Einstellungen öffnen</p>
+              <p className="text-xs text-zinc-400">Einstellungen</p>
             </div>
             <Settings className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors duration-150 flex-shrink-0" strokeWidth={1.5} />
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={handleLogout}
+            title="Abmelden"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors duration-150 shrink-0"
+          >
+            <LogOut className="w-4 h-4" strokeWidth={1.5} />
           </motion.button>
         </div>
       </aside>
