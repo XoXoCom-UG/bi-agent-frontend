@@ -191,7 +191,15 @@ export function Sidebar() {
 
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-4 py-4 border-b border-zinc-100 dark:border-zinc-800">
-          <motion.button whileHover={{ opacity: 0.8 }} onClick={() => { router.push("/chat"); closeMobile(); }} className="flex items-center gap-px leading-none flex-1">
+          <motion.button whileHover={{ opacity: 0.8 }}
+            onClick={() => {
+              // Logo = home: leave the current chat/project and show the landing screen.
+              store.newChat();
+              store.setActiveProject(null);
+              router.push("/chat");
+              closeMobile();
+            }}
+            className="flex items-center gap-px leading-none flex-1">
             <span className="font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-50">matfit</span>
             <span className="font-bold text-sm tracking-tight text-green-600">.ai</span>
           </motion.button>
