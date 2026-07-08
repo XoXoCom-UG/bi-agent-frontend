@@ -4,6 +4,13 @@ import { create } from "zustand";
 import { Message, Session, Project } from "@/lib/api";
 import { newSessionId } from "@/lib/utils";
 
+/** A snippet the user wants to discuss with the assistant (selected text, a
+ *  roadmap tool, a concept row). Pushed from any page into the shared panel. */
+export interface AssistantContext {
+  quote: string;
+  question?: string;
+}
+
 interface ChatStore {
   // current session
   sessionId: string;
@@ -19,6 +26,11 @@ interface ChatStore {
   thinkingPhase: string;
   sidebarOpen: boolean;
 
+  // shared assistant panel (right side, present on every screen)
+  assistantContext: AssistantContext | null;
+  assistantContextNonce: number;
+  assistantOpenMobile: boolean;
+
   // actions
   setSessionId: (id: string) => void;
   setSessionTitle: (t: string) => void;
@@ -33,6 +45,9 @@ interface ChatStore {
   setGuidedProject: (b: boolean) => void;
   setThinkingPhase: (p: string) => void;
   setSidebarOpen: (b: boolean) => void;
+  reorderProjects: (ids: string[]) => void;
+  pushAssistant: (ctx: AssistantContext) => void;
+  setAssistantOpenMobile: (b: boolean) => void;
   newChat: () => void;
 }
 
@@ -49,6 +64,9 @@ export const useChatStore = create<ChatStore>((set) => ({
   guidedProject: false,
   thinkingPhase: "",
   sidebarOpen: false,
+  assistantContext: null,
+  assistantContextNonce: 0,
+  assistantOpenMobile: false,
 
   setSessionId: (id) => set({ sessionId: id }),
   setSessionTitle: (t) => set({ sessionTitle: t }),
@@ -64,6 +82,21 @@ export const useChatStore = create<ChatStore>((set) => ({
   setGuidedProject: (b) => set({ guidedProject: b }),
   setThinkingPhase: (p) => set({ thinkingPhase: p }),
   setSidebarOpen: (b) => set({ sidebarOpen: b }),
+  reorderProjects: (ids) =>
+    set((state) => {
+      const byId = new Map(state.projects.map((p) => [p.project_id, p]));
+      const next = ids.map((id) => byId.get(id)).filter(Boolean) as Project[];
+      // keep any projects not present in ids (safety) at the end
+      for (const p of state.projects) if (!ids.includes(p.project_id)) next.push(p);
+      return { projects: next };
+    }),
+  pushAssistant: (ctx) =>
+    set((s) => ({
+      assistantContext: ctx,
+      assistantContextNonce: s.assistantContextNonce + 1,
+      assistantOpenMobile: true,
+    })),
+  setAssistantOpenMobile: (b) => set({ assistantOpenMobile: b }),
   newChat: () =>
     set({
       sessionId: newSessionId(),

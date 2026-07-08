@@ -5,14 +5,13 @@ import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api } from "@/lib/api";
 import { md } from "@/lib/markdown";
-import { Sidebar, SidebarHamburger } from "@/components/layout/sidebar";
-import { RightPanel, WorkflowStatus, HelpChat, HelpContext } from "@/components/layout/right-panel";
+import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Zap, Map, ArrowUp, MessageSquare, CheckCircle2, Copy, Check, RefreshCw,
-  Folder, Plus, PanelRight, LayoutDashboard,
+  Zap, ArrowUp, MessageSquare, CheckCircle2, Copy, Check, RefreshCw,
+  Folder, Plus, LayoutDashboard,
 } from "lucide-react";
 
 // ── Phase list (long, non-repeating within a response) ───────────────────────
@@ -150,14 +149,7 @@ export default function ChatPage() {
   const [phaseIdx, setPhaseIdx] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Right panel: workflow status + interactive help chat
-  const [panelOpen, setPanelOpen] = useState(true);
-  const [helpCtx, setHelpCtx] = useState<HelpContext | null>(null);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [hasConcept, setHasConcept] = useState(false);
-  const [hasRoadmap, setHasRoadmap] = useState(false);
-
-  // Text selection → "discuss with agent" floating button
+  // Text selection → "discuss with agent" floating button (feeds the shared panel)
   const msgListRef = useRef<HTMLDivElement>(null);
   const [selBtn, setSelBtn] = useState<{ x: number; y: number; text: string } | null>(null);
 
@@ -168,16 +160,6 @@ export default function ChatPage() {
 
   useEffect(() => { if (!loading && !token) router.replace("/login"); }, [token, loading]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [store.messages, store.sending]);
-
-  // Track concept/roadmap existence for the workflow status
-  useEffect(() => {
-    if (!token || !store.sessionId || store.messages.length === 0) {
-      setHasConcept(false); setHasRoadmap(false);
-      return;
-    }
-    api.getConcept(token, store.sessionId).then(r => setHasConcept(!!r)).catch(() => setHasConcept(false));
-    api.getRoadmap(token, store.sessionId).then(r => setHasRoadmap(!!r?.roadmap)).catch(() => setHasRoadmap(false));
-  }, [token, store.sessionId, store.sending, store.messages.length]);
 
   const activeProject = store.projects.find(p => p.project_id === store.activeProjectId) ?? null;
 
@@ -268,23 +250,12 @@ export default function ChatPage() {
 
   function askAboutSelection() {
     if (!selBtn) return;
-    setHelpCtx({ quote: selBtn.text });
-    setHelpOpen(true); setPanelOpen(true);
+    store.pushAssistant({ quote: selBtn.text });
     setSelBtn(null);
     window.getSelection()?.removeAllRanges();
   }
 
   const turns = store.messages.filter(m => m.role === "user").length;
-  const permissionsDone = activeProject != null &&
-    (activeProject.use_profile != null || activeProject.use_other_projects != null);
-  const workflowSteps = [
-    { label: "Profil & Berechtigungen", detail: "Der Agent lernt dich kennen und fragt, welches Wissen er nutzen darf.", done: permissionsDone || hasConcept },
-    { label: "Interview & Projektdetails", detail: "Beantworte die Fragen zum Projekt — eine nach der anderen.", done: hasConcept || turns >= 3 },
-    { label: "Transformation Concept", detail: "Erstelle das Konzept mit Ist- und Ziel-Zustand.", done: hasConcept },
-    { label: "Roadmap & Dashboard", detail: "Generiere die Roadmap mit Phasen und Tools.", done: hasRoadmap },
-    { label: "Verfeinern & Diskutieren", detail: "Diskutiere Alternativen direkt mit dem Agenten.", done: false },
-  ];
-
   const canSend = !!input.trim() && !store.sending;
   const lastAssistantIdx = (() => {
     for (let i = store.messages.length - 1; i >= 0; i--)
@@ -299,55 +270,7 @@ export default function ChatPage() {
   );
 
   return (
-    <div className="flex bg-zinc-50 dark:bg-zinc-950" style={{ height: "100vh", overflow: "hidden" }}>
-      <Sidebar />
-
-      <div className="flex-1 flex flex-col bg-white dark:bg-zinc-900 min-w-0" style={{ overflow: "hidden" }}>
-
-        {/* Topbar */}
-        <header className="flex items-center gap-3 px-4 md:px-6 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
-          <SidebarHamburger />
-          <div className="flex-1 min-w-0 flex items-center gap-2">
-            {activeProject && (
-              <span className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/60 border border-green-100 dark:border-green-900 rounded-lg px-2 py-1 max-w-[160px]">
-                <Folder className="w-3 h-3 shrink-0" strokeWidth={1.5} />
-                <span className="truncate">{activeProject.name}</span>
-              </span>
-            )}
-            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">{store.sessionTitle}</p>
-          </div>
-          {store.guidedProject && <Badge variant="default" className="hidden sm:inline-flex">Geführter Modus</Badge>}
-          {store.messages.length > 0 && (
-            <>
-              <Btn
-                onClick={() => router.push(`/concept?session=${store.sessionId}`)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 rounded-lg px-3 md:px-3.5 py-2 shadow-sm shadow-green-600/20"
-              >
-                <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
-                <span className="hidden sm:inline">Konzept</span>
-              </Btn>
-              <Btn
-                onClick={() => router.push("/dashboard")}
-                className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150 rounded-lg px-3 md:px-3.5 py-2"
-              >
-                <Map className="w-3.5 h-3.5" strokeWidth={1.5} />
-                <span className="hidden sm:inline">Dashboard</span>
-              </Btn>
-            </>
-          )}
-          <Btn
-            onClick={() => setPanelOpen(o => !o)}
-            className={cn(
-              "hidden lg:flex items-center justify-center w-8 h-8 rounded-lg border transition-colors duration-150",
-              panelOpen
-                ? "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/60 border-green-100 dark:border-green-900"
-                : "text-zinc-500 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-            )}
-          >
-            <PanelRight className="w-4 h-4" strokeWidth={1.5} />
-          </Btn>
-        </header>
-
+    <AppShell active="chat">
         {/* Messages / Project hub / Welcome */}
         <div className="flex-1 overflow-y-auto relative" ref={msgListRef} onMouseUp={handleMouseUp}>
           {/* Floating "discuss selection" button */}
@@ -711,27 +634,6 @@ export default function ChatPage() {
             </div>
           </div>
         </footer>
-      </div>
-
-      {/* Right panel: workflow status + interactive help */}
-      <RightPanel open={panelOpen}>
-        <WorkflowStatus steps={workflowSteps} />
-        {helpOpen && token ? (
-          <HelpChat
-            token={token}
-            projectId={store.activeProjectId}
-            context={helpCtx}
-            onClose={() => { setHelpOpen(false); setHelpCtx(null); }}
-          />
-        ) : (
-          <div className="px-4 py-3 border-t border-zinc-100 dark:border-zinc-800 mt-auto">
-            <p className="text-[11px] text-zinc-400 leading-relaxed">
-              Tipp: Markiere Text in einer Antwort, um Details oder Alternativen
-              direkt mit dem Agenten zu diskutieren.
-            </p>
-          </div>
-        )}
-      </RightPanel>
-    </div>
+    </AppShell>
   );
 }

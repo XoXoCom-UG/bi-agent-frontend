@@ -4,8 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api, DeckRow, RoadmapData } from "@/lib/api";
-import { Sidebar, SidebarHamburger } from "@/components/layout/sidebar";
-import { HelpChat, HelpContext } from "@/components/layout/right-panel";
+import { AppShell } from "@/components/layout/app-shell";
+import { AssistantContext } from "@/lib/chat-store";
 import {
   MessageSquare, Zap, Map, ArrowLeft, RefreshCw,
   CheckCircle2, ChevronDown, Copy, Check,
@@ -113,7 +113,7 @@ function RoadmapLoading() {
 function StepCard({ step, index, onDiscuss }: {
   step: NonNullable<RoadmapData["phases"]>[0]["steps"][0];
   index: number;
-  onDiscuss?: (ctx: HelpContext) => void;
+  onDiscuss?: (ctx: AssistantContext) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
@@ -283,10 +283,7 @@ function DashboardContent() {
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
   const [rmSession, setRmSession] = useState<string | null>(null);
   const [rmLoading, setRmLoading] = useState(false);
-  // Right-side discussion panel inside the roadmap view
-  const [helpCtx, setHelpCtx] = useState<HelpContext | null>(null);
-  const [helpOpen, setHelpOpen] = useState(false);
-  // Floating "discuss selection" button (same UX as the main chat)
+  // Floating "discuss selection" button — feeds the shared assistant panel
   const [selBtn, setSelBtn] = useState<{ x: number; y: number; text: string } | null>(null);
   const rmBodyRef = useRef<HTMLDivElement>(null);
 
@@ -307,8 +304,7 @@ function DashboardContent() {
 
   function askAboutSelection() {
     if (!selBtn) return;
-    setHelpCtx({ quote: selBtn.text });
-    setHelpOpen(true);
+    store.pushAssistant({ quote: selBtn.text });
     setSelBtn(null);
     window.getSelection()?.removeAllRanges();
   }
@@ -335,16 +331,8 @@ function DashboardContent() {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950">
-      <Sidebar />
-
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-
-        {/* Topbar */}
-        <div className="h-14 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-4 md:px-6 gap-3 flex-shrink-0">
-          <SidebarHamburger />
-          <h1 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Roadmap</h1>
-        </div>
+    <AppShell active="dashboard">
+      <div className="flex-1 flex flex-col overflow-hidden relative min-h-0">
 
         {/* Deck */}
         <div className="flex-1 overflow-y-auto p-5 md:p-6">
@@ -466,7 +454,7 @@ function DashboardContent() {
                 )}
               </div>
 
-              {/* Roadmap body + discussion panel */}
+              {/* Roadmap body */}
               <div className="flex-1 flex min-h-0">
                 <div ref={rmBodyRef} onMouseUp={handleRmMouseUp} className="flex-1 overflow-y-auto relative">
 
@@ -527,7 +515,7 @@ function DashboardContent() {
                           <div className="flex flex-col gap-2">
                             {ph.steps.map((step, si) => (
                               <StepCard key={step.id} step={step} index={si}
-                                onDiscuss={ctx => { setHelpCtx(ctx); setHelpOpen(true); }} />
+                                onDiscuss={ctx => store.pushAssistant(ctx)} />
                             ))}
                           </div>
                         </motion.div>
@@ -535,33 +523,12 @@ function DashboardContent() {
                     </div>
                   )}
                 </div>
-
-                {/* Discussion panel — the agent refines things on the left while you chat here */}
-                <AnimatePresence>
-                  {helpOpen && (
-                    <motion.div
-                      initial={{ width: 0, opacity: 0 }}
-                      animate={{ width: 320, opacity: 1 }}
-                      exit={{ width: 0, opacity: 0 }}
-                      transition={{ type: "spring", duration: 0.35, bounce: 0 }}
-                      className="hidden md:flex flex-col shrink-0 border-l border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
-                      <div className="flex flex-col h-full" style={{ width: 320 }}>
-                        <HelpChat
-                          token={token}
-                          projectId={store.activeProjectId}
-                          context={helpCtx}
-                          onClose={() => { setHelpOpen(false); setHelpCtx(null); }}
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </AppShell>
   );
 }
 

@@ -4,11 +4,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api, ConceptData } from "@/lib/api";
-import { Sidebar, SidebarHamburger } from "@/components/layout/sidebar";
+import { AppShell } from "@/components/layout/app-shell";
 import { dateStr } from "@/lib/utils";
 import {
   Clock, AlertTriangle, TrendingDown, Zap,
-  ChevronRight, CheckCircle2, FileText, MessageSquare, Map,
+  ChevronRight, CheckCircle2, FileText, MessageSquare,
 } from "lucide-react";
 import { motion, AnimatePresence, useSpring } from "motion/react";
 
@@ -292,18 +292,15 @@ function ConceptContent() {
   );
 
   return (
-    <div className="flex bg-white" style={{ height: "100vh", overflow: "hidden" }}>
-      <Sidebar />
-
-      <div className="flex-1 flex flex-col relative" style={{ overflow: "hidden" }}>
+    <AppShell active="concept">
+      <div className="flex-1 flex flex-col relative min-h-0" style={{ overflow: "hidden" }}>
         {/* Generating overlay */}
         <AnimatePresence>{generating && <GeneratingOverlay />}</AnimatePresence>
 
-        {/* Topbar */}
-        <header className="flex items-center gap-2.5 px-4 md:px-5 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
-          <SidebarHamburger />
+        {/* Page toolbar (page-specific actions live here) */}
+        <div className="flex items-center gap-2.5 px-4 md:px-6 h-12 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-zinc-900 truncate">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">
               {concept?.title || (hasMessages ? store.sessionTitle : "Transformation Concept")}
             </p>
             {concept && (
@@ -314,31 +311,16 @@ function ConceptContent() {
           {concept && (
             <motion.button
               whileTap={{ scale: 0.95 }}
-              whileHover={{ y: -1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 28 }}
-              className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-800 border border-zinc-200 rounded-lg px-3 py-1.5 hover:bg-zinc-50 transition-colors duration-150"
+              className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150"
             >
               <FileText className="w-3.5 h-3.5" strokeWidth={1.5} />
               PDF
             </motion.button>
           )}
 
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            whileHover={{ y: -1 }}
-            transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            onClick={() => router.push(`/dashboard?session=${sessionId}`)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-zinc-700 bg-white hover:bg-zinc-50 border border-zinc-200 hover:border-zinc-300 transition-colors duration-150 rounded-lg px-3.5 py-1.5"
-          >
-            <Map className="w-3.5 h-3.5" strokeWidth={1.5} />
-            Roadmap
-          </motion.button>
-
           {hasMessages && (
             <motion.button
               whileTap={{ scale: 0.95 }}
-              whileHover={{ y: -1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 28 }}
               onClick={generate}
               disabled={generating}
               className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-zinc-300 transition-colors duration-150 rounded-lg px-3.5 py-1.5 shadow-sm shadow-green-600/20"
@@ -347,7 +329,7 @@ function ConceptContent() {
               {concept ? "Neu generieren" : "Generieren"}
             </motion.button>
           )}
-        </header>
+        </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
@@ -736,7 +718,7 @@ function ConceptContent() {
           </div>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }
 
