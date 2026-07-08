@@ -80,9 +80,10 @@ function RoadmapLoading() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
       className="flex flex-col items-center justify-center py-24 px-8">
       <motion.div
-        className="w-14 h-14 rounded-2xl bg-green-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-green-600/20 mb-12"
-        animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
-        style={{ fontFamily: "Georgia, serif" }}>B</motion.div>
+        className="w-14 h-14 rounded-2xl bg-green-600 flex items-center justify-center text-white shadow-lg shadow-green-600/20 mb-12"
+        animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}>
+        <Map className="w-6 h-6" strokeWidth={1.5} />
+      </motion.div>
       <div className="flex flex-col gap-4 w-full max-w-xs">
         {RM_PHASES.map((m, i) => {
           if (i > current) return null;

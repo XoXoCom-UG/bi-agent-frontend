@@ -124,12 +124,11 @@ function GeneratingOverlay() {
       <div className="relative w-full max-w-sm px-8">
         <div className="flex justify-center mb-14">
           <motion.div
-            className="w-14 h-14 rounded-2xl bg-green-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-green-600/25"
+            className="w-14 h-14 rounded-2xl bg-green-600 flex items-center justify-center text-white shadow-lg shadow-green-600/25"
             animate={{ scale: [1, 1.06, 1] }}
             transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
-            style={{ fontFamily: "Georgia, serif" }}
           >
-            B
+            <Zap className="w-6 h-6" strokeWidth={1.5} />
           </motion.div>
         </div>
 
@@ -431,7 +430,7 @@ function ConceptContent() {
                     </motion.div>
                     <h3 className="text-lg font-semibold text-zinc-900 mb-2">Erst mit dem Agenten chatten</h3>
                     <p className="text-sm text-zinc-500 max-w-sm mx-auto mb-8 leading-relaxed">
-                      Starte ein Gespräch mit dem BI Agent. Die KI erstellt dann hier ein strukturiertes Transformation Concept.
+                      Starte ein Gespräch mit dem Agenten. Die KI erstellt dann hier ein strukturiertes Transformation Concept.
                     </p>
                     <motion.button whileTap={{ scale: 0.95 }} whileHover={{ y: -1 }}
                       transition={{ type: "spring", stiffness: 400, damping: 28 }}

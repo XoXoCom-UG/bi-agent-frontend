@@ -63,11 +63,9 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
         <header className="flex items-center gap-2 md:gap-3 px-3 md:px-5 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
           {/* Logo → home */}
           <button onClick={goHome} className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm shadow-green-600/25"
-              style={{ background: "var(--green)", fontFamily: "Georgia, serif" }}>B</div>
             <div className="flex items-center gap-px leading-none">
-              <span className="font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-50">matfit</span>
-              <span className="font-bold text-sm tracking-tight text-green-600">.ai</span>
+              <span className="font-bold text-base tracking-tight text-zinc-900 dark:text-zinc-50">matfit</span>
+              <span className="font-bold text-base tracking-tight text-green-600">.ai</span>
             </div>
             <span className="hidden xl:inline text-[10px] font-semibold tracking-[0.14em] uppercase text-zinc-400 ml-1">
               KI-gestützte IT-Beratung

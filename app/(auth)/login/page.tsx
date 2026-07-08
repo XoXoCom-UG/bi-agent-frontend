@@ -36,9 +36,9 @@ export default function LoginPage() {
       {/* Left panel */}
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 24px", borderRight: "1px solid var(--border)", background: "#fff", minWidth: 0 }}>
         <div style={{ maxWidth: 400, width: "100%" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 36 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--green)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 18, fontFamily: "Georgia,serif" }}>B</div>
-            <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.01em" }}>BI Agent</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 1, marginBottom: 36 }}>
+            <span style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>matfit</span>
+            <span style={{ fontSize: 20, fontWeight: 700, color: "var(--green)", letterSpacing: "-0.02em" }}>.ai</span>
           </div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em", marginBottom: 6 }}>{tab === "login" ? "Willkommen zurück" : "Account erstellen"}</h1>
           <p style={{ fontSize: 14, color: "var(--text-3)", marginBottom: 28 }}>{tab === "login" ? "Logge dich ein, um fortzufahren." : "Starte kostenlos mit dem IT Consulting Agent."}</p>

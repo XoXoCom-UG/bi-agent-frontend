@@ -404,16 +404,10 @@ export default function ChatPage() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ type: "spring", duration: 0.6, bounce: 0.1 }}
-                  className="flex items-center justify-center gap-2.5 mb-10"
+                  className="flex items-center justify-center gap-px mb-10"
                 >
-                  <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md shadow-green-600/25"
-                    style={{ background: "var(--green)", fontFamily: "Georgia, serif" }}
-                  >B</div>
-                  <span
-                    className="text-2xl font-bold text-zinc-900 dark:text-zinc-50"
-                    style={{ letterSpacing: "-0.04em", fontFamily: "inherit" }}
-                  >matfit.ai</span>
+                  <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-50" style={{ letterSpacing: "-0.04em" }}>matfit</span>
+                  <span className="text-3xl font-bold text-green-600" style={{ letterSpacing: "-0.04em" }}>.ai</span>
                 </motion.div>
 
                 {/* Headline */}
