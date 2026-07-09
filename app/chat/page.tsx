@@ -205,7 +205,10 @@ export default function ChatPage() {
       const res = await api.chat(token, { messages: [...store.messages, userMsg], session_id: store.sessionId, project_id: store.activeProjectId, guided: store.guidedProject });
       store.setMessages(res.messages);
       store.setSessionId(res.session_id);
-      if (store.guidedProject) store.setGuidedProject(false);
+      // NOTE: guided mode stays ON for the whole interview — it used to reset
+      // after the first message, which made the agent drop the interview and
+      // jump straight to giving ideas. It is turned off only when the concept
+      // is generated or a new chat starts.
       api.getHistory(token).then(d => store.setHistory(d.sessions)).catch(() => {});
       // Refresh consent flags (the agent may have recorded permissions this turn)
       api.getProjects(token).then(d => store.setProjects(d.projects)).catch(() => {});

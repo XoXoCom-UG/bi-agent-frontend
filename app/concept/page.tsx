@@ -260,6 +260,8 @@ function ConceptContent() {
       const res = await api.generateConcept(token, { messages: msgs, session_id: sessionId });
       setConcept(res.concept);
       await api.saveConcept(token, res.session_id, res.concept);
+      // Interview is effectively done once a concept exists.
+      store.setGuidedProject(false);
     } catch (e: unknown) { setError((e as Error).message); }
     finally { setGenerating(false); }
   }
