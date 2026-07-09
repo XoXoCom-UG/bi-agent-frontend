@@ -264,6 +264,18 @@ function ConceptContent() {
     finally { setGenerating(false); }
   }
 
+  // Feed the right-side assistant with the concept currently on screen.
+  useEffect(() => {
+    if (!concept) return;
+    const parts: string[] = [];
+    if (concept.title) parts.push(`Titel: ${concept.title}`);
+    if (concept.now?.summary) parts.push(`Ist-Zustand: ${concept.now.summary}`);
+    if (concept.goal?.summary) parts.push(`Ziel-Zustand: ${concept.goal.summary}`);
+    (concept.goal?.table ?? []).forEach(r => parts.push(`Ziel: ${r.ziel} — Tooling: ${r.tooling}`));
+    store.setLeftContext(`Transformation Concept, das der Nutzer gerade ansieht:\n${parts.join("\n")}`.slice(0, 2000));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [concept]);
+
   const steps    = concept?.transformation_steps ?? [];
   const stories  = concept?.user_stories ?? [];
   const bv       = concept?.business_value_summary ?? {};

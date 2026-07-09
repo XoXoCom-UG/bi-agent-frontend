@@ -166,6 +166,16 @@ export default function ChatPage() {
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [store.messages, store.sending]);
 
+  // Feed the right-side assistant with the current conversation as context.
+  useEffect(() => {
+    const recent = store.messages.slice(-6)
+      .map(m => `${m.role === "user" ? "Nutzer" : "matfit.ai"}: ${toText(m.content).slice(0, 400)}`)
+      .filter(l => l.split(": ")[1]?.trim())
+      .join("\n");
+    store.setLeftContext(recent ? `Aktuelle Konversation im Chat:\n${recent}` : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.messages]);
+
   const activeProject = store.projects.find(p => p.project_id === store.activeProjectId) ?? null;
 
   const allPhases = PHASES_CHAT;

@@ -30,6 +30,9 @@ interface ChatStore {
   assistantContext: AssistantContext | null;
   assistantContextNonce: number;
   assistantOpenMobile: boolean;
+  // A short description of what the user currently sees on the left (chat /
+  // concept / roadmap), so the right-side assistant knows the context.
+  leftContext: string;
 
   // actions
   setSessionId: (id: string) => void;
@@ -48,6 +51,7 @@ interface ChatStore {
   reorderProjects: (ids: string[]) => void;
   pushAssistant: (ctx: AssistantContext) => void;
   setAssistantOpenMobile: (b: boolean) => void;
+  setLeftContext: (c: string) => void;
   newChat: () => void;
 }
 
@@ -67,6 +71,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   assistantContext: null,
   assistantContextNonce: 0,
   assistantOpenMobile: false,
+  leftContext: "",
 
   setSessionId: (id) => set({ sessionId: id }),
   setSessionTitle: (t) => set({ sessionTitle: t }),
@@ -97,6 +102,7 @@ export const useChatStore = create<ChatStore>((set) => ({
       assistantOpenMobile: true,
     })),
   setAssistantOpenMobile: (b) => set({ assistantOpenMobile: b }),
+  setLeftContext: (c) => set({ leftContext: c }),
   newChat: () =>
     set({
       sessionId: newSessionId(),

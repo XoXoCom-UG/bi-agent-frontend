@@ -69,14 +69,24 @@ export function AssistantPanel({ token, projectId }: { token: string | null; pro
     if (!t || sending || !token) return;
     setInput("");
     const userMsg: Message = { role: "user", content: t };
-    const next = [...messages, userMsg];
-    setMessages(next);
+    const shown = [...messages, userMsg];
+    setMessages(shown);
     setSending(true);
     try {
-      const res = await api.chat(token, { messages: next, session_id: sessionRef.current, project_id: projectId });
-      setMessages(res.messages);
+      // Give the assistant the context of what the user currently sees on the
+      // left (chat / concept / roadmap) — as a hidden seed, not shown here.
+      const leftCtx = useChatStore.getState().leftContext;
+      const seed: Message[] = leftCtx
+        ? [
+            { role: "user", content: `[Kontext, den der Nutzer gerade links sieht — nur zur Orientierung, nicht wiederholen]\n\n${leftCtx}` },
+            { role: "assistant", content: "Alles klar, ich habe den Kontext im Blick." },
+          ]
+        : [];
+      const res = await api.chat(token, { messages: [...seed, ...shown], session_id: sessionRef.current, project_id: projectId });
+      const reply = res.messages[res.messages.length - 1];
+      setMessages(reply ? [...shown, reply] : shown);
     } catch (e: unknown) {
-      setMessages([...next, { role: "assistant", content: `**Fehler:** ${(e as Error).message}` }]);
+      setMessages([...shown, { role: "assistant", content: `**Fehler:** ${(e as Error).message}` }]);
     } finally { setSending(false); }
   }
 

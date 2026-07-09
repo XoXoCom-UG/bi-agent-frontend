@@ -325,6 +325,18 @@ function DashboardContent() {
     try { const d = await api.generateRoadmap(token!, sid); setRoadmap(d.roadmap); } catch {} finally { setRmLoading(false); }
   }
 
+  // Feed the right-side assistant with the roadmap currently on screen.
+  useEffect(() => {
+    if (!roadmap) { store.setLeftContext("Der Nutzer ist im Dashboard (Deck-Übersicht)."); return; }
+    const parts: string[] = [roadmap.title ? `Roadmap: ${roadmap.title}` : "Roadmap"];
+    roadmap.phases?.forEach((ph, i) => {
+      parts.push(`Phase ${i + 1}: ${ph.name}${ph.goal ? " — " + ph.goal : ""}`);
+      ph.steps.forEach(s => parts.push(`  • ${s.title}${s.tools?.length ? " (Tools: " + s.tools.map(t => t.name).join(", ") + ")" : ""}`));
+    });
+    store.setLeftContext(`Roadmap, die der Nutzer gerade ansieht:\n${parts.join("\n")}`.slice(0, 2500));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roadmap]);
+
   if (loading || !token) return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-900">
       <div className="thinking-spinner" style={{ width: 24, height: 24 }} />
