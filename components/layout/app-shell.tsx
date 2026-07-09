@@ -10,7 +10,7 @@ import { AssistantDock } from "./right-panel";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Zap, Map, Folder, FolderOpen, Plus, ChevronDown, Check, X,
-  Settings, LogOut, GripVertical, MessageCircle,
+  Settings, LogOut, GripVertical, MessageCircle, Sparkles,
 } from "lucide-react";
 
 type ActiveScreen = "chat" | "concept" | "dashboard";
@@ -97,6 +97,11 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
 
           {/* User + settings + logout */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Mobile: open the assistant drawer (no floating button that covers the composer) */}
+            <button onClick={() => store.setAssistantOpenMobile(true)} title="Assistent"
+              className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40 transition-colors">
+              <Sparkles className="w-4 h-4" strokeWidth={1.5} />
+            </button>
             <button onClick={() => setSettingsOpen(true)}
               className="flex items-center gap-2 rounded-lg pl-1 pr-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-green-800 dark:text-green-400 select-none"

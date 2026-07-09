@@ -185,15 +185,7 @@ export function AssistantDock({ token, projectId }: { token: string | null; proj
         <AssistantPanel token={token} projectId={projectId} />
       </aside>
 
-      {/* Mobile: floating button + slide-in drawer */}
-      <button
-        onClick={() => setOpenMobile(true)}
-        className="lg:hidden fixed bottom-5 right-5 z-40 w-12 h-12 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/30 flex items-center justify-center"
-        aria-label="Assistent öffnen"
-      >
-        <Sparkles className="w-5 h-5" strokeWidth={1.5} />
-      </button>
-
+      {/* Mobile: slide-in drawer (opened from the topbar assistant button) */}
       <AnimatePresence>
         {openMobile && (
           <>

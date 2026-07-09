@@ -159,7 +159,12 @@ export default function ChatPage() {
   const [projSaving, setProjSaving] = useState(false);
 
   useEffect(() => { if (!loading && !token) router.replace("/login"); }, [token, loading]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [store.messages, store.sending]);
+  // Keep the message list pinned to the newest content — scroll ONLY the list
+  // container, never the whole page (that caused the jump-to-top annoyance).
+  useEffect(() => {
+    const el = msgListRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [store.messages, store.sending]);
 
   const activeProject = store.projects.find(p => p.project_id === store.activeProjectId) ?? null;
 
@@ -552,6 +557,8 @@ export default function ChatPage() {
                 let choices: string[] = [];
                 const cm = content.match(/\[\[CHOICES:\s*([\s\S]*?)\]\]/i);
                 if (cm) { choices = cm[1].split("|").map(s => s.trim()).filter(Boolean); content = content.replace(cm[0], "").trim(); }
+                // Skip empty turns (tool-only / stripped messages) — no empty bubbles.
+                if (!content.trim() && choices.length === 0) return null;
                 return (
                   <div key={i} className={cn("group/msg flex gap-3 animate-in", isUser && "flex-row-reverse")}>
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5"
