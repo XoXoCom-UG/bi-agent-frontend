@@ -502,7 +502,12 @@ function DashboardContent() {
                         <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-2 leading-tight">
                           {roadmap.title || "Deine Roadmap"}
                         </h2>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        {roadmap.overview && (
+                          <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed mb-3">
+                            {roadmap.overview}
+                          </p>
+                        )}
+                        <p className="text-xs text-zinc-400 dark:text-zinc-500 leading-relaxed">
                           {roadmap.phases?.length ?? 0} Phasen · {roadmap.phases?.reduce((n, ph) => n + ph.steps.length, 0) ?? 0} Maßnahmen
                           — hake ab, was erledigt ist, und diskutiere Tools & Alternativen direkt mit dem Agenten.
                         </p>

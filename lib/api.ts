@@ -244,6 +244,7 @@ export interface ConceptResponse {
 
 export interface RoadmapData {
   title?: string;
+  overview?: string;
   phases?: Array<{
     name: string;
     goal: string;
