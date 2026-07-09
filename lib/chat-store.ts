@@ -45,6 +45,8 @@ interface ChatStore {
   leftContext: string;
   // Deletions inside their 15-minute undo window.
   pendingDeletes: PendingDelete[];
+  // Cache of fully-loaded sessions so re-opening a conversation is instant.
+  sessionCache: Record<string, { title: string; messages: Message[] }>;
 
   // actions
   setSessionId: (id: string) => void;
@@ -66,6 +68,7 @@ interface ChatStore {
   setLeftContext: (c: string) => void;
   queueDelete: (d: PendingDelete) => void;
   dropPending: (id: string) => void;
+  cacheSession: (id: string, data: { title: string; messages: Message[] }) => void;
   newChat: () => void;
 }
 
@@ -87,6 +90,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   assistantOpenMobile: false,
   leftContext: "",
   pendingDeletes: [],
+  sessionCache: {},
 
   setSessionId: (id) => set({ sessionId: id }),
   setSessionTitle: (t) => set({ sessionTitle: t }),
@@ -120,6 +124,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   setLeftContext: (c) => set({ leftContext: c }),
   queueDelete: (d) => set((s) => ({ pendingDeletes: [...s.pendingDeletes.filter(p => p.id !== d.id), d] })),
   dropPending: (id) => set((s) => ({ pendingDeletes: s.pendingDeletes.filter(p => p.id !== id) })),
+  cacheSession: (id, data) => set((s) => ({ sessionCache: { ...s.sessionCache, [id]: data } })),
   newChat: () =>
     set({
       sessionId: newSessionId(),

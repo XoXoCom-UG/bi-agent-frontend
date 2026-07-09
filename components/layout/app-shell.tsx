@@ -208,6 +208,7 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -245,24 +246,59 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
     });
   }
 
-  async function openProject(pid: string) {
+  // Expand/collapse a project to reveal its conversations (fetched once, cached).
+  async function toggleProject(pid: string) {
+    setExpanded(prev => {
+      const n = new Set(prev);
+      if (n.has(pid)) n.delete(pid); else n.add(pid);
+      return n;
+    });
     if (!token) return;
-    store.setActiveProject(pid);
+    if (!store.projectSessions[pid]) {
+      try {
+        const d = await api.getProjectSessions(token, pid);
+        store.setProjectSessions(pid, d.sessions);
+      } catch {}
+    }
+  }
+
+  // Load a conversation — instant from cache, then refreshed in the background.
+  async function loadSession(sid: string, pid: string | null) {
+    if (!token) return;
     setOpen(false);
+    const cached = useChatStore.getState().sessionCache[sid];
+    if (cached) {
+      store.setSessionId(sid);
+      store.setSessionTitle(cached.title);
+      store.setActiveProject(pid);
+      store.setMessages(cached.messages);
+      router.push("/chat");
+      api.getSession(token, sid).then(s => {
+        const data = { title: s.title || cached.title, messages: s.messages ?? [] };
+        store.cacheSession(sid, data);
+        if (useChatStore.getState().sessionId === sid) {
+          store.setMessages(data.messages); store.setSessionTitle(data.title);
+        }
+      }).catch(() => {});
+      return;
+    }
     try {
-      const d = await api.getProjectSessions(token, pid);
-      store.setProjectSessions(pid, d.sessions);
-      const latest = d.sessions[0];
-      if (latest) {
-        const s = await api.getSession(token, latest.session_id);
-        store.setSessionId(latest.session_id);
-        store.setSessionTitle(s.title || "Konversation");
-        store.setMessages(s.messages ?? []);
-      } else {
-        store.newChat();
-        store.setActiveProject(pid);
-      }
-    } catch { store.newChat(); store.setActiveProject(pid); }
+      const s = await api.getSession(token, sid);
+      const data = { title: s.title || "Konversation", messages: s.messages ?? [] };
+      store.setSessionId(sid);
+      store.setSessionTitle(data.title);
+      store.setActiveProject(pid);
+      store.setMessages(data.messages);
+      store.cacheSession(sid, data);
+    } catch {}
+    router.push("/chat");
+  }
+
+  function newChatInProject(pid: string) {
+    store.newChat();
+    store.setActiveProject(pid);
+    store.setGuidedProject(true);
+    setOpen(false);
     router.push("/chat");
   }
 
@@ -284,19 +320,6 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
     store.newChat();
     store.setActiveProject(null);
     setOpen(false);
-    router.push("/chat");
-  }
-
-  async function loadLooseChat(sid: string) {
-    if (!token) return;
-    setOpen(false);
-    try {
-      const s = await api.getSession(token, sid);
-      store.setSessionId(sid);
-      store.setSessionTitle(s.title || "Konversation");
-      store.setActiveProject(null);
-      store.setMessages(s.messages ?? []);
-    } catch {}
     router.push("/chat");
   }
 
@@ -377,29 +400,60 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
               )}
               {visibleProjects.map(p => {
                 const isActive = store.activeProjectId === p.project_id;
+                const isOpen = expanded.has(p.project_id);
+                const sessions = (store.projectSessions[p.project_id] ?? []).filter(s => !pendingIds.has(s.session_id));
                 return (
-                  <div key={p.project_id}
-                    draggable
-                    onDragStart={() => setDragId(p.project_id)}
-                    onDragOver={e => e.preventDefault()}
-                    onDrop={() => onDrop(p.project_id)}
-                    className={cn(
-                      "group/pi flex items-center gap-1.5 px-2 py-1.5 mx-1 rounded-lg cursor-pointer transition-colors",
-                      isActive ? "bg-green-50 dark:bg-green-950/60" : "hover:bg-zinc-50 dark:hover:bg-zinc-800",
-                      dragId === p.project_id && "opacity-40"
+                  <div key={p.project_id}>
+                    <div
+                      draggable
+                      onDragStart={() => setDragId(p.project_id)}
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={() => onDrop(p.project_id)}
+                      className={cn(
+                        "group/pi flex items-center gap-1.5 px-2 py-1.5 mx-1 rounded-lg cursor-pointer transition-colors",
+                        isActive ? "bg-green-50 dark:bg-green-950/60" : "hover:bg-zinc-50 dark:hover:bg-zinc-800",
+                        dragId === p.project_id && "opacity-40"
+                      )}
+                      onClick={() => toggleProject(p.project_id)}
+                    >
+                      <ChevronDown className={cn("w-3.5 h-3.5 text-zinc-400 shrink-0 transition-transform", !isOpen && "-rotate-90")} strokeWidth={1.5} />
+                      <Folder className={cn("w-3.5 h-3.5 shrink-0", isActive ? "text-green-600" : "text-zinc-400")} strokeWidth={1.5} />
+                      <span className={cn("flex-1 text-xs font-medium truncate", isActive ? "text-green-800 dark:text-green-300" : "text-zinc-700 dark:text-zinc-300")}>
+                        {p.name}
+                      </span>
+                      <span className="text-[10px] font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5 shrink-0 group-hover/pi:hidden">{p.chats}</span>
+                      <button onClick={e => deleteProject(e, p)} title="Projekt löschen"
+                        className="hidden group-hover/pi:flex w-5 h-5 rounded items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0 transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      </button>
+                    </div>
+
+                    {/* Conversations inside the project */}
+                    {isOpen && (
+                      <div className="ml-4 pl-2 border-l border-zinc-100 dark:border-zinc-800 my-0.5">
+                        <button onClick={() => newChatInProject(p.project_id)}
+                          className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-medium text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/40 transition-colors">
+                          <Plus className="w-3 h-3" strokeWidth={2} /> Neue Konversation
+                        </button>
+                        {sessions.length === 0 ? (
+                          <p className="text-[11px] text-zinc-400 px-2 py-1.5">Noch keine Konversationen.</p>
+                        ) : sessions.map(s => (
+                          <div key={s.session_id}
+                            onClick={() => loadSession(s.session_id, p.project_id)}
+                            className={cn("group/cs flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors",
+                              store.sessionId === s.session_id ? "bg-green-50 dark:bg-green-950/60" : "hover:bg-zinc-50 dark:hover:bg-zinc-800")}>
+                            <MessageCircle className="w-3 h-3 text-zinc-400 shrink-0" strokeWidth={1.5} />
+                            <span className={cn("flex-1 text-[11px] truncate", store.sessionId === s.session_id ? "text-green-800 dark:text-green-300 font-medium" : "text-zinc-500 dark:text-zinc-400")}>
+                              {(s.title || "Konversation").slice(0, 28)}
+                            </span>
+                            <button onClick={e => deleteChat(e, s)} title="Chat löschen"
+                              className="hidden group-hover/cs:flex w-5 h-5 rounded items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0 transition-colors">
+                              <Trash2 className="w-3 h-3" strokeWidth={1.5} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     )}
-                    onClick={() => openProject(p.project_id)}
-                  >
-                    <GripVertical className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0 cursor-grab active:cursor-grabbing" strokeWidth={1.5} />
-                    <Folder className={cn("w-3.5 h-3.5 shrink-0", isActive ? "text-green-600" : "text-zinc-400")} strokeWidth={1.5} />
-                    <span className={cn("flex-1 text-xs font-medium truncate", isActive ? "text-green-800 dark:text-green-300" : "text-zinc-700 dark:text-zinc-300")}>
-                      {p.name}
-                    </span>
-                    <span className="text-[10px] font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5 shrink-0 group-hover/pi:hidden">{p.chats}</span>
-                    <button onClick={e => deleteProject(e, p)} title="Projekt löschen"
-                      className="hidden group-hover/pi:flex w-5 h-5 rounded items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0 transition-colors">
-                      <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
-                    </button>
                   </div>
                 );
               })}
@@ -415,7 +469,7 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
               {looseChats.map(s => (
                 <div key={s.session_id}
                   className="group/lc w-full flex items-center gap-2 pl-8 pr-2 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                  onClick={() => loadLooseChat(s.session_id)}>
+                  onClick={() => loadSession(s.session_id, null)}>
                   <span className="flex-1 text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{(s.title || "Untitled").slice(0, 30)}</span>
                   <button onClick={e => deleteChat(e, s)} title="Chat löschen"
                     className="hidden group-hover/lc:flex w-5 h-5 rounded items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0 transition-colors">
