@@ -11,6 +11,16 @@ export interface AssistantContext {
   question?: string;
 }
 
+/** A deletion waiting out its 15-minute undo window. The real API delete only
+ *  fires when `deleteAt` passes; clicking undo drops it before then. */
+export interface PendingDelete {
+  id: string;
+  kind: "project" | "session";
+  item: Project | Session;
+  deleteAt: number;
+  label: string;
+}
+
 interface ChatStore {
   // current session
   sessionId: string;
@@ -33,6 +43,8 @@ interface ChatStore {
   // A short description of what the user currently sees on the left (chat /
   // concept / roadmap), so the right-side assistant knows the context.
   leftContext: string;
+  // Deletions inside their 15-minute undo window.
+  pendingDeletes: PendingDelete[];
 
   // actions
   setSessionId: (id: string) => void;
@@ -52,6 +64,8 @@ interface ChatStore {
   pushAssistant: (ctx: AssistantContext) => void;
   setAssistantOpenMobile: (b: boolean) => void;
   setLeftContext: (c: string) => void;
+  queueDelete: (d: PendingDelete) => void;
+  dropPending: (id: string) => void;
   newChat: () => void;
 }
 
@@ -72,6 +86,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   assistantContextNonce: 0,
   assistantOpenMobile: false,
   leftContext: "",
+  pendingDeletes: [],
 
   setSessionId: (id) => set({ sessionId: id }),
   setSessionTitle: (t) => set({ sessionTitle: t }),
@@ -103,6 +118,8 @@ export const useChatStore = create<ChatStore>((set) => ({
     })),
   setAssistantOpenMobile: (b) => set({ assistantOpenMobile: b }),
   setLeftContext: (c) => set({ leftContext: c }),
+  queueDelete: (d) => set((s) => ({ pendingDeletes: [...s.pendingDeletes.filter(p => p.id !== d.id), d] })),
+  dropPending: (id) => set((s) => ({ pendingDeletes: s.pendingDeletes.filter(p => p.id !== id) })),
   newChat: () =>
     set({
       sessionId: newSessionId(),

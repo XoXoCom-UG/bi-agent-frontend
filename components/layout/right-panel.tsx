@@ -191,7 +191,7 @@ export function AssistantDock({ token, projectId }: { token: string | null; proj
   return (
     <>
       {/* Desktop: always-present column */}
-      <aside className="hidden lg:flex flex-col shrink-0 w-[320px] border-l border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-full">
+      <aside className="no-print hidden lg:flex flex-col shrink-0 w-[320px] border-l border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-full">
         <AssistantPanel token={token} projectId={projectId} />
       </aside>
 

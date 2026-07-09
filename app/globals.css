@@ -91,3 +91,19 @@ html.dark .choice-chip:hover:not(:disabled) { background: #052e16; color: #4ade8
 .prose-chat h4 { font-weight: 600; margin: 10px 0 4px; }
 .prose-chat code { font-size: 12px; font-family: monospace; background: #f3f4f6; padding: 1px 5px; border-radius: 4px; }
 html.dark .prose-chat code { background: #27272a; color: #d4d4d8; }
+
+/* ── Print: export the Transformation Concept as a clean PDF ──────────── */
+@media print {
+  .no-print { display: none !important; }
+  html, body { height: auto !important; overflow: visible !important; background: #fff !important; }
+  /* Let the concept content flow across pages instead of being clipped by
+     the fixed 100vh app layout. */
+  .print-area {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    flex: none !important;
+  }
+  .print-area * { overflow: visible !important; }
+}

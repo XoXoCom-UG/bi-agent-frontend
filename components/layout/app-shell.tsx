@@ -10,7 +10,7 @@ import { AssistantDock } from "./right-panel";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Zap, Map, Folder, FolderOpen, Plus, ChevronDown, Check, X,
-  Settings, LogOut, GripVertical, MessageCircle, Sparkles,
+  Settings, LogOut, GripVertical, MessageCircle, Sparkles, Trash2, RotateCcw,
 } from "lucide-react";
 
 type ActiveScreen = "chat" | "concept" | "dashboard";
@@ -50,6 +50,28 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
     router.push("/chat");
   }
 
+  // Commit a deletion once its 15-minute undo window has elapsed.
+  useEffect(() => {
+    if (!token) return;
+    const timers = store.pendingDeletes.map(p =>
+      window.setTimeout(async () => {
+        const st = useChatStore.getState();
+        try {
+          if (p.kind === "project") {
+            await api.deleteProject(token, p.id, false);
+            st.setProjects(st.projects.filter(x => x.project_id !== p.id));
+          } else {
+            await api.deleteSession(token, p.id);
+            st.setHistory(st.history.filter(x => x.session_id !== p.id));
+          }
+        } catch {}
+        useChatStore.getState().dropPending(p.id);
+      }, Math.max(0, p.deleteAt - Date.now()))
+    );
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, store.pendingDeletes]);
+
   const sessionId = store.sessionId;
 
   return (
@@ -60,7 +82,7 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
       <div className="flex-1 flex flex-col bg-white dark:bg-zinc-900 min-w-0" style={{ overflow: "hidden" }}>
 
         {/* ── Topbar ─────────────────────────────────────────────────── */}
-        <header className="flex items-center gap-2 md:gap-3 px-3 md:px-5 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
+        <header className="no-print flex items-center gap-2 md:gap-3 px-3 md:px-5 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
           {/* Logo → home */}
           <button onClick={goHome} className="flex items-center gap-2.5 shrink-0 group">
             <div className="flex items-center gap-px leading-none">
@@ -131,6 +153,26 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
         {children}
       </div>
 
+      {/* Undo toasts for deletions (15-minute window) */}
+      {store.pendingDeletes.length > 0 && (
+        <div className="no-print fixed bottom-5 left-5 z-[60] flex flex-col gap-2">
+          <AnimatePresence>
+            {store.pendingDeletes.slice(-3).map(p => (
+              <motion.div key={p.id}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+                className="flex items-center gap-3 bg-zinc-900 dark:bg-zinc-800 text-white rounded-xl pl-4 pr-2 py-2.5 shadow-xl shadow-black/25 border border-white/10">
+                <span className="text-xs">{p.label}</span>
+                <button onClick={() => store.dropPending(p.id)}
+                  className="flex items-center gap-1 text-xs font-semibold text-green-400 hover:text-green-300 rounded-lg px-2 py-1 hover:bg-white/10 transition-colors">
+                  <RotateCcw className="w-3.5 h-3.5" strokeWidth={2} />
+                  Rückgängig
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+
       {/* Right: persistent assistant */}
       <AssistantDock token={token} projectId={store.activeProjectId} />
     </div>
@@ -179,8 +221,29 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
 
   useEffect(() => { if (creating) setTimeout(() => inputRef.current?.focus(), 50); }, [creating]);
 
+  const pendingIds = new Set(store.pendingDeletes.map(p => p.id));
   const activeProject = store.projects.find(p => p.project_id === store.activeProjectId) ?? null;
-  const looseChats = store.history.filter(s => !s.project_id).slice(0, 6);
+  const visibleProjects = store.projects.filter(p => !pendingIds.has(p.project_id));
+  const looseChats = store.history.filter(s => !s.project_id && !pendingIds.has(s.session_id)).slice(0, 6);
+
+  function deleteProject(e: React.MouseEvent, p: { project_id: string; name: string }) {
+    e.stopPropagation();
+    store.queueDelete({
+      id: p.project_id, kind: "project", item: p as never,
+      deleteAt: Date.now() + 15 * 60 * 1000,
+      label: `Projekt „${p.name}" gelöscht`,
+    });
+    if (store.activeProjectId === p.project_id) { store.newChat(); store.setActiveProject(null); }
+  }
+
+  function deleteChat(e: React.MouseEvent, s: { session_id: string; title?: string }) {
+    e.stopPropagation();
+    store.queueDelete({
+      id: s.session_id, kind: "session", item: s as never,
+      deleteAt: Date.now() + 15 * 60 * 1000,
+      label: `Chat „${(s.title || "Konversation").slice(0, 22)}" gelöscht`,
+    });
+  }
 
   async function openProject(pid: string) {
     if (!token) return;
@@ -309,10 +372,10 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
 
             {/* Project list (drag to reorder) */}
             <div className="max-h-64 overflow-y-auto py-1">
-              {store.projects.length === 0 && !creating && (
+              {visibleProjects.length === 0 && !creating && (
                 <p className="text-xs text-zinc-400 px-3 py-3 text-center">Noch keine Projekte.</p>
               )}
-              {store.projects.map(p => {
+              {visibleProjects.map(p => {
                 const isActive = store.activeProjectId === p.project_id;
                 return (
                   <div key={p.project_id}
@@ -332,7 +395,11 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
                     <span className={cn("flex-1 text-xs font-medium truncate", isActive ? "text-green-800 dark:text-green-300" : "text-zinc-700 dark:text-zinc-300")}>
                       {p.name}
                     </span>
-                    <span className="text-[10px] font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5 shrink-0">{p.chats}</span>
+                    <span className="text-[10px] font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5 shrink-0 group-hover/pi:hidden">{p.chats}</span>
+                    <button onClick={e => deleteProject(e, p)} title="Projekt löschen"
+                      className="hidden group-hover/pi:flex w-5 h-5 rounded items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0 transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    </button>
                   </div>
                 );
               })}
@@ -346,10 +413,15 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
                 Schnelle Frage — ohne Projekt
               </button>
               {looseChats.map(s => (
-                <button key={s.session_id} onClick={() => loadLooseChat(s.session_id)}
-                  className="w-full flex items-center gap-2 pl-8 pr-3 py-1.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{(s.title || "Untitled").slice(0, 34)}</span>
-                </button>
+                <div key={s.session_id}
+                  className="group/lc w-full flex items-center gap-2 pl-8 pr-2 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  onClick={() => loadLooseChat(s.session_id)}>
+                  <span className="flex-1 text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{(s.title || "Untitled").slice(0, 30)}</span>
+                  <button onClick={e => deleteChat(e, s)} title="Chat löschen"
+                    className="hidden group-hover/lc:flex w-5 h-5 rounded items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0 transition-colors">
+                    <Trash2 className="w-3 h-3" strokeWidth={1.5} />
+                  </button>
+                </div>
               ))}
             </div>
           </motion.div>

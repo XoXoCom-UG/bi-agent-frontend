@@ -8,7 +8,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { dateStr } from "@/lib/utils";
 import {
   Clock, AlertTriangle, TrendingDown, Zap,
-  ChevronRight, CheckCircle2, FileText, MessageSquare,
+  ChevronRight, CheckCircle2, FileText, MessageSquare, ArrowLeft,
 } from "lucide-react";
 import { motion, AnimatePresence, useSpring } from "motion/react";
 
@@ -311,7 +311,18 @@ function ConceptContent() {
         <AnimatePresence>{generating && <GeneratingOverlay />}</AnimatePresence>
 
         {/* Page toolbar (page-specific actions live here) */}
-        <div className="flex items-center gap-2.5 px-4 md:px-6 h-12 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
+        <div className="no-print flex items-center gap-2.5 px-4 md:px-6 h-12 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
+          {/* Back to chat */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => router.push("/chat")}
+            title="Zurück zum Chat"
+            className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150 shrink-0"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" strokeWidth={1.5} />
+            <span className="hidden sm:inline">Zurück</span>
+          </motion.button>
+
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">
               {concept?.title || (hasMessages ? store.sessionTitle : "Transformation Concept")}
@@ -324,6 +335,7 @@ function ConceptContent() {
           {concept && (
             <motion.button
               whileTap={{ scale: 0.95 }}
+              onClick={() => window.print()}
               className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150"
             >
               <FileText className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -345,7 +357,7 @@ function ConceptContent() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="print-area flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto px-6 py-10 pb-20">
 
             {/* Page header */}
