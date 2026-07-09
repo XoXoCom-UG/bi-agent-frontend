@@ -98,6 +98,51 @@ function ChoiceChips({ choices, onSelect }: { choices: string[]; onSelect: (c: s
   );
 }
 
+// Multi-select variant: pick several options, then submit.
+function MultiChoiceChips({ choices, onSubmit }: { choices: string[]; onSubmit: (c: string) => void }) {
+  const [selected, setSelected] = useState<string[]>([]);
+  const [sent, setSent] = useState(false);
+  function toggle(c: string) {
+    setSelected(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+  }
+  return (
+    <div className="mt-3 space-y-2.5">
+      <div className="flex flex-wrap gap-2">
+        {choices.map(c => {
+          const on = selected.includes(c);
+          return (
+            <button key={c} disabled={sent} onClick={() => toggle(c)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[12px] transition-colors duration-150",
+                on
+                  ? "border-green-500 bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-400 font-medium"
+                  : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:border-green-300"
+              )}>
+              <span className={cn("w-3.5 h-3.5 rounded-[4px] border flex items-center justify-center shrink-0",
+                on ? "bg-green-600 border-green-600" : "border-zinc-300 dark:border-zinc-600")}>
+                {on && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+              </span>
+              {c}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          disabled={selected.length === 0 || sent}
+          onClick={() => { setSent(true); onSubmit(selected.join(", ")); }}
+          className={cn("text-xs font-semibold rounded-lg px-3.5 py-1.5 transition-colors duration-150",
+            selected.length > 0 && !sent
+              ? "bg-green-600 hover:bg-green-700 text-white"
+              : "bg-zinc-100 dark:bg-zinc-700 text-zinc-400 cursor-default")}>
+          {selected.length > 0 ? `${selected.length} auswählen →` : "Auswählen"}
+        </button>
+        <span className="text-xs text-zinc-400">Mehrere möglich — oder schreib deine eigene Antwort.</span>
+      </div>
+    </div>
+  );
+}
+
 function Btn({ children, onClick, className, disabled }: {
   children: React.ReactNode; onClick?: () => void; className?: string; disabled?: boolean;
 }) {
@@ -568,10 +613,14 @@ export default function ChatPage() {
                 const isUser = m.role === "user";
                 let content = toText(m.content);
                 let choices: string[] = [];
+                let multi: string[] = [];
                 const cm = content.match(/\[\[CHOICES:\s*([\s\S]*?)\]\]/i);
                 if (cm) { choices = cm[1].split("|").map(s => s.trim()).filter(Boolean); content = content.replace(cm[0], "").trim(); }
+                const mm = content.match(/\[\[MULTI:\s*([\s\S]*?)\]\]/i);
+                if (mm) { multi = mm[1].split("|").map(s => s.trim()).filter(Boolean); content = content.replace(mm[0], "").trim(); }
                 // Skip empty turns (tool-only / stripped messages) — no empty bubbles.
-                if (!content.trim() && choices.length === 0) return null;
+                if (!content.trim() && choices.length === 0 && multi.length === 0) return null;
+                const isLastAssistant = i === lastAssistantIdx && !store.sending;
                 return (
                   <div key={i} className={cn("group/msg flex gap-3 animate-in", isUser && "flex-row-reverse")}>
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5"
@@ -594,6 +643,7 @@ export default function ChatPage() {
                         />
                       )}
                       {choices.length > 0 && <ChoiceChips choices={choices} onSelect={send} />}
+                      {multi.length > 0 && isLastAssistant && <MultiChoiceChips choices={multi} onSubmit={send} />}
                     </div>
                   </div>
                 );
