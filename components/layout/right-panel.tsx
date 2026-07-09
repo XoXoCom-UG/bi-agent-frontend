@@ -184,14 +184,61 @@ export function AssistantPanel({ token, projectId }: { token: string | null; pro
 
 // ── Panel shell: persistent column on desktop, slide-in drawer on mobile ──────
 
+const MIN_W = 280;
+const MAX_W = 560;
+const DEFAULT_W = 320;
+
 export function AssistantDock({ token, projectId }: { token: string | null; projectId: string | null }) {
   const openMobile = useChatStore(s => s.assistantOpenMobile);
   const setOpenMobile = useChatStore(s => s.setAssistantOpenMobile);
 
+  const [width, setWidth] = useState(DEFAULT_W);
+  const widthRef = useRef(DEFAULT_W);
+  const dragging = useRef(false);
+
+  const apply = (w: number) => { widthRef.current = w; setWidth(w); };
+
+  useEffect(() => {
+    const saved = Number(localStorage.getItem("matfit_assistant_w"));
+    if (saved >= MIN_W && saved <= MAX_W) apply(saved);
+  }, []);
+
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!dragging.current) return;
+      // Panel sits on the right edge — width grows as the cursor moves left.
+      apply(Math.min(MAX_W, Math.max(MIN_W, window.innerWidth - e.clientX)));
+    }
+    function onUp() {
+      if (!dragging.current) return;
+      dragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      localStorage.setItem("matfit_assistant_w", String(widthRef.current));
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, []);
+
+  function startDrag(e: React.MouseEvent) {
+    e.preventDefault();
+    dragging.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }
+
   return (
     <>
-      {/* Desktop: always-present column */}
-      <aside className="no-print hidden lg:flex flex-col shrink-0 w-[320px] border-l border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-full">
+      {/* Desktop: always-present, resizable column */}
+      <aside className="no-print relative hidden lg:flex flex-col shrink-0 border-l border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-full"
+        style={{ width }}>
+        {/* Drag handle on the left edge */}
+        <div onMouseDown={startDrag}
+          title="Ziehen zum Anpassen"
+          className="group absolute left-0 top-0 h-full w-2 -translate-x-1/2 cursor-col-resize z-20 flex items-center justify-center">
+          <div className="h-12 w-1 rounded-full bg-zinc-200 dark:bg-zinc-700 group-hover:bg-green-500 transition-colors duration-150" />
+        </div>
         <AssistantPanel token={token} projectId={projectId} />
       </aside>
 
