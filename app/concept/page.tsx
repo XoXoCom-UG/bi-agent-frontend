@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api, ConceptData } from "@/lib/api";
 import { AppShell } from "@/components/layout/app-shell";
+import { DEMO_CONCEPT } from "@/lib/demo";
 import { dateStr } from "@/lib/utils";
 import {
   Clock, AlertTriangle, TrendingDown, Zap,
@@ -233,6 +234,11 @@ function ConceptContent() {
       .finally(() => setConceptLoading(false));
   }, [token, urlSession]);
 
+  // During the tour, show the bundled example instead of loading/generating.
+  useEffect(() => {
+    if (store.demoActive) setConcept(DEMO_CONCEPT);
+  }, [store.demoActive]);
+
   // Arriving from the chat CTA (?gen=1) auto-generates the concept once.
   const autoGen = useRef(false);
   useEffect(() => {
@@ -334,8 +340,11 @@ function ConceptContent() {
           </motion.button>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate flex items-center gap-2">
               {concept?.title || (hasMessages ? store.sessionTitle : "Transformation Concept")}
+              {store.demoActive && (
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-900 rounded px-1.5 py-0.5">Beispiel</span>
+              )}
             </p>
             {concept && (
               <p className="text-xs text-zinc-400">{steps.length} Maßnahmen · {stories.length} User Stories</p>

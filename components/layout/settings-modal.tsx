@@ -14,7 +14,7 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
   const [tab, setTab] = useState<Tab>("profil");
   const { theme, setTheme } = useTheme();
   const { user, signOut, token } = useAuth();
-  const setTourActive = useChatStore(s => s.setTourActive);
+  const startTour = useChatStore(s => s.startTour);
   const [name, setName] = useState("");
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -207,7 +207,7 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
                           </label>
                           <motion.button
                             whileTap={{ scale: 0.97 }}
-                            onClick={() => { onClose(); setTimeout(() => setTourActive(true), 200); }}
+                            onClick={() => { onClose(); setTimeout(() => startTour(), 200); }}
                             className="flex items-center gap-2 h-9 px-4 rounded-lg text-xs font-semibold text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/30 hover:bg-green-50 dark:hover:bg-green-950/60 transition-colors duration-150"
                           >
                             Tutorial wiederholen

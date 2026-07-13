@@ -6,6 +6,7 @@ import { useChatStore } from "@/lib/chat-store";
 import { api, DeckRow, RoadmapData } from "@/lib/api";
 import { AppShell } from "@/components/layout/app-shell";
 import { AssistantContext } from "@/lib/chat-store";
+import { DEMO_ROADMAP } from "@/lib/demo";
 import {
   MessageSquare, Zap, Map, ArrowLeft,
   CheckCircle2, ChevronDown, Copy, Check,
@@ -325,6 +326,11 @@ function DashboardContent() {
     try { const d = await api.generateRoadmap(token!, sid); setRoadmap(d.roadmap); } catch {} finally { setRmLoading(false); }
   }
 
+  // During the tour, open the bundled example roadmap immediately.
+  useEffect(() => {
+    if (store.demoActive) { setRoadmap(DEMO_ROADMAP); setRmLoading(false); }
+  }, [store.demoActive]);
+
   // Feed the right-side assistant with the roadmap currently on screen.
   useEffect(() => {
     if (!roadmap) { store.setLeftContext("Der Nutzer ist im Dashboard (Deck-Übersicht)."); return; }
@@ -491,7 +497,12 @@ function DashboardContent() {
                         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ type: "spring", duration: 0.4, bounce: 0 }}
                         className="pb-6 border-b border-zinc-100 dark:border-zinc-800 -mb-2">
-                        <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-green-600 mb-2">Roadmap</p>
+                        <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-green-600 mb-2 flex items-center gap-2">
+                          Roadmap
+                          {store.demoActive && (
+                            <span className="text-[10px] font-semibold tracking-wide text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-900 rounded px-1.5 py-0.5 normal-case">Beispiel</span>
+                          )}
+                        </p>
                         <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-2 leading-tight">
                           {roadmap.title || "Deine Roadmap"}
                         </h2>

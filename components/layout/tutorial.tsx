@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { useChatStore } from "@/lib/chat-store";
-import { cn } from "@/lib/utils";
 import { Sparkles, X, ArrowRight, Check } from "lucide-react";
 
 /*
@@ -19,24 +19,25 @@ interface TourStep {
   chapter: string;
   title: string;
   text: string;
-  advance: "click" | "weiter";  // key steps are hands-on (click the element)
+  goto: "/chat" | "/concept" | "/dashboard";
 }
 
+// Ordered so the tour makes ONE forward journey: chat → concept → dashboard.
 const STEPS: TourStep[] = [
-  { target: "projekte", chapter: "Grundlagen", title: "Deine Projekte",
-    text: "Hier startest du ein Projekt, wechselst zwischen Konversationen und löschst mit 15-Minuten-Undo. Tipp: einfach draufklicken zum Öffnen.", advance: "weiter" },
-  { target: "composer", chapter: "Grundlagen", title: "Frag den Agenten",
-    text: "Hier stellst du deine Frage oder startest das geführte Interview. Alles beginnt an dieser Stelle.", advance: "weiter" },
-  { target: "concept", chapter: "Ergebnisse", title: "Transformation Concept",
-    text: "Aus eurem Gespräch entsteht hier ein strukturiertes Konzept — Ist-Zustand, Ziel und Tooling als Tabellen, exportierbar als PDF.", advance: "weiter" },
-  { target: "roadmap", chapter: "Ergebnisse", title: "Roadmap",
-    text: "Die Roadmap zeigt Phasen, Tools und wie alle Bausteine zusammenwirken, um ans Ziel zu kommen.", advance: "weiter" },
-  { target: "assistant", chapter: "Assistent", title: "Dein persönlicher Assistent",
-    text: "Immer an deiner Seite — frag jederzeit etwas. Er kennt den Kontext von links. Tipp: markiere Text in einer Antwort, um genau darüber zu sprechen.", advance: "weiter" },
-  { target: "persona", chapter: "Assistent", title: "Sein Stil",
-    text: "Wähle, wie er antwortet: Tier-1-Berater (klare Empfehlungen) oder Kritiker (deckt Risiken und Schwächen auf).", advance: "weiter" },
-  { target: "profile", chapter: "Assistent", title: "Profil & Einstellungen",
-    text: "Hier findest du dein Profil, das Design — und kannst diese Tour jederzeit neu starten. Viel Erfolg! 🎉", advance: "weiter" },
+  { target: "projekte", chapter: "Grundlagen", title: "Deine Projekte", goto: "/chat",
+    text: "Hier startest du ein Projekt, wechselst zwischen Konversationen und löschst mit 15-Minuten-Undo." },
+  { target: "composer", chapter: "Grundlagen", title: "Frag den Agenten", goto: "/chat",
+    text: "Hier stellst du deine Frage oder startest das geführte Interview. Das ist ein echtes Beispiel-Gespräch — du siehst gleich, was dabei herauskommt." },
+  { target: "assistant", chapter: "Assistent", title: "Dein persönlicher Assistent", goto: "/chat",
+    text: "Immer an deiner Seite — frag jederzeit etwas. Er kennt den Kontext von links. Tipp: markiere Text in einer Antwort, um genau darüber zu sprechen." },
+  { target: "persona", chapter: "Assistent", title: "Sein Stil", goto: "/chat",
+    text: "Wähle, wie er antwortet: Tier-1-Berater (klare Empfehlungen) oder Kritiker (deckt Risiken und Schwächen auf)." },
+  { target: "", chapter: "Ergebnisse", title: "So sieht das Konzept aus", goto: "/concept",
+    text: "Das ist ein fertiges Beispiel-Konzept: Ist-Zustand, Ziel-Zustand und Tooling als Tabellen — ganz ohne Warten. Genau das entsteht aus deinem Gespräch." },
+  { target: "", chapter: "Ergebnisse", title: "Und die Roadmap", goto: "/dashboard",
+    text: "Die Roadmap zeigt Phasen, Tools und wie alle Bausteine zusammenwirken, um ans Ziel zu kommen. Auch das hier ist das Beispiel." },
+  { target: "profile", chapter: "Abschluss", title: "Profil & Einstellungen", goto: "/dashboard",
+    text: "Hier findest du dein Profil, das Design — und kannst diese Tour jederzeit neu starten. Viel Erfolg! 🎉" },
 ];
 
 const PAD = 8;
@@ -65,8 +66,11 @@ function Confetti({ seed }: { seed: number }) {
 
 export function TutorialOverlay() {
   const active = useChatStore(s => s.tourActive);
-  const setActive = useChatStore(s => s.setTourActive);
-  const [step, setStep] = useState(0);
+  const step = useChatStore(s => s.tourStep);
+  const setStep = useChatStore(s => s.setTourStep);
+  const endTour = useChatStore(s => s.endTour);
+  const router = useRouter();
+  const pathname = usePathname();
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [burst, setBurst] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -74,6 +78,13 @@ export function TutorialOverlay() {
   useEffect(() => setMounted(true), []);
 
   const cur = STEPS[step];
+
+  // Navigate to the step's page (the tour walks chat → concept → dashboard).
+  useEffect(() => {
+    if (!active || !cur) return;
+    if (pathname !== cur.goto) router.push(cur.goto);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, step, cur, pathname]);
 
   const measure = useCallback(() => {
     if (!cur) return;
@@ -85,24 +96,22 @@ export function TutorialOverlay() {
   useEffect(() => {
     if (!active) return;
     measure();
-    const t = setTimeout(measure, 60); // after any layout settle
+    const t = setTimeout(measure, 120); // after navigation / layout settle
+    const t2 = setTimeout(measure, 400);
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
-    return () => { clearTimeout(t); window.removeEventListener("resize", measure); window.removeEventListener("scroll", measure, true); };
-  }, [active, step, measure]);
+    return () => { clearTimeout(t); clearTimeout(t2); window.removeEventListener("resize", measure); window.removeEventListener("scroll", measure, true); };
+  }, [active, step, measure, pathname]);
 
-  // Reset to first step whenever the tour (re)starts.
-  useEffect(() => { if (active) { setStep(0); setBurst(b => b + 1); } }, [active]);
+  useEffect(() => { if (active) setBurst(b => b + 1); }, [active, step]);
 
   function finish() {
     localStorage.setItem("matfit_tour_done", "1");
-    setActive(false);
-    setStep(0);
+    endTour();
   }
   function next() {
-    setBurst(b => b + 1);
     if (step >= STEPS.length - 1) { finish(); return; }
-    setStep(s => s + 1);
+    setStep(step + 1);
   }
 
   if (!mounted || !active || !cur) return null;
@@ -190,7 +199,7 @@ export function TutorialOverlay() {
 
 // First-run prompt: asks before starting (only if never seen).
 export function TutorialPrompt() {
-  const setActive = useChatStore(s => s.setTourActive);
+  const startTour = useChatStore(s => s.startTour);
   const tourActive = useChatStore(s => s.tourActive);
   const [ask, setAsk] = useState(false);
 
@@ -203,7 +212,7 @@ export function TutorialPrompt() {
   if (tourActive || !ask) return null;
 
   function later() { localStorage.setItem("matfit_tour_done", "1"); setAsk(false); }
-  function start() { setAsk(false); setActive(true); }
+  function start() { setAsk(false); startTour(); }
 
   return (
     <motion.div

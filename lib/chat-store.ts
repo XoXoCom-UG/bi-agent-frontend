@@ -48,7 +48,11 @@ interface ChatStore {
   // Cache of fully-loaded sessions so re-opening a conversation is instant.
   sessionCache: Record<string, { title: string; messages: Message[] }>;
   // Guided onboarding tour (delivered through the assistant coach + spotlight).
+  // tourStep lives here so the tour survives page navigation between chapters.
   tourActive: boolean;
+  tourStep: number;
+  // When the tour is showing the bundled example (populated Concept/Roadmap).
+  demoActive: boolean;
 
   // actions
   setSessionId: (id: string) => void;
@@ -71,7 +75,9 @@ interface ChatStore {
   queueDelete: (d: PendingDelete) => void;
   dropPending: (id: string) => void;
   cacheSession: (id: string, data: { title: string; messages: Message[] }) => void;
-  setTourActive: (b: boolean) => void;
+  setTourStep: (n: number) => void;
+  startTour: () => void;
+  endTour: () => void;
   newChat: () => void;
 }
 
@@ -95,6 +101,8 @@ export const useChatStore = create<ChatStore>((set) => ({
   pendingDeletes: [],
   sessionCache: {},
   tourActive: false,
+  tourStep: 0,
+  demoActive: false,
 
   setSessionId: (id) => set({ sessionId: id }),
   setSessionTitle: (t) => set({ sessionTitle: t }),
@@ -129,7 +137,9 @@ export const useChatStore = create<ChatStore>((set) => ({
   queueDelete: (d) => set((s) => ({ pendingDeletes: [...s.pendingDeletes.filter(p => p.id !== d.id), d] })),
   dropPending: (id) => set((s) => ({ pendingDeletes: s.pendingDeletes.filter(p => p.id !== id) })),
   cacheSession: (id, data) => set((s) => ({ sessionCache: { ...s.sessionCache, [id]: data } })),
-  setTourActive: (b) => set({ tourActive: b }),
+  setTourStep: (n) => set({ tourStep: n }),
+  startTour: () => set({ tourActive: true, tourStep: 0, demoActive: true }),
+  endTour: () => set({ tourActive: false, tourStep: 0, demoActive: false }),
   newChat: () =>
     set({
       sessionId: newSessionId(),
@@ -137,5 +147,6 @@ export const useChatStore = create<ChatStore>((set) => ({
       messages: [],
       guidedProject: false,
       activeProjectId: null,
+      demoActive: false,
     }),
 }));

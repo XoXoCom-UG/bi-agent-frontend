@@ -6,12 +6,13 @@ import { useChatStore } from "@/lib/chat-store";
 import { api } from "@/lib/api";
 import { md } from "@/lib/markdown";
 import { AppShell } from "@/components/layout/app-shell";
+import { DEMO_MESSAGES } from "@/lib/demo";
 import { Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Zap, ArrowUp, MessageSquare, CheckCircle2, Copy, Check,
-  Folder, Plus, LayoutDashboard,
+  Folder, Plus, LayoutDashboard, Sparkles,
 } from "lucide-react";
 
 // ── Phase list (long, non-repeating within a response) ───────────────────────
@@ -291,11 +292,14 @@ export default function ChatPage() {
     window.getSelection()?.removeAllRanges();
   }
 
+  // During the onboarding tour we show a bundled example conversation.
+  const demo = store.demoActive;
+  const msgs = demo ? DEMO_MESSAGES : store.messages;
   const turns = store.messages.filter(m => m.role === "user").length;
   const canSend = !!input.trim() && !store.sending;
   const lastAssistantIdx = (() => {
-    for (let i = store.messages.length - 1; i >= 0; i--)
-      if (store.messages[i].role === "assistant") return i;
+    for (let i = msgs.length - 1; i >= 0; i--)
+      if (msgs[i].role === "assistant") return i;
     return -1;
   })();
 
@@ -327,7 +331,7 @@ export default function ChatPage() {
             )}
           </AnimatePresence>
 
-          {store.messages.length === 0 && !store.sending && activeProject ? (
+          {msgs.length === 0 && !store.sending && activeProject ? (
             /* ── Project hub: the three buttons, centered ── */
             <div className="flex flex-col items-center justify-center min-h-full px-6 py-16">
               <motion.div
@@ -420,7 +424,7 @@ export default function ChatPage() {
                 </div>
               </motion.div>
             </div>
-          ) : store.messages.length === 0 && !store.sending ? (
+          ) : msgs.length === 0 && !store.sending ? (
             <div className="relative flex flex-col items-center justify-center min-h-full px-6 py-16 overflow-hidden">
 
               {/* Ambient background glow */}
@@ -582,7 +586,13 @@ export default function ChatPage() {
             </div>
           ) : (
             <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 w-full max-w-5xl mx-auto">
-              {store.messages.map((m, i) => {
+              {demo && (
+                <div className="flex items-center gap-2 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-900 rounded-lg px-3 py-2">
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
+                  Beispiel — nur zur Ansicht während der Tour. Deine echten Gespräche startest du danach.
+                </div>
+              )}
+              {msgs.map((m, i) => {
                 const isUser = m.role === "user";
                 let content = toText(m.content);
                 let choices: string[] = [];
