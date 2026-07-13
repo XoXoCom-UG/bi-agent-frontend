@@ -8,7 +8,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { AssistantContext } from "@/lib/chat-store";
 import { DEMO_ROADMAP } from "@/lib/demo";
 import {
-  MessageSquare, Zap, Map, ArrowLeft,
+  MessageSquare, Zap, Map, ArrowLeft, ArrowRight,
   CheckCircle2, ChevronDown, Copy, Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -229,6 +229,47 @@ function StepCard({ step, index, onDiscuss }: {
   );
 }
 
+// ── Phase timeline (horizontal, sequence + relative size) ───────────────────────
+function PhaseTimeline({ phases }: { phases: NonNullable<RoadmapData["phases"]> }) {
+  const shades = ["bg-green-400", "bg-green-500", "bg-green-600", "bg-green-700", "bg-green-800"];
+  return (
+    <div className="mb-8">
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400 mb-2">Zeitlicher Ablauf</p>
+      <div className="flex items-stretch gap-1.5">
+        {phases.map((ph, i) => (
+          <motion.div key={i}
+            initial={{ opacity: 0, scaleX: 0.6 }} animate={{ opacity: 1, scaleX: 1 }}
+            transition={{ type: "spring", duration: 0.5, bounce: 0, delay: i * 0.08 }}
+            style={{ flexGrow: ph.steps.length || 1, flexBasis: 0, transformOrigin: "left" }}
+            className={`${shades[i % shades.length]} rounded-lg px-3 py-2.5 text-white min-w-0`}>
+            <p className="text-[10px] font-semibold opacity-90 leading-none mb-1">Phase {i + 1}</p>
+            <p className="text-xs font-semibold truncate leading-tight">{ph.name}</p>
+            <p className="text-[10px] opacity-80 mt-0.5">{ph.steps.length} Maßnahmen</p>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Step flow (chips connected by arrows — how steps build on each other) ────────
+function StepFlow({ steps }: { steps: NonNullable<RoadmapData["phases"]>[0]["steps"] }) {
+  if (steps.length < 2) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 mb-4">
+      {steps.map((s, i) => (
+        <div key={s.id} className="flex items-center gap-1.5">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-1 text-[11px] text-zinc-600 dark:text-zinc-300 max-w-[220px]">
+            <span className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400 text-[9px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+            <span className="truncate">{s.title}</span>
+          </span>
+          {i < steps.length - 1 && <ArrowRight className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0" strokeWidth={2} />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Main dashboard ─────────────────────────────────────────────────────────────
 function DashboardContent() {
   const { token, loading } = useAuth();
@@ -396,6 +437,9 @@ function DashboardContent() {
                         </p>
                       </motion.div>
 
+                      {/* Visual: phase timeline */}
+                      {roadmap.phases && roadmap.phases.length > 0 && <PhaseTimeline phases={roadmap.phases} />}
+
                       {roadmap.phases?.map((ph, pi) => (
                         <motion.div key={pi}
                           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -409,8 +453,11 @@ function DashboardContent() {
                             <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{ph.name}</h3>
                           </div>
                           {ph.goal && (
-                            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5 leading-relaxed">{ph.goal}</p>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">{ph.goal}</p>
                           )}
+
+                          {/* Visual: how the steps build on each other */}
+                          <StepFlow steps={ph.steps} />
 
                           {/* Steps — clean list */}
                           <div className="flex flex-col gap-2">
