@@ -563,7 +563,7 @@ function ConceptContent() {
                       <table className="w-full">
                         <thead className="bg-zinc-50">
                           <tr>
-                            {["Ziel-Zustand", "Annahme bestes Tooling", "Mögliche Alternativen"].map(h => (
+                            {["Ziel", "Annahme bestes Tooling", "Mögliche Alternativen"].map(h => (
                               <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                             ))}
                           </tr>
