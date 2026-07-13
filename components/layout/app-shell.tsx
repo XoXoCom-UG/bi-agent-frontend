@@ -45,6 +45,9 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
+  // Never let the settings modal sit on top of the running tour.
+  useEffect(() => { if (store.tourActive) setSettingsOpen(false); }, [store.tourActive]);
+
   function goHome() {
     store.newChat();
     store.setActiveProject(null);

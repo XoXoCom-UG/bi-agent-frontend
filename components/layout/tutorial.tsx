@@ -157,27 +157,30 @@ export function TutorialOverlay() {
   const progress = ((step + 1) / STEPS.length) * 100;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100]">
+    // pointer-events-none so the highlighted element underneath stays clickable
+    // (hands-on steps). Only the coach card re-enables pointer events.
+    <div className="fixed inset-0 z-[100] pointer-events-none">
       {/* Spotlight: transparent hole over the target, dark everywhere else. */}
       {rect ? (
         <motion.div
-          initial={false}
-          animate={{ top: rect.top - PAD, left: rect.left - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2 }}
-          transition={{ type: "spring", duration: 0.4, bounce: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, top: rect.top - PAD, left: rect.left - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2 }}
+          transition={{ opacity: { duration: 0.25 }, default: { type: "spring", stiffness: 260, damping: 30 } }}
           className="absolute rounded-xl pointer-events-none"
-          style={{ boxShadow: "0 0 0 9999px rgba(9,9,11,0.62)", outline: "2px solid rgba(34,197,94,0.9)" }}
+          style={{ boxShadow: "0 0 0 9999px rgba(9,9,11,0.55)", outline: "2px solid rgba(34,197,94,0.9)", outlineOffset: 2 }}
         />
       ) : (
-        <div className="absolute inset-0 pointer-events-none" style={{ background: "rgba(9,9,11,0.62)" }} />
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}
+          className="absolute inset-0 pointer-events-none" style={{ background: "rgba(9,9,11,0.55)" }} />
       )}
 
       {/* Coach card (assistant voice) */}
       <AnimatePresence mode="wait">
         <motion.div key={step}
-          initial={{ opacity: 0, y: 8, scale: 0.98 }}
+          initial={{ opacity: 0, y: 10, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -6, scale: 0.98 }}
-          transition={{ type: "spring", duration: 0.35, bounce: 0.1 }}
+          exit={{ opacity: 0, y: -8, scale: 0.96 }}
+          transition={{ type: "spring", stiffness: 320, damping: 26 }}
           className="absolute pointer-events-auto"
           style={{ width: cardW, ...cardStyle }}
         >
