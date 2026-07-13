@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
-import { api, DeckRow, RoadmapData } from "@/lib/api";
+import { api, RoadmapData } from "@/lib/api";
 import { AppShell } from "@/components/layout/app-shell";
 import { AssistantContext } from "@/lib/chat-store";
 import { DEMO_ROADMAP } from "@/lib/demo";
@@ -11,52 +11,7 @@ import {
   MessageSquare, Zap, Map, ArrowLeft,
   CheckCircle2, ChevronDown, Copy, Check,
 } from "lucide-react";
-import {
-  motion, AnimatePresence, useMotionValue, useSpring, useTransform,
-} from "motion/react";
-
-// ── Magnetic button ───────────────────────────────────────────────────────────
-function MagneticButton({ children, onClick, className, disabled }: {
-  children: React.ReactNode; onClick?: () => void; className?: string; disabled?: boolean;
-}) {
-  const ref = useRef<HTMLButtonElement>(null);
-  const x = useSpring(0, { stiffness: 200, damping: 18 });
-  const y = useSpring(0, { stiffness: 200, damping: 18 });
-  return (
-    <motion.button ref={ref} style={{ x, y }}
-      onMouseMove={e => { if (disabled || !ref.current) return; const r = ref.current.getBoundingClientRect(); x.set((e.clientX - r.left - r.width / 2) * 0.28); y.set((e.clientY - r.top - r.height / 2) * 0.28); }}
-      onMouseLeave={() => { x.set(0); y.set(0); }}
-      whileTap={disabled ? {} : { scale: 0.96 }} onClick={onClick} disabled={disabled} className={className}>
-      {children}
-    </motion.button>
-  );
-}
-
-// ── Spotlight card ────────────────────────────────────────────────────────────
-function SpotlightCard({ children, className, delay = 0 }: {
-  children: React.ReactNode; className?: string; delay?: number;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [2.5, -2.5]), { stiffness: 300, damping: 30 });
-  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-2.5, 2.5]), { stiffness: 300, damping: 30 });
-  const [spot, setSpot] = useState({ x: 0, y: 0, visible: false });
-  return (
-    <motion.div ref={ref}
-      initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", duration: 0.5, bounce: 0.08, delay }}
-      style={{ rotateX, rotateY, transformPerspective: 900 }}
-      onMouseMove={e => { if (!ref.current) return; const r = ref.current.getBoundingClientRect(); mouseX.set((e.clientX - r.left) / r.width - 0.5); mouseY.set((e.clientY - r.top) / r.height - 0.5); setSpot({ x: e.clientX - r.left, y: e.clientY - r.top, visible: true }); }}
-      onMouseLeave={() => { mouseX.set(0); mouseY.set(0); setSpot(s => ({ ...s, visible: false })); }}
-      className={`relative overflow-hidden ${className ?? ""}`}
-    >
-      <div className="pointer-events-none absolute inset-0 z-10 rounded-xl transition-opacity duration-300"
-        style={{ opacity: spot.visible ? 1 : 0, background: `radial-gradient(200px circle at ${spot.x}px ${spot.y}px, rgba(22,163,74,0.06), transparent 70%)` }} />
-      {children}
-    </motion.div>
-  );
-}
+import { motion, AnimatePresence } from "motion/react";
 
 // ── Roadmap loading ───────────────────────────────────────────────────────────
 const RM_PHASES = [
@@ -280,8 +235,6 @@ function DashboardContent() {
   const store = useChatStore();
   const router = useRouter();
   const params = useSearchParams();
-  const [deck, setDeck] = useState<DeckRow[]>([]);
-  const [deckLoading, setDeckLoading] = useState(true);
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
   const [rmSession, setRmSession] = useState<string | null>(null);
   const [rmLoading, setRmLoading] = useState(false);
@@ -312,13 +265,12 @@ function DashboardContent() {
   }
 
   useEffect(() => { if (!loading && !token) router.replace("/login"); }, [token, loading]);
+  // Open the roadmap for the current conversation directly (no more Deck).
   useEffect(() => {
-    if (!token) return;
-    api.getDeck(token, 200).then(d => { setDeck(d.deck); setDeckLoading(false); }).catch(() => setDeckLoading(false));
-  }, [token]);
-  useEffect(() => {
-    const s = params.get("session");
-    if (s && token) openRoadmap(s);
+    if (!token || store.demoActive) return;
+    const s = params.get("session") || store.sessionId;
+    if (s) openRoadmap(s);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, token]);
 
   async function openRoadmap(sid: string) {
@@ -353,98 +305,25 @@ function DashboardContent() {
     <AppShell active="dashboard">
       <div className="flex-1 flex flex-col overflow-hidden relative min-h-0">
 
-        {/* Deck */}
-        <div className="flex-1 overflow-y-auto p-5 md:p-6">
-          <div className="max-w-2xl mx-auto">
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ type: "spring", duration: 0.4, bounce: 0 }} className="mb-6">
-              <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-1">Deck</h2>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">Alle Konversationen. Öffne Concept oder Roadmap.</p>
-            </motion.div>
-
-            {deckLoading && (
-              <div className="flex flex-col gap-3">
-                {[0, 1, 2].map(i => (
-                  <div key={i} className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl h-[88px] overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-zinc-100 via-zinc-50 to-zinc-100 dark:from-zinc-700 dark:via-zinc-800 dark:to-zinc-700 animate-pulse" />
-                  </div>
-                ))}
+        {/* Empty state when there is no roadmap yet */}
+        {!roadmap && !rmLoading && (
+          <div className="flex-1 overflow-y-auto p-5 md:p-6 flex items-center justify-center">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", duration: 0.5, bounce: 0.1 }}
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-10 py-16 text-center max-w-md">
+              <div className="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                <Map className="w-5 h-5 text-zinc-400" strokeWidth={1.5} />
               </div>
-            )}
-
-            {!deckLoading && deck.length === 0 && (
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ type: "spring", duration: 0.5, bounce: 0.1 }}
-                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-10 py-16 text-center">
-                <div className="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                  <MessageSquare className="w-5 h-5 text-zinc-400" strokeWidth={1.5} />
-                </div>
-                <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Noch keine Konversationen</h3>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Starte einen Chat und komm dann hierher zurück.</p>
-                <MagneticButton onClick={() => router.push("/chat")}
-                  className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 rounded-lg px-5 py-2.5 inline-flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4" strokeWidth={1.5} />Chat starten
-                </MagneticButton>
-              </motion.div>
-            )}
-
-            <div className="flex flex-col gap-3">
-              {deck.map((row, i) => (
-                <SpotlightCard key={row.session_id} delay={i * 0.055}
-                  className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
-                  <div className="px-5 pt-4 pb-3 flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-0.5 leading-snug">{row.title || "Konversation"}</h3>
-                      <p className="text-xs text-zinc-400 dark:text-zinc-500 font-mono">
-                        {row.message_count} Nachrichten · {new Date(row.saved_at).toLocaleDateString("de", { month: "short", day: "numeric" })}
-                      </p>
-                    </div>
-                    {row.has_concept && (
-                      <span className="flex items-center gap-1 text-xs text-zinc-400 flex-shrink-0 mt-0.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500" strokeWidth={2} />Concept
-                      </span>
-                    )}
-                  </div>
-                  <div className="px-4 pb-3.5 flex items-center gap-1.5 border-t border-zinc-100 dark:border-zinc-800 pt-2.5">
-                    <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.94 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 28 }}
-                      onClick={() => { store.setSessionId(row.session_id); router.push("/chat"); }}
-                      title="Chat öffnen"
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-150">
-                      <MessageSquare className="w-4 h-4" strokeWidth={1.5} />
-                    </motion.button>
-                    <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.94 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 28 }}
-                      onClick={() => router.push(`/concept?session=${row.session_id}`)}
-                      title="Concept öffnen"
-                      className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-150 relative">
-                      <span className={row.has_concept ? "text-green-600" : "text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}>
-                        <Zap className="w-4 h-4" strokeWidth={1.5} />
-                      </span>
-                      {row.has_concept && (
-                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900" />
-                      )}
-                    </motion.button>
-                    <div className="ml-auto">
-                      {row.has_concept ? (
-                        <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.95 }}
-                          transition={{ type: "spring", stiffness: 400, damping: 28 }}
-                          onClick={() => openRoadmap(row.session_id)}
-                          className="flex items-center gap-2 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 rounded-lg px-4 py-2 shadow-sm shadow-green-600/20">
-                          <Map className="w-3.5 h-3.5" strokeWidth={1.5} />Roadmap
-                        </motion.button>
-                      ) : (
-                        <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-300 dark:text-zinc-600 px-2 py-1.5 cursor-not-allowed">
-                          <Map className="w-3.5 h-3.5" strokeWidth={1.5} />Roadmap
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </SpotlightCard>
-              ))}
-            </div>
+              <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Noch keine Roadmap</h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Erstelle zuerst ein Transformation Concept aus eurem Gespräch — daraus entsteht die Roadmap.</p>
+              <motion.button whileTap={{ scale: 0.96 }}
+                onClick={() => router.push(`/concept?session=${store.sessionId}`)}
+                className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 rounded-lg px-5 py-2.5 inline-flex items-center gap-2">
+                <Zap className="w-4 h-4" strokeWidth={1.5} />Zum Konzept
+              </motion.button>
+            </motion.div>
           </div>
-        </div>
+        )}
 
         {/* Roadmap panel */}
         <AnimatePresence>
@@ -457,9 +336,9 @@ function DashboardContent() {
               {/* Roadmap topbar */}
               <div className="h-14 border-b border-zinc-100 dark:border-zinc-800 flex items-center px-5 gap-3 flex-shrink-0">
                 <motion.button whileTap={{ scale: 0.96 }}
-                  onClick={() => { setRoadmap(null); setRmSession(null); }}
+                  onClick={() => router.push("/chat")}
                   className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors duration-150 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800">
-                  <ArrowLeft className="w-3.5 h-3.5" strokeWidth={1.5} />Deck
+                  <ArrowLeft className="w-3.5 h-3.5" strokeWidth={1.5} />Chat
                 </motion.button>
                 <h2 className="flex-1 text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">
                   {roadmap?.title || "Roadmap"}

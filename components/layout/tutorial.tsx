@@ -20,23 +20,28 @@ interface TourStep {
   title: string;
   text: string;
   goto: "/chat" | "/concept" | "/dashboard";
+  advance: "weiter" | "click";  // "click" = user must click the highlighted element
 }
 
-// Ordered so the tour makes ONE forward journey: chat → concept → dashboard.
+// One forward journey: chat → (user clicks) Concept → (user clicks) Roadmap.
 const STEPS: TourStep[] = [
-  { target: "projekte", chapter: "Grundlagen", title: "Deine Projekte", goto: "/chat",
+  { target: "projekte", chapter: "Grundlagen", title: "Deine Projekte", goto: "/chat", advance: "weiter",
     text: "Hier startest du ein Projekt, wechselst zwischen Konversationen und löschst mit 15-Minuten-Undo." },
-  { target: "composer", chapter: "Grundlagen", title: "Frag den Agenten", goto: "/chat",
-    text: "Hier stellst du deine Frage oder startest das geführte Interview. Das ist ein echtes Beispiel-Gespräch — du siehst gleich, was dabei herauskommt." },
-  { target: "assistant", chapter: "Assistent", title: "Dein persönlicher Assistent", goto: "/chat",
-    text: "Immer an deiner Seite — frag jederzeit etwas. Er kennt den Kontext von links. Tipp: markiere Text in einer Antwort, um genau darüber zu sprechen." },
-  { target: "persona", chapter: "Assistent", title: "Sein Stil", goto: "/chat",
+  { target: "composer", chapter: "Grundlagen", title: "Frag den Agenten", goto: "/chat", advance: "weiter",
+    text: "Hier stellst du deine Frage oder startest das geführte Interview. Das ist ein echtes Beispiel-Gespräch." },
+  { target: "assistant", chapter: "Assistent", title: "Dein persönlicher Assistent", goto: "/chat", advance: "weiter",
+    text: "Immer an deiner Seite — frag jederzeit etwas. Tipp: markiere Text in einer Antwort, um genau darüber zu sprechen." },
+  { target: "persona", chapter: "Assistent", title: "Sein Stil", goto: "/chat", advance: "weiter",
     text: "Wähle, wie er antwortet: Tier-1-Berater (klare Empfehlungen) oder Kritiker (deckt Risiken und Schwächen auf)." },
-  { target: "", chapter: "Ergebnisse", title: "So sieht das Konzept aus", goto: "/concept",
-    text: "Das ist ein fertiges Beispiel-Konzept: Ist-Zustand, Ziel-Zustand und Tooling als Tabellen — ganz ohne Warten. Genau das entsteht aus deinem Gespräch." },
-  { target: "", chapter: "Ergebnisse", title: "Und die Roadmap", goto: "/dashboard",
-    text: "Die Roadmap zeigt Phasen, Tools und wie alle Bausteine zusammenwirken, um ans Ziel zu kommen. Auch das hier ist das Beispiel." },
-  { target: "profile", chapter: "Abschluss", title: "Profil & Einstellungen", goto: "/dashboard",
+  { target: "concept", chapter: "Ergebnisse", title: "Probier es aus: Transformation Concept", goto: "/chat", advance: "click",
+    text: "Klick jetzt oben auf »Transformation Concept« — du siehst sofort, was aus dem Gespräch entsteht." },
+  { target: "", chapter: "Ergebnisse", title: "Dein Konzept", goto: "/concept", advance: "weiter",
+    text: "Das ist ein fertiges Beispiel-Konzept: Ist-Zustand, Ziel-Zustand und Tooling als Tabellen — ganz ohne Warten." },
+  { target: "roadmap", chapter: "Ergebnisse", title: "Und jetzt die Roadmap", goto: "/concept", advance: "click",
+    text: "Klick oben auf »Roadmap«, um den Umsetzungsplan zu sehen." },
+  { target: "", chapter: "Ergebnisse", title: "Deine Roadmap", goto: "/dashboard", advance: "weiter",
+    text: "Phasen, Tools und wie alle Bausteine zusammenwirken — auch das hier ist das Beispiel." },
+  { target: "profile", chapter: "Abschluss", title: "Profil & Einstellungen", goto: "/dashboard", advance: "weiter",
     text: "Hier findest du dein Profil, das Design — und kannst diese Tour jederzeit neu starten. Viel Erfolg! 🎉" },
 ];
 
@@ -69,6 +74,7 @@ export function TutorialOverlay() {
   const step = useChatStore(s => s.tourStep);
   const setStep = useChatStore(s => s.setTourStep);
   const endTour = useChatStore(s => s.endTour);
+  const newChat = useChatStore(s => s.newChat);
   const router = useRouter();
   const pathname = usePathname();
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -105,9 +111,25 @@ export function TutorialOverlay() {
 
   useEffect(() => { if (active) setBurst(b => b + 1); }, [active, step]);
 
+  // Hands-on steps: advance when the user actually clicks the highlighted element.
+  useEffect(() => {
+    if (!active || !cur || cur.advance !== "click") return;
+    const el = document.querySelector(`[data-tour="${cur.target}"]`);
+    if (!el) return;
+    const onClick = () => setTimeout(() => {
+      const s = useChatStore.getState();
+      if (s.tourStep >= STEPS.length - 1) finish(); else s.setTourStep(s.tourStep + 1);
+    }, 0);
+    el.addEventListener("click", onClick);
+    return () => el.removeEventListener("click", onClick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, step, cur, pathname]);
+
   function finish() {
     localStorage.setItem("matfit_tour_done", "1");
     endTour();
+    newChat();
+    router.push("/chat");
   }
   function next() {
     if (step >= STEPS.length - 1) { finish(); return; }
@@ -183,10 +205,17 @@ export function TutorialOverlay() {
                 <button onClick={finish} className="text-[11px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
                   Überspringen
                 </button>
-                <button onClick={next}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg px-3.5 py-2 transition-colors">
-                  {step >= STEPS.length - 1 ? <>Fertig <Check className="w-3.5 h-3.5" strokeWidth={2} /></> : <>Weiter <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} /></>}
-                </button>
+                {cur.advance === "click" ? (
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-green-600">
+                    <motion.span animate={{ x: [0, 4, 0] }} transition={{ repeat: Infinity, duration: 1.1 }}>👉</motion.span>
+                    Klick auf den markierten Button
+                  </span>
+                ) : (
+                  <button onClick={next}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg px-3.5 py-2 transition-colors">
+                    {step >= STEPS.length - 1 ? <>Fertig <Check className="w-3.5 h-3.5" strokeWidth={2} /></> : <>Weiter <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} /></>}
+                  </button>
+                )}
               </div>
             </div>
           </div>

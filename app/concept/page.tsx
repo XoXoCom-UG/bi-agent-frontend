@@ -216,23 +216,25 @@ function ConceptContent() {
 
   // Load concept when we have a session with messages
   useEffect(() => {
+    if (store.demoActive) return;
     if (!token || !sessionId || !store.messages.length) return;
     setConceptLoading(true);
     api.getConcept(token, sessionId)
       .then(d => { if (d?.concept) setConcept(d.concept); })
       .catch(() => {})
       .finally(() => setConceptLoading(false));
-  }, [token, sessionId, store.messages.length]);
+  }, [token, sessionId, store.messages.length, store.demoActive]);
 
   // Also load concept immediately if URL has ?session= param
   useEffect(() => {
+    if (store.demoActive) return;
     if (!token || !urlSession) return;
     setConceptLoading(true);
     api.getConcept(token, urlSession)
       .then(d => { if (d?.concept) setConcept(d.concept); })
       .catch(() => {})
       .finally(() => setConceptLoading(false));
-  }, [token, urlSession]);
+  }, [token, urlSession, store.demoActive]);
 
   // During the tour, show the bundled example instead of loading/generating.
   useEffect(() => {
