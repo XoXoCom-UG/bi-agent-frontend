@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { api, Message } from "@/lib/api";
+import { api, Message, ConceptData, RoadmapData } from "@/lib/api";
 import { md } from "@/lib/markdown";
 import { cn } from "@/lib/utils";
 import { useChatStore, AssistantContext } from "@/lib/chat-store";
 import { motion, AnimatePresence } from "motion/react";
-import { X, ArrowUp, Sparkles, Pencil, MessageCircle, HelpCircle, MousePointerClick } from "lucide-react";
+import { X, ArrowUp, Sparkles, Pencil, MessageCircle, HelpCircle, MousePointerClick, Check, RotateCcw } from "lucide-react";
 
 /*
  * Persönlicher Assistent — the right-side panel, present on every screen
@@ -38,10 +38,17 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
   const context = useChatStore(s => s.assistantContext);
   const contextNonce = useChatStore(s => s.assistantContextNonce);
 
+  const editContext = useChatStore(s => s.editContext);
+  const clearEdit = useChatStore(s => s.clearEdit);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [persona, setPersona] = useState<"berater" | "kritiker">("berater");
+  // Assisted-edit state: a proposed change awaiting "Übernehmen", and the last
+  // applied change (for a one-click "Rückgängig").
+  const [pendingEdit, setPendingEdit] = useState<{ kind: "concept" | "roadmap"; updated: ConceptData | RoadmapData } | null>(null);
+  const [undoData, setUndoData] = useState<{ kind: "concept" | "roadmap"; prev: ConceptData | RoadmapData | null } | null>(null);
   const sessionRef = useRef(`help-${Date.now()}`);
 
   useEffect(() => {
@@ -93,10 +100,23 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
     const shown = [...messages, userMsg];
     setMessages(shown);
     setSending(true);
+    const st = useChatStore.getState();
+    const ec = st.editContext;
     try {
-      // Give the assistant the context of what the user currently sees on the
-      // left (chat / concept / roadmap) — as a hidden seed, not shown here.
-      const leftCtx = useChatStore.getState().leftContext;
+      // ── Assisted-edit mode: discuss + propose a targeted change ──────────
+      if (ec) {
+        const current = ec.kind === "concept" ? st.activeConcept : st.activeRoadmap;
+        if (!current) throw new Error("Es gibt gerade nichts zum Bearbeiten.");
+        const res = await api.assistantEdit(token, {
+          kind: ec.kind, current, target: ec.target, instruction: t, messages: shown,
+        });
+        setMessages([...shown, { role: "assistant", content: res.reply }]);
+        const changed = JSON.stringify(res.updated) !== JSON.stringify(current);
+        setPendingEdit(changed ? { kind: ec.kind, updated: res.updated } : null);
+        return;
+      }
+      // ── Normal side-chat ─────────────────────────────────────────────────
+      const leftCtx = st.leftContext;
       const seed: Message[] = leftCtx
         ? [
             { role: "user", content: `[Kontext, den der Nutzer gerade links sieht — nur zur Orientierung, nicht wiederholen]\n\n${leftCtx}` },
@@ -107,11 +127,37 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
       const reply = res.messages[res.messages.length - 1];
       const finalMsgs = reply ? [...shown, reply] : shown;
       setMessages(finalMsgs);
-      // Persist the side-thread against the current conversation.
       if (scopeKey) api.saveAssistantThread(token, scopeKey, finalMsgs).catch(() => {});
     } catch (e: unknown) {
       setMessages([...shown, { role: "assistant", content: `**Fehler:** ${(e as Error).message}` }]);
     } finally { setSending(false); }
+  }
+
+  function applyEdit() {
+    if (!pendingEdit) return;
+    const st = useChatStore.getState();
+    const prev = pendingEdit.kind === "concept" ? st.activeConcept : st.activeRoadmap;
+    if (pendingEdit.kind === "concept") st.setActiveConcept(pendingEdit.updated as ConceptData);
+    else st.setActiveRoadmap(pendingEdit.updated as RoadmapData);
+    // Persist (skip while showing the tour example).
+    if (token && scopeKey && !st.demoActive) {
+      if (pendingEdit.kind === "concept") api.saveConcept(token, scopeKey, pendingEdit.updated as ConceptData).catch(() => {});
+      else api.saveRoadmap(token, scopeKey, pendingEdit.updated as RoadmapData).catch(() => {});
+    }
+    setUndoData({ kind: pendingEdit.kind, prev });
+    setPendingEdit(null);
+  }
+
+  function undoEdit() {
+    if (!undoData) return;
+    const st = useChatStore.getState();
+    if (undoData.kind === "concept") st.setActiveConcept(undoData.prev as ConceptData | null);
+    else st.setActiveRoadmap(undoData.prev as RoadmapData | null);
+    if (token && scopeKey && !st.demoActive && undoData.prev) {
+      if (undoData.kind === "concept") api.saveConcept(token, scopeKey, undoData.prev as ConceptData).catch(() => {});
+      else api.saveRoadmap(token, scopeKey, undoData.prev as RoadmapData).catch(() => {});
+    }
+    setUndoData(null);
   }
 
   return (
@@ -138,9 +184,28 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
         </div>
       </div>
 
+      {/* Edit-mode banner */}
+      {editContext && (
+        <div className="flex items-center gap-2 px-4 py-2 shrink-0 bg-green-50 dark:bg-green-950/40 border-b border-green-100 dark:border-green-900">
+          <Pencil className="w-3.5 h-3.5 text-green-600 shrink-0" strokeWidth={1.5} />
+          <p className="text-[11px] text-green-800 dark:text-green-300 flex-1 min-w-0">
+            Bearbeiten: <span className="font-semibold">{editContext.target}</span>
+          </p>
+          <button onClick={() => { clearEdit(); setPendingEdit(null); }}
+            className="text-[11px] font-medium text-green-700 dark:text-green-400 hover:underline shrink-0">
+            Fertig
+          </button>
+        </div>
+      )}
+
       {/* Conversation (or intro + capabilities when empty) */}
       <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
-        {messages.length === 0 && !sending ? (
+        {messages.length === 0 && !sending && editContext ? (
+          <p className="text-[12px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            Sag mir, was du an <span className="font-semibold text-zinc-700 dark:text-zinc-200">{editContext.target}</span> ändern
+            möchtest — oder frag mich, was am besten zu dir passt. Ich schlage die Änderung vor, du übernimmst sie mit einem Klick.
+          </p>
+        ) : messages.length === 0 && !sending ? (
           <div>
             <ul className="space-y-2.5 mb-5">
               {CAPABILITIES.map(({ Icon, text }) => (
@@ -198,13 +263,42 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
         <div ref={bottomRef} />
       </div>
 
+      {/* Proposed edit — apply or discard */}
+      {pendingEdit && (
+        <div className="px-3 pb-2 shrink-0">
+          <div className="rounded-xl border border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/40 p-3">
+            <p className="text-[12px] font-medium text-green-800 dark:text-green-300 mb-2">Änderung übernehmen?</p>
+            <div className="flex items-center gap-2">
+              <button onClick={applyEdit}
+                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg px-3 py-1.5 transition-colors">
+                <Check className="w-3.5 h-3.5" strokeWidth={2} /> Übernehmen
+              </button>
+              <button onClick={() => setPendingEdit(null)}
+                className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 px-2 py-1.5">
+                Verwerfen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Undo the last applied edit */}
+      {undoData && !pendingEdit && (
+        <div className="px-3 pb-2 shrink-0">
+          <button onClick={undoEdit}
+            className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            <RotateCcw className="w-3.5 h-3.5" strokeWidth={2} /> Änderung rückgängig machen
+          </button>
+        </div>
+      )}
+
       {/* Composer — always available */}
       <div className="px-3 pb-3 pt-1 shrink-0">
         <div className="flex gap-2 items-end bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 focus-within:border-green-400 dark:focus-within:border-green-600 transition-colors">
           <textarea value={input} rows={1}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
-            placeholder="Ask anything… (Enter to send)"
+            placeholder={editContext ? "Was soll sich ändern? Oder frag nach…" : "Ask anything… (Enter to send)"}
             className="flex-1 bg-transparent border-none resize-none text-xs text-zinc-900 dark:text-zinc-100 outline-none leading-relaxed placeholder:text-zinc-400 min-w-0"
             style={{ minHeight: 20, maxHeight: 100 }} />
           <button onClick={() => send(input)} disabled={!input.trim() || sending}

@@ -9,7 +9,7 @@ import { DEMO_CONCEPT } from "@/lib/demo";
 import { dateStr } from "@/lib/utils";
 import {
   Clock, AlertTriangle, TrendingDown, Zap,
-  ChevronRight, CheckCircle2, FileText, MessageSquare, ArrowLeft,
+  ChevronRight, CheckCircle2, FileText, MessageSquare, ArrowLeft, Pencil,
 } from "lucide-react";
 import { motion, AnimatePresence, useSpring } from "motion/react";
 
@@ -199,7 +199,10 @@ function ConceptContent() {
   const params = useSearchParams();
   const urlSession = params.get("session");
   const sessionId = urlSession || store.sessionId;
-  const [concept, setConcept] = useState<ConceptData | null>(null);
+  // Concept lives in the store so the assistant can edit it and this page
+  // re-renders (assisted editing).
+  const concept = store.activeConcept;
+  const setConcept = store.setActiveConcept;
   const [conceptLoading, setConceptLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
@@ -566,11 +569,12 @@ function ConceptContent() {
                             {["Ziel", "Annahme bestes Tooling", "Mögliche Alternativen"].map(h => (
                               <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                             ))}
+                            <th className="w-8" />
                           </tr>
                         </thead>
                         <tbody>
                           {goalTable.map((row, i) => (
-                            <tr key={i} className="border-t border-zinc-100 hover:bg-zinc-50/60 align-top">
+                            <tr key={i} className="group/row border-t border-zinc-100 hover:bg-zinc-50/60 align-top">
                               <td className="px-5 py-3.5 text-sm text-zinc-800 font-medium leading-snug">{row.ziel}</td>
                               <td className="px-5 py-3.5 text-sm text-zinc-600 leading-snug">{row.tooling}</td>
                               <td className="px-5 py-3.5">
@@ -582,6 +586,13 @@ function ConceptContent() {
                                     </li>
                                   ))}
                                 </ul>
+                              </td>
+                              <td className="pr-3 py-3.5 align-middle">
+                                <button onClick={() => store.startEdit("concept", `Ziel: ${row.ziel}`)}
+                                  title="Mit dem Assistenten bearbeiten"
+                                  className="opacity-0 group-hover/row:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center text-zinc-400 hover:text-green-600 hover:bg-green-50 transition-all">
+                                  <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} />
+                                </button>
                               </td>
                             </tr>
                           ))}
@@ -616,14 +627,24 @@ function ConceptContent() {
                       <thead className="bg-zinc-50">
                         <tr>
                           <th className="px-5 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wide">Schwachpunkt heute</th>
+                          <th className="w-8" />
                         </tr>
                       </thead>
                       <tbody>
                         {pains.map((p, i) => (
-                          <tr key={i} className="border-t border-zinc-100 hover:bg-zinc-50/60">
-                            <td className="px-5 py-3 text-sm text-zinc-600 leading-snug flex gap-2.5 items-start">
-                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 shrink-0 mt-1.5" />
-                              {p}
+                          <tr key={i} className="group/row border-t border-zinc-100 hover:bg-zinc-50/60">
+                            <td className="px-5 py-3 text-sm text-zinc-600 leading-snug">
+                              <span className="flex gap-2.5 items-start">
+                                <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 shrink-0 mt-1.5" />
+                                {p}
+                              </span>
+                            </td>
+                            <td className="pr-3 py-2 align-middle">
+                              <button onClick={() => store.startEdit("concept", `Ist-Zustand: ${p.slice(0, 40)}`)}
+                                title="Mit dem Assistenten bearbeiten"
+                                className="opacity-0 group-hover/row:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center text-zinc-400 hover:text-green-600 hover:bg-green-50 transition-all">
+                                <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} />
+                              </button>
                             </td>
                           </tr>
                         ))}

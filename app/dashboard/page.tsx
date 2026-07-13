@@ -8,7 +8,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { AssistantContext } from "@/lib/chat-store";
 import { DEMO_ROADMAP } from "@/lib/demo";
 import {
-  MessageSquare, Zap, Map, ArrowLeft, ArrowRight,
+  MessageSquare, Zap, Map, ArrowLeft, ArrowRight, Pencil,
   CheckCircle2, ChevronDown, Copy, Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -67,10 +67,11 @@ function RoadmapLoading() {
 }
 
 // ── Step card ─────────────────────────────────────────────────────────────────
-function StepCard({ step, index, onDiscuss }: {
+function StepCard({ step, index, onDiscuss, onEdit }: {
   step: NonNullable<RoadmapData["phases"]>[0]["steps"][0];
   index: number;
   onDiscuss?: (ctx: AssistantContext) => void;
+  onEdit?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
@@ -125,8 +126,14 @@ function StepCard({ step, index, onDiscuss }: {
           }`}>{step.title}</span>
         </button>
 
-        {/* Effort + chevron */}
+        {/* Edit + effort + chevron */}
         <div className="flex items-center gap-2 shrink-0">
+          {onEdit && (
+            <button onClick={onEdit} title="Mit dem Assistenten bearbeiten"
+              className="text-zinc-300 dark:text-zinc-600 hover:text-green-600 dark:hover:text-green-400 transition-colors">
+              <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} />
+            </button>
+          )}
           {step.effort && (
             <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono tabular-nums">{step.effort}</span>
           )}
@@ -276,7 +283,9 @@ function DashboardContent() {
   const store = useChatStore();
   const router = useRouter();
   const params = useSearchParams();
-  const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
+  // Roadmap lives in the store so the assistant can edit it live.
+  const roadmap = store.activeRoadmap;
+  const setRoadmap = store.setActiveRoadmap;
   const [rmSession, setRmSession] = useState<string | null>(null);
   const [rmLoading, setRmLoading] = useState(false);
   // Floating "discuss selection" button — feeds the shared assistant panel
@@ -463,7 +472,8 @@ function DashboardContent() {
                           <div className="flex flex-col gap-2">
                             {ph.steps.map((step, si) => (
                               <StepCard key={step.id} step={step} index={si}
-                                onDiscuss={ctx => store.pushAssistant(ctx)} />
+                                onDiscuss={ctx => store.pushAssistant(ctx)}
+                                onEdit={() => store.startEdit("roadmap", `Maßnahme: ${step.title}`)} />
                             ))}
                           </div>
                         </motion.div>

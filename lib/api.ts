@@ -123,6 +123,12 @@ export const api = {
   getRoadmap: (token: string, session_id: string) =>
     request<{ roadmap: RoadmapData }>(`/api/roadmap/${session_id}`, {}, token),
 
+  saveRoadmap: (token: string, session_id: string, roadmap: RoadmapData) =>
+    request<{ ok: boolean }>("/api/roadmap/save", {
+      method: "POST",
+      body: JSON.stringify({ session_id, roadmap }),
+    }, token),
+
   // ── Deck ───────────────────────────────────────────────────
   getDeck: (token: string, n = 200) =>
     request<{ deck: DeckRow[] }>(`/api/deck?n=${n}`, {}, token),
@@ -135,6 +141,19 @@ export const api = {
     request<{ ok: boolean }>("/api/assistant-thread", {
       method: "POST",
       body: JSON.stringify({ scope_key: scopeKey, messages }),
+    }, token),
+
+  // ── Assisted edit of Concept / Roadmap ─────────────────────
+  assistantEdit: (token: string, body: {
+    kind: "concept" | "roadmap";
+    current: ConceptData | RoadmapData;
+    target?: string;
+    instruction: string;
+    messages?: Message[];
+  }) =>
+    request<{ reply: string; updated: ConceptData | RoadmapData }>("/api/assistant-edit", {
+      method: "POST",
+      body: JSON.stringify(body),
     }, token),
 };
 

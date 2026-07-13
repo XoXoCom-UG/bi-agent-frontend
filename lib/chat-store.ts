@@ -1,8 +1,14 @@
 "use client";
 
 import { create } from "zustand";
-import { Message, Session, Project } from "@/lib/api";
+import { Message, Session, Project, ConceptData, RoadmapData } from "@/lib/api";
 import { newSessionId } from "@/lib/utils";
+
+/** Which box the assistant is currently editing (assisted Concept/Roadmap edit). */
+export interface EditContext {
+  kind: "concept" | "roadmap";
+  target: string; // human label of the box being edited
+}
 
 /** A snippet the user wants to discuss with the assistant (selected text, a
  *  roadmap tool, a concept row). Pushed from any page into the shared panel. */
@@ -54,6 +60,13 @@ interface ChatStore {
   // When the tour is showing the bundled example (populated Concept/Roadmap).
   demoActive: boolean;
 
+  // Assisted editing: the current Concept/Roadmap live in the store so the
+  // right-side assistant can edit them and the page re-renders. `editContext`
+  // is the box the user clicked "Edit" on.
+  activeConcept: ConceptData | null;
+  activeRoadmap: RoadmapData | null;
+  editContext: EditContext | null;
+
   // actions
   setSessionId: (id: string) => void;
   setSessionTitle: (t: string) => void;
@@ -78,6 +91,10 @@ interface ChatStore {
   setTourStep: (n: number) => void;
   startTour: () => void;
   endTour: () => void;
+  setActiveConcept: (c: ConceptData | null) => void;
+  setActiveRoadmap: (r: RoadmapData | null) => void;
+  startEdit: (kind: "concept" | "roadmap", target: string) => void;
+  clearEdit: () => void;
   newChat: () => void;
 }
 
@@ -103,6 +120,9 @@ export const useChatStore = create<ChatStore>((set) => ({
   tourActive: false,
   tourStep: 0,
   demoActive: false,
+  activeConcept: null,
+  activeRoadmap: null,
+  editContext: null,
 
   setSessionId: (id) => set({ sessionId: id }),
   setSessionTitle: (t) => set({ sessionTitle: t }),
@@ -140,6 +160,10 @@ export const useChatStore = create<ChatStore>((set) => ({
   setTourStep: (n) => set({ tourStep: n }),
   startTour: () => set({ tourActive: true, tourStep: 0, demoActive: true }),
   endTour: () => set({ tourActive: false, tourStep: 0, demoActive: false }),
+  setActiveConcept: (c) => set({ activeConcept: c }),
+  setActiveRoadmap: (r) => set({ activeRoadmap: r }),
+  startEdit: (kind, target) => set({ editContext: { kind, target }, assistantOpenMobile: true }),
+  clearEdit: () => set({ editContext: null }),
   newChat: () =>
     set({
       sessionId: newSessionId(),
@@ -148,5 +172,8 @@ export const useChatStore = create<ChatStore>((set) => ({
       guidedProject: false,
       activeProjectId: null,
       demoActive: false,
+      activeConcept: null,
+      activeRoadmap: null,
+      editContext: null,
     }),
 }));
