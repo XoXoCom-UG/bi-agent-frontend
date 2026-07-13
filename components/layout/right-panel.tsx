@@ -34,7 +34,7 @@ function toText(content: unknown): string {
 
 /** The always-on assistant chat. Reads the shared discuss-context from the
  *  store so any page can push a selection into it. */
-export function AssistantPanel({ token, projectId }: { token: string | null; projectId: string | null }) {
+export function AssistantPanel({ token, projectId, scopeKey }: { token: string | null; projectId: string | null; scopeKey: string }) {
   const context = useChatStore(s => s.assistantContext);
   const contextNonce = useChatStore(s => s.assistantContextNonce);
 
@@ -45,6 +45,17 @@ export function AssistantPanel({ token, projectId }: { token: string | null; pro
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastNonce = useRef(0);
+
+  // The side-thread is kept per conversation (scopeKey = main session id):
+  // load it when the scope changes so the assistant "remembers" this project.
+  useEffect(() => {
+    if (!token || !scopeKey) { setMessages([]); return; }
+    let alive = true;
+    api.getAssistantThread(token, scopeKey)
+      .then(r => { if (alive) setMessages(r.messages ?? []); })
+      .catch(() => { if (alive) setMessages([]); });
+    return () => { alive = false; };
+  }, [token, scopeKey]);
 
   // Keep the panel scrolled to the newest message (only scrolls the panel,
   // never the main page).
@@ -84,7 +95,10 @@ export function AssistantPanel({ token, projectId }: { token: string | null; pro
         : [];
       const res = await api.chat(token, { messages: [...seed, ...shown], session_id: sessionRef.current, project_id: projectId });
       const reply = res.messages[res.messages.length - 1];
-      setMessages(reply ? [...shown, reply] : shown);
+      const finalMsgs = reply ? [...shown, reply] : shown;
+      setMessages(finalMsgs);
+      // Persist the side-thread against the current conversation.
+      if (scopeKey) api.saveAssistantThread(token, scopeKey, finalMsgs).catch(() => {});
     } catch (e: unknown) {
       setMessages([...shown, { role: "assistant", content: `**Fehler:** ${(e as Error).message}` }]);
     } finally { setSending(false); }
@@ -188,7 +202,7 @@ const MIN_W = 240;
 const MAX_W = 520;
 const DEFAULT_W = 280;
 
-export function AssistantDock({ token, projectId }: { token: string | null; projectId: string | null }) {
+export function AssistantDock({ token, projectId, scopeKey }: { token: string | null; projectId: string | null; scopeKey: string }) {
   const openMobile = useChatStore(s => s.assistantOpenMobile);
   const setOpenMobile = useChatStore(s => s.setAssistantOpenMobile);
 
@@ -239,7 +253,7 @@ export function AssistantDock({ token, projectId }: { token: string | null; proj
           className="group absolute left-0 top-0 h-full w-2 -translate-x-1/2 cursor-col-resize z-20 flex items-center justify-center">
           <div className="h-12 w-1 rounded-full bg-zinc-200 dark:bg-zinc-700 group-hover:bg-green-500 transition-colors duration-150" />
         </div>
-        <AssistantPanel token={token} projectId={projectId} />
+        <AssistantPanel token={token} projectId={projectId} scopeKey={scopeKey} />
       </aside>
 
       {/* Mobile: slide-in drawer (opened from the topbar assistant button) */}
@@ -264,7 +278,7 @@ export function AssistantDock({ token, projectId }: { token: string | null; proj
                 </button>
               </div>
               <div className="flex-1 min-h-0">
-                <AssistantPanel token={token} projectId={projectId} />
+                <AssistantPanel token={token} projectId={projectId} scopeKey={scopeKey} />
               </div>
             </motion.aside>
           </>

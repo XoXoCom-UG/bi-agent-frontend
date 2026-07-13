@@ -137,8 +137,8 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
           {children}
         </div>
 
-        {/* Right: persistent assistant */}
-        <AssistantDock token={token} projectId={store.activeProjectId} />
+        {/* Right: persistent assistant (side-thread kept per conversation) */}
+        <AssistantDock token={token} projectId={store.activeProjectId} scopeKey={store.sessionId} />
       </div>
 
       {/* Undo toasts for deletions (15-minute window) */}

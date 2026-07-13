@@ -126,6 +126,16 @@ export const api = {
   // ── Deck ───────────────────────────────────────────────────
   getDeck: (token: string, n = 200) =>
     request<{ deck: DeckRow[] }>(`/api/deck?n=${n}`, {}, token),
+
+  // ── Assistant side-thread (right panel, per conversation) ──
+  getAssistantThread: (token: string, scopeKey: string) =>
+    request<{ messages: Message[] }>(`/api/assistant-thread/${encodeURIComponent(scopeKey)}`, {}, token),
+
+  saveAssistantThread: (token: string, scopeKey: string, messages: Message[]) =>
+    request<{ ok: boolean }>("/api/assistant-thread", {
+      method: "POST",
+      body: JSON.stringify({ scope_key: scopeKey, messages }),
+    }, token),
 };
 
 // ── Types ─────────────────────────────────────────────────────
