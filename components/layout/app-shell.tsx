@@ -75,14 +75,11 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
   const sessionId = store.sessionId;
 
   return (
-    <div className="flex bg-zinc-50 dark:bg-zinc-950" style={{ height: "100vh", overflow: "hidden" }}>
+    <div className="flex flex-col bg-zinc-50 dark:bg-zinc-950" style={{ height: "100vh", overflow: "hidden" }}>
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
-      {/* Main column */}
-      <div className="flex-1 flex flex-col bg-white dark:bg-zinc-900 min-w-0" style={{ overflow: "hidden" }}>
-
-        {/* ── Topbar ─────────────────────────────────────────────────── */}
-        <header className="no-print flex items-center gap-2 md:gap-3 px-3 md:px-5 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
+      {/* ── Topbar — spans the full screen width ──────────────────────── */}
+      <header className="no-print flex items-center gap-2 md:gap-3 px-3 md:px-5 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900 z-30">
           {/* Logo → home */}
           <button onClick={goHome} className="flex items-center gap-2.5 shrink-0 group">
             <div className="flex items-center gap-px leading-none">
@@ -133,8 +130,15 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
           </div>
         </header>
 
-        {/* Page body */}
-        {children}
+      {/* Row below the topbar: main content + assistant panel */}
+      <div className="flex flex-1 min-h-0">
+        {/* Main column */}
+        <div className="flex-1 flex flex-col bg-white dark:bg-zinc-900 min-w-0" style={{ overflow: "hidden" }}>
+          {children}
+        </div>
+
+        {/* Right: persistent assistant */}
+        <AssistantDock token={token} projectId={store.activeProjectId} />
       </div>
 
       {/* Undo toasts for deletions (15-minute window) */}
@@ -156,9 +160,6 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
           </AnimatePresence>
         </div>
       )}
-
-      {/* Right: persistent assistant */}
-      <AssistantDock token={token} projectId={store.activeProjectId} />
     </div>
   );
 }

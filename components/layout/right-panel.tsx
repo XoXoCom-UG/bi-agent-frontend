@@ -184,9 +184,9 @@ export function AssistantPanel({ token, projectId }: { token: string | null; pro
 
 // ── Panel shell: persistent column on desktop, slide-in drawer on mobile ──────
 
-const MIN_W = 280;
-const MAX_W = 560;
-const DEFAULT_W = 320;
+const MIN_W = 240;
+const MAX_W = 520;
+const DEFAULT_W = 280;
 
 export function AssistantDock({ token, projectId }: { token: string | null; projectId: string | null }) {
   const openMobile = useChatStore(s => s.assistantOpenMobile);

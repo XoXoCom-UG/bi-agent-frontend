@@ -591,8 +591,13 @@ export default function ChatPage() {
                 if (cm) { choices = cm[1].split("|").map(s => s.trim()).filter(Boolean); content = content.replace(cm[0], "").trim(); }
                 const mm = content.match(/\[\[MULTI:\s*([\s\S]*?)\]\]/i);
                 if (mm) { multi = mm[1].split("|").map(s => s.trim()).filter(Boolean); content = content.replace(mm[0], "").trim(); }
+                // The agent points to the Concept/Roadmap features instead of
+                // writing them out in the chat: [[OPEN:concept]] / [[OPEN:roadmap]].
+                let openTarget: "concept" | "roadmap" | null = null;
+                const om = content.match(/\[\[OPEN:\s*(concept|roadmap)\s*\]\]/i);
+                if (om) { openTarget = om[1].toLowerCase() as "concept" | "roadmap"; content = content.replace(om[0], "").trim(); }
                 // Skip empty turns (tool-only / stripped messages) — no empty bubbles.
-                if (!content.trim() && choices.length === 0 && multi.length === 0) return null;
+                if (!content.trim() && choices.length === 0 && multi.length === 0 && !openTarget) return null;
                 const isLastAssistant = i === lastAssistantIdx && !store.sending;
                 return (
                   <div key={i} className={cn("group/msg flex gap-3 animate-in", isUser && "flex-row-reverse")}>
@@ -612,6 +617,18 @@ export default function ChatPage() {
                       {!isUser && <MsgActions text={content} />}
                       {choices.length > 0 && <ChoiceChips choices={choices} onSelect={send} />}
                       {multi.length > 0 && isLastAssistant && <MultiChoiceChips choices={multi} onSubmit={send} />}
+                      {openTarget === "concept" && (
+                        <button onClick={() => router.push(`/concept?session=${store.sessionId}&gen=1`)}
+                          className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors rounded-xl px-4 py-2.5 shadow-sm shadow-green-600/20">
+                          <Zap className="w-4 h-4" strokeWidth={1.5} /> Transformation Concept erstellen
+                        </button>
+                      )}
+                      {openTarget === "roadmap" && (
+                        <button onClick={() => router.push(`/dashboard?session=${store.sessionId}`)}
+                          className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors rounded-xl px-4 py-2.5 shadow-sm shadow-green-600/20">
+                          <LayoutDashboard className="w-4 h-4" strokeWidth={1.5} /> Roadmap erstellen
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

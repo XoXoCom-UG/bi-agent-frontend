@@ -233,6 +233,16 @@ function ConceptContent() {
       .finally(() => setConceptLoading(false));
   }, [token, urlSession]);
 
+  // Arriving from the chat CTA (?gen=1) auto-generates the concept once.
+  const autoGen = useRef(false);
+  useEffect(() => {
+    if (params.get("gen") !== "1" || autoGen.current || !token) return;
+    if (!store.messages.length || concept || generating) return;
+    autoGen.current = true;
+    generate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, token, store.messages.length, concept]);
+
   async function selectSession(sid: string) {
     if (!token) return;
     try {
