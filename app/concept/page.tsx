@@ -343,7 +343,7 @@ function ConceptContent() {
             </motion.button>
           )}
 
-          {hasMessages && (
+          {hasMessages && !concept && (
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={generate}
@@ -351,7 +351,7 @@ function ConceptContent() {
               className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-zinc-300 transition-colors duration-150 rounded-lg px-3.5 py-1.5 shadow-sm shadow-green-600/20"
             >
               <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
-              {concept ? "Neu generieren" : "Generieren"}
+              Generieren
             </motion.button>
           )}
         </div>

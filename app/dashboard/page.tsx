@@ -7,7 +7,7 @@ import { api, DeckRow, RoadmapData } from "@/lib/api";
 import { AppShell } from "@/components/layout/app-shell";
 import { AssistantContext } from "@/lib/chat-store";
 import {
-  MessageSquare, Zap, Map, ArrowLeft, RefreshCw,
+  MessageSquare, Zap, Map, ArrowLeft,
   CheckCircle2, ChevronDown, Copy, Check,
 } from "lucide-react";
 import {
@@ -458,13 +458,6 @@ function DashboardContent() {
                 <h2 className="flex-1 text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">
                   {roadmap?.title || "Roadmap"}
                 </h2>
-                {rmSession && (
-                  <motion.button whileTap={{ scale: 0.96 }}
-                    onClick={() => openRoadmap(rmSession)}
-                    className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors duration-150 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800">
-                    <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />Neu generieren
-                  </motion.button>
-                )}
               </div>
 
               {/* Roadmap body */}

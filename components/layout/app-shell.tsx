@@ -10,7 +10,7 @@ import { AssistantDock } from "./right-panel";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Zap, Map, Folder, FolderOpen, Plus, ChevronDown, Check, X,
-  Settings, LogOut, GripVertical, MessageCircle, Sparkles, Trash2, RotateCcw,
+  GripVertical, MessageCircle, Sparkles, Trash2, RotateCcw,
 } from "lucide-react";
 
 type ActiveScreen = "chat" | "concept" | "dashboard";
@@ -22,7 +22,7 @@ type ActiveScreen = "chat" | "concept" | "dashboard";
  * Concept / Roadmap). The persistent assistant lives on the right via AssistantDock.
  */
 export function AppShell({ active, children }: { active: ActiveScreen; children: React.ReactNode }) {
-  const { token, user, signOut } = useAuth();
+  const { token, user } = useAuth();
   const store = useChatStore();
   const router = useRouter();
 
@@ -117,34 +117,18 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
 
           <div className="flex-1" />
 
-          {/* User + settings + logout */}
+          {/* Right cluster — kept minimal: just the avatar. Click opens
+              Einstellungen (profile + logout live inside the modal). */}
           <div className="flex items-center gap-1.5 shrink-0">
             {/* Mobile: open the assistant drawer (no floating button that covers the composer) */}
             <button onClick={() => store.setAssistantOpenMobile(true)} title="Assistent"
               className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40 transition-colors">
               <Sparkles className="w-4 h-4" strokeWidth={1.5} />
             </button>
-            <button onClick={() => setSettingsOpen(true)}
-              className="flex items-center gap-2 rounded-lg pl-1 pr-2 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-green-800 dark:text-green-400 select-none"
-                style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
-                {(displayName || user?.email || "U")[0].toUpperCase()}
-              </div>
-              <div className="hidden md:block text-left leading-tight">
-                <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate max-w-[120px]">
-                  {displayName || user?.email?.split("@")[0] || "Profil"}
-                </p>
-                <p className="text-[10px] text-zinc-400">Einstellungen</p>
-              </div>
-            </button>
-            <button onClick={() => setSettingsOpen(true)} title="Einstellungen"
-              className="hidden sm:flex w-8 h-8 rounded-lg items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-              <Settings className="w-4 h-4" strokeWidth={1.5} />
-            </button>
-            <button onClick={async () => { try { await signOut(); } finally { window.location.href = "/login"; } }}
-              title="Abmelden"
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors">
-              <LogOut className="w-4 h-4" strokeWidth={1.5} />
+            <button onClick={() => setSettingsOpen(true)} title="Profil & Einstellungen"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-green-800 dark:text-green-400 select-none hover:ring-2 hover:ring-green-200 dark:hover:ring-green-900 transition-all"
+              style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+              {(displayName || user?.email || "U")[0].toUpperCase()}
             </button>
           </div>
         </header>

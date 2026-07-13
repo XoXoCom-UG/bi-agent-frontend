@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Zap, ArrowUp, MessageSquare, CheckCircle2, Copy, Check, RefreshCw,
+  Zap, ArrowUp, MessageSquare, CheckCircle2, Copy, Check,
   Folder, Plus, LayoutDashboard,
 } from "lucide-react";
 
@@ -86,14 +86,14 @@ function toText(content: unknown): string {
 function ChoiceChips({ choices, onSelect }: { choices: string[]; onSelect: (c: string) => void }) {
   const [picked, setPicked] = useState<string | null>(null);
   return (
-    <div className="mt-3 space-y-2">
+    <div className="mt-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/40 p-3 space-y-2.5">
       <div className="flex flex-wrap gap-2">
         {choices.map(c => (
           <button key={c} disabled={!!picked} onClick={() => { setPicked(c); onSelect(c); }}
             className={cn("choice-chip", picked === c && "chosen")}>{c}</button>
         ))}
       </div>
-      <p className="text-xs text-zinc-400">Wähle oder schreib deine eigene Antwort.</p>
+      <p className="text-[11px] text-zinc-400">Wähle eine Option — oder schreib deine eigene Antwort.</p>
     </div>
   );
 }
@@ -106,7 +106,7 @@ function MultiChoiceChips({ choices, onSubmit }: { choices: string[]; onSubmit: 
     setSelected(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
   }
   return (
-    <div className="mt-3 space-y-2.5">
+    <div className="mt-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/40 p-3 space-y-2.5">
       <div className="flex flex-wrap gap-2">
         {choices.map(c => {
           const on = selected.includes(c);
@@ -154,11 +154,11 @@ function Btn({ children, onClick, className, disabled }: {
   );
 }
 
-// ── Message actions (copy / regenerate) ───────────────────────────────────────
-function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {
+// ── Message actions (copy — right-aligned) ────────────────────────────────────
+function MsgActions({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity duration-150">
+    <div className="flex items-center justify-end w-full gap-1 mt-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity duration-150">
       <button
         onClick={() => navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })}
         title="Kopieren"
@@ -169,16 +169,6 @@ function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () =>
           : <Copy className="w-3 h-3" strokeWidth={1.5} />}
         {copied ? "Kopiert" : "Kopieren"}
       </button>
-      {onRegenerate && (
-        <button
-          onClick={onRegenerate}
-          title="Antwort neu generieren"
-          className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-150"
-        >
-          <RefreshCw className="w-3 h-3" strokeWidth={1.5} />
-          Neu generieren
-        </button>
-      )}
     </div>
   );
 }
@@ -257,23 +247,6 @@ export default function ChatPage() {
       api.getHistory(token).then(d => store.setHistory(d.sessions)).catch(() => {});
       // Refresh consent flags (the agent may have recorded permissions this turn)
       api.getProjects(token).then(d => store.setProjects(d.projects)).catch(() => {});
-    } catch (e: unknown) {
-      store.addMessage({ role: "assistant", content: `**Fehler:** ${(e as Error).message}` });
-    } finally { stopThinking(); }
-  }
-
-  async function regenerate() {
-    if (!token || store.sending) return;
-    // Drop trailing assistant message(s), resend the conversation
-    const msgs = [...store.messages];
-    while (msgs.length && msgs[msgs.length - 1].role === "assistant") msgs.pop();
-    if (!msgs.length) return;
-    store.setMessages(msgs);
-    startThinking();
-    try {
-      const res = await api.chat(token, { messages: msgs, session_id: store.sessionId, project_id: store.activeProjectId });
-      store.setMessages(res.messages);
-      store.setSessionId(res.session_id);
     } catch (e: unknown) {
       store.addMessage({ role: "assistant", content: `**Fehler:** ${(e as Error).message}` });
     } finally { stopThinking(); }
@@ -636,12 +609,7 @@ export default function ChatPage() {
                           : "bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200 px-5 py-4 rounded-2xl rounded-tl-sm w-full"
                       )}
                         dangerouslySetInnerHTML={{ __html: md(content) }} />
-                      {!isUser && (
-                        <MsgActions
-                          text={content}
-                          onRegenerate={i === lastAssistantIdx && !store.sending ? regenerate : undefined}
-                        />
-                      )}
+                      {!isUser && <MsgActions text={content} />}
                       {choices.length > 0 && <ChoiceChips choices={choices} onSelect={send} />}
                       {multi.length > 0 && isLastAssistant && <MultiChoiceChips choices={multi} onSubmit={send} />}
                     </div>
