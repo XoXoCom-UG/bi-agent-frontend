@@ -41,7 +41,17 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [persona, setPersona] = useState<"berater" | "kritiker">("berater");
   const sessionRef = useRef(`help-${Date.now()}`);
+
+  useEffect(() => {
+    const p = localStorage.getItem("matfit_persona");
+    if (p === "kritiker" || p === "berater") setPersona(p);
+  }, []);
+  function choosePersona(p: "berater" | "kritiker") {
+    setPersona(p);
+    localStorage.setItem("matfit_persona", p);
+  }
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastNonce = useRef(0);
@@ -93,7 +103,7 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
             { role: "assistant", content: "Alles klar, ich habe den Kontext im Blick." },
           ]
         : [];
-      const res = await api.chat(token, { messages: [...seed, ...shown], session_id: sessionRef.current, project_id: projectId });
+      const res = await api.chat(token, { messages: [...seed, ...shown], session_id: sessionRef.current, project_id: projectId, persona });
       const reply = res.messages[res.messages.length - 1];
       const finalMsgs = reply ? [...shown, reply] : shown;
       setMessages(finalMsgs);
@@ -107,11 +117,25 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 shrink-0 border-b border-zinc-100 dark:border-zinc-800">
-        <div className="w-6 h-6 rounded-lg bg-green-50 dark:bg-green-950/60 flex items-center justify-center">
-          <Sparkles className="w-3.5 h-3.5 text-green-600" strokeWidth={1.5} />
+      <div className="px-4 py-3 shrink-0 border-b border-zinc-100 dark:border-zinc-800 space-y-2.5">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-green-50 dark:bg-green-950/60 flex items-center justify-center">
+            <Sparkles className="w-3.5 h-3.5 text-green-600" strokeWidth={1.5} />
+          </div>
+          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 flex-1">Persönlicher Assistent</p>
         </div>
-        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 flex-1">Persönlicher Assistent</p>
+        {/* Persona selector */}
+        <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5">
+          {([["berater", "Tier-1-Berater"], ["kritiker", "Kritiker"]] as const).map(([key, label]) => (
+            <button key={key} onClick={() => choosePersona(key)}
+              className={cn("flex-1 text-[11px] font-medium rounded-md py-1 transition-colors",
+                persona === key
+                  ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 shadow-sm"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200")}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Conversation (or intro + capabilities when empty) */}

@@ -193,6 +193,7 @@ export interface ChatRequest {
   user_id?: string;
   project_id?: string | null;
   guided?: boolean;
+  persona?: "berater" | "kritiker";
 }
 
 export interface ResearchRequest {
