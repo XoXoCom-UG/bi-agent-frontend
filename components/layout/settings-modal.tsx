@@ -5,6 +5,7 @@ import { X, User, Palette, Sun, Moon, Monitor, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
+import { useChatStore } from "@/lib/chat-store";
 import { cn } from "@/lib/utils";
 
 type Tab = "profil" | "darstellung";
@@ -13,6 +14,7 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
   const [tab, setTab] = useState<Tab>("profil");
   const { theme, setTheme } = useTheme();
   const { user, signOut, token } = useAuth();
+  const setTourActive = useChatStore(s => s.setTourActive);
   const [name, setName] = useState("");
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -196,6 +198,23 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
                           <div className="h-9 rounded-lg border border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 flex items-center">
                             <span className="text-sm text-zinc-500 dark:text-zinc-400">{user?.email || "—"}</span>
                           </div>
+                        </div>
+
+                        {/* Tutorial */}
+                        <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                          <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2 block">
+                            Tour
+                          </label>
+                          <motion.button
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => { onClose(); setTimeout(() => setTourActive(true), 200); }}
+                            className="flex items-center gap-2 h-9 px-4 rounded-lg text-xs font-semibold text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/30 hover:bg-green-50 dark:hover:bg-green-950/60 transition-colors duration-150"
+                          >
+                            Tutorial wiederholen
+                          </motion.button>
+                          <p className="text-[11px] text-zinc-400 mt-2">
+                            Zeigt dir die geführte Tour durch matfit.ai noch einmal.
+                          </p>
                         </div>
 
                         {/* Logout */}

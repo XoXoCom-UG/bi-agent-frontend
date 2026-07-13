@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { SettingsModal } from "./settings-modal";
 import { AssistantDock } from "./right-panel";
+import { TutorialOverlay, TutorialPrompt } from "./tutorial";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Zap, Map, Folder, FolderOpen, Plus, ChevronDown, Check, X,
@@ -97,6 +98,7 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
           {/* Permanent nav buttons */}
           <div className="flex items-center gap-1.5">
             <TopButton
+              tourId="concept"
               icon={<Zap className="w-3.5 h-3.5" strokeWidth={1.5} />}
               label="Transformation Concept"
               shortLabel="Konzept"
@@ -104,6 +106,7 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
               onClick={() => router.push(`/concept?session=${sessionId}`)}
             />
             <TopButton
+              tourId="roadmap"
               icon={<Map className="w-3.5 h-3.5" strokeWidth={1.5} />}
               label="Roadmap"
               shortLabel="Roadmap"
@@ -122,7 +125,7 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
               className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40 transition-colors">
               <Sparkles className="w-4 h-4" strokeWidth={1.5} />
             </button>
-            <button onClick={() => setSettingsOpen(true)} title="Profil & Einstellungen"
+            <button data-tour="profile" onClick={() => setSettingsOpen(true)} title="Profil & Einstellungen"
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-green-800 dark:text-green-400 select-none hover:ring-2 hover:ring-green-200 dark:hover:ring-green-900 transition-all"
               style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
               {(displayName || user?.email || "U")[0].toUpperCase()}
@@ -160,16 +163,20 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
           </AnimatePresence>
         </div>
       )}
+
+      {/* Onboarding tour */}
+      <TutorialPrompt />
+      <TutorialOverlay />
     </div>
   );
 }
 
 // ── Top nav button ──────────────────────────────────────────────────────────
-function TopButton({ icon, label, shortLabel, active, onClick }: {
-  icon: React.ReactNode; label: string; shortLabel: string; active: boolean; onClick: () => void;
+function TopButton({ icon, label, shortLabel, active, onClick, tourId }: {
+  icon: React.ReactNode; label: string; shortLabel: string; active: boolean; onClick: () => void; tourId?: string;
 }) {
   return (
-    <motion.button whileTap={{ scale: 0.96 }} onClick={onClick}
+    <motion.button data-tour={tourId} whileTap={{ scale: 0.96 }} onClick={onClick}
       className={cn(
         "flex items-center gap-1.5 text-xs font-semibold rounded-lg px-2.5 md:px-3 py-2 border transition-colors duration-150",
         active
@@ -322,7 +329,7 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
 
   return (
     <div ref={ref} className="relative shrink-0">
-      <button onClick={() => setOpen(o => !o)}
+      <button data-tour="projekte" onClick={() => setOpen(o => !o)}
         className={cn(
           "flex items-center gap-1.5 text-xs font-medium rounded-lg px-2.5 py-2 border transition-colors duration-150 max-w-[180px]",
           active === "chat" && activeProject

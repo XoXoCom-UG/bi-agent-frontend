@@ -115,7 +115,7 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div data-tour="assistant" className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="px-4 py-3 shrink-0 border-b border-zinc-100 dark:border-zinc-800 space-y-2.5">
         <div className="flex items-center gap-2">
@@ -125,7 +125,7 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
           <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 flex-1">Persönlicher Assistent</p>
         </div>
         {/* Persona selector */}
-        <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5">
+        <div data-tour="persona" className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5">
           {([["berater", "Tier-1-Berater"], ["kritiker", "Kritiker"]] as const).map(([key, label]) => (
             <button key={key} onClick={() => choosePersona(key)}
               className={cn("flex-1 text-[11px] font-medium rounded-md py-1 transition-colors",

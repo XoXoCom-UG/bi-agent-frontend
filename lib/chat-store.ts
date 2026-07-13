@@ -47,6 +47,8 @@ interface ChatStore {
   pendingDeletes: PendingDelete[];
   // Cache of fully-loaded sessions so re-opening a conversation is instant.
   sessionCache: Record<string, { title: string; messages: Message[] }>;
+  // Guided onboarding tour (delivered through the assistant coach + spotlight).
+  tourActive: boolean;
 
   // actions
   setSessionId: (id: string) => void;
@@ -69,6 +71,7 @@ interface ChatStore {
   queueDelete: (d: PendingDelete) => void;
   dropPending: (id: string) => void;
   cacheSession: (id: string, data: { title: string; messages: Message[] }) => void;
+  setTourActive: (b: boolean) => void;
   newChat: () => void;
 }
 
@@ -91,6 +94,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   leftContext: "",
   pendingDeletes: [],
   sessionCache: {},
+  tourActive: false,
 
   setSessionId: (id) => set({ sessionId: id }),
   setSessionTitle: (t) => set({ sessionTitle: t }),
@@ -125,6 +129,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   queueDelete: (d) => set((s) => ({ pendingDeletes: [...s.pendingDeletes.filter(p => p.id !== d.id), d] })),
   dropPending: (id) => set((s) => ({ pendingDeletes: s.pendingDeletes.filter(p => p.id !== id) })),
   cacheSession: (id, data) => set((s) => ({ sessionCache: { ...s.sessionCache, [id]: data } })),
+  setTourActive: (b) => set({ tourActive: b }),
   newChat: () =>
     set({
       sessionId: newSessionId(),
