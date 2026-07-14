@@ -187,8 +187,10 @@ function TopButton({ icon, label, shortLabel, active, onClick, tourId }: {
           : "text-zinc-600 dark:text-zinc-300 border-green-200 dark:border-green-900/60 hover:bg-green-50/60 dark:hover:bg-green-950/30 hover:text-green-700 dark:hover:text-green-400"
       )}>
       {icon}
+      {/* Phones: icon only (keeps the topbar from overflowing so the assistant
+          + avatar stay reachable). Tablets: short label. Desktop: full label. */}
       <span className="hidden md:inline">{label}</span>
-      <span className="md:hidden">{shortLabel}</span>
+      <span className="hidden sm:inline md:hidden">{shortLabel}</span>
     </motion.button>
   );
 }

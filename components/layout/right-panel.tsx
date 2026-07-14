@@ -386,8 +386,9 @@ export function AssistantDock({ token, projectId, scopeKey }: { token: string | 
             />
             <motion.aside
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
-              transition={{ type: "spring", duration: 0.35, bounce: 0 }}
-              className="lg:hidden fixed inset-y-0 right-0 z-50 w-[86%] max-w-[360px] bg-white dark:bg-zinc-900 border-l border-zinc-100 dark:border-zinc-800 flex flex-col"
+              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+              style={{ willChange: "transform" }}
+              className="lg:hidden fixed inset-y-0 right-0 z-50 w-[86%] max-w-[360px] bg-white dark:bg-zinc-900 border-l border-zinc-100 dark:border-zinc-800 flex flex-col shadow-2xl shadow-black/30"
             >
               <div className="flex items-center justify-end px-2 py-2 shrink-0">
                 <button onClick={() => setOpenMobile(false)}

@@ -365,11 +365,11 @@ function DashboardContent() {
                 <Map className="w-5 h-5 text-zinc-400" strokeWidth={1.5} />
               </div>
               <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Noch keine Roadmap</h3>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Erstelle zuerst ein Transformation Concept aus eurem Gespräch — daraus entsteht die Roadmap.</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Starte zuerst ein Gespräch — daraus erstelle ich Konzept und Roadmap automatisch.</p>
               <motion.button whileTap={{ scale: 0.96 }}
-                onClick={() => router.push(`/concept?session=${store.sessionId}`)}
+                onClick={() => router.push("/chat")}
                 className="text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors duration-150 rounded-lg px-5 py-2.5 inline-flex items-center gap-2">
-                <Zap className="w-4 h-4" strokeWidth={1.5} />Zum Konzept
+                <MessageSquare className="w-4 h-4" strokeWidth={1.5} />Zum Chat
               </motion.button>
             </motion.div>
           </div>
