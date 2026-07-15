@@ -12,6 +12,7 @@ import {
   CheckCircle2, ChevronDown, Copy, Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { PhaseEffortChart } from "@/components/charts/phase-effort";
 
 // ── Roadmap loading ───────────────────────────────────────────────────────────
 const RM_PHASES = [
@@ -448,6 +449,9 @@ function DashboardContent() {
 
                       {/* Visual: phase timeline */}
                       {roadmap.phases && roadmap.phases.length > 0 && <PhaseTimeline phases={roadmap.phases} />}
+
+                      {/* Visual: effort mix per phase */}
+                      {roadmap.phases && roadmap.phases.length > 0 && <PhaseEffortChart phases={roadmap.phases} />}
 
                       {roadmap.phases?.map((ph, pi) => (
                         <motion.div key={pi}

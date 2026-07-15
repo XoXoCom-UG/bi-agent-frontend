@@ -47,9 +47,9 @@ export const DEMO_CONCEPT: ConceptData = {
     { title: "Kostentransparenz", size: "S", story: "Als IT-Leitung möchte ich Kosten pro Projekt sehen, um Budgets zu steuern.", acceptance_criteria: "Kosten-Dashboard pro Team" },
   ],
   business_value_summary: {
-    manual_effort: "-40 % Betriebsaufwand",
-    error_rate: "-30 % Fehldeployments",
-    cost_savings: "~25 % Infrastrukturkosten",
+    manual_effort: "von 3 Tagen auf unter 4 Stunden pro Bereitstellung",
+    error_rate: "Fehldeployments von 30 % auf unter 8 %",
+    cost_savings: "€6.500/Monat Einsparung durch nutzungsbasierte Infrastruktur — ca. €78.000 pro Jahr",
   },
 };
 

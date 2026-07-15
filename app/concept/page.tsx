@@ -10,9 +10,11 @@ import { dateStr } from "@/lib/utils";
 import {
   Clock, AlertTriangle, TrendingDown, Zap,
   ChevronRight, CheckCircle2, FileText, MessageSquare, ArrowLeft, Pencil,
-  ArrowRight, ListChecks,
 } from "lucide-react";
 import { motion, AnimatePresence, useSpring } from "motion/react";
+import { deriveConceptMetrics } from "@/lib/metrics";
+import { RoiSimulator } from "@/components/charts/roi-simulator";
+import { BeforeAfterGrid, EffortPie } from "@/components/charts/concept-charts";
 
 // ── Magnetic button ───────────────────────────────────────────────────────────
 function MagBtn({
@@ -181,34 +183,6 @@ const KPI_META = [
   { key: "cost_savings",  label: "Kostenersparnis",  sub: "Pro Jahr",          Icon: TrendingDown },
 ] as const;
 
-// Pull a 0–100 percentage out of a value string like "-25 %" / "~30%".
-function pctOf(s?: string): number | null {
-  if (!s) return null;
-  const m = s.match(/(\d{1,3})\s*%/);
-  if (!m) return null;
-  return Math.min(100, Math.max(0, parseInt(m[1], 10)));
-}
-
-// Simple animated progress ring — visual, minimal text.
-function Donut({ pct }: { pct: number }) {
-  const r = 26, circ = 2 * Math.PI * r;
-  return (
-    <svg width="76" height="76" viewBox="0 0 76 76" className="shrink-0">
-      <circle cx="38" cy="38" r={r} fill="none" stroke="currentColor" strokeWidth="8" className="text-zinc-100 dark:text-zinc-800" />
-      <motion.circle
-        cx="38" cy="38" r={r} fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round"
-        className="text-green-500"
-        transform="rotate(-90 38 38)"
-        strokeDasharray={circ}
-        initial={{ strokeDashoffset: circ }}
-        animate={{ strokeDashoffset: circ * (1 - pct / 100) }}
-        transition={{ type: "spring", duration: 0.9, bounce: 0 }}
-      />
-      <text x="38" y="39" textAnchor="middle" dominantBaseline="central" className="fill-zinc-900 dark:fill-zinc-50" fontSize="16" fontWeight="700">{pct}%</text>
-    </svg>
-  );
-}
-
 // ── Skeleton loader ───────────────────────────────────────────────────────────
 function Skeleton({ className }: { className?: string }) {
   return (
@@ -340,6 +314,9 @@ function ConceptContent() {
   const kpiItems = KPI_META
     .map(m => ({ ...m, val: (bv as Record<string, string | undefined>)[m.key] }))
     .filter(k => k.val);
+
+  // Chart data derived from the concept's own text (empty blocks are hidden).
+  const metrics = deriveConceptMetrics(concept);
 
   const hasMessages = store.messages.length > 0;
   // All conversations (project chats included) can carry a concept.
@@ -579,47 +556,17 @@ function ConceptContent() {
             {concept && (
               <div className="flex flex-col gap-5">
 
-                {/* Ist → Ziel auf einen Blick — visual, text-arm */}
-                {(pains.length > 0 || outcomes.length > 0 || steps.length > 0) && (
+                {/* Visual dashboard — driven by the concept's own numbers. Each block
+                    only appears when the underlying data is actually present. */}
+                {(metrics.beforeAfter.length > 0 || metrics.money) && (
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ type: "spring", duration: 0.5, bounce: 0 }}
-                    className="bg-white border border-zinc-200 rounded-xl shadow-sm p-5 sm:p-6"
+                    className="flex flex-col gap-5"
                   >
-                    <div className="flex items-stretch justify-center gap-3 sm:gap-6">
-                      {/* Ist */}
-                      <div className="flex-1 max-w-[180px] rounded-xl bg-zinc-50 border border-zinc-200 flex flex-col items-center justify-center py-5 px-2">
-                        <AlertTriangle className="w-5 h-5 text-zinc-400 mb-2" strokeWidth={1.5} />
-                        <motion.span
-                          initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }}
-                          transition={{ type: "spring", duration: 0.6, bounce: 0.35, delay: 0.15 }}
-                          className="text-4xl font-bold text-zinc-800 leading-none tabular-nums"
-                        >{pains.length}</motion.span>
-                        <span className="text-[11px] tracking-widest text-zinc-400 uppercase mt-2">Ist</span>
-                      </div>
-
-                      {/* Steps in the middle */}
-                      <div className="flex flex-col items-center justify-center gap-1.5 px-1">
-                        <ArrowRight className="w-6 h-6 text-green-500 shrink-0" strokeWidth={2} />
-                        {steps.length > 0 && (
-                          <span className="flex items-center gap-1 text-[11px] text-zinc-400 tabular-nums">
-                            <ListChecks className="w-3.5 h-3.5" strokeWidth={1.75} />{steps.length}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Ziel */}
-                      <div className="flex-1 max-w-[180px] rounded-xl bg-green-50 border border-green-200 flex flex-col items-center justify-center py-5 px-2">
-                        <CheckCircle2 className="w-5 h-5 text-green-500 mb-2" strokeWidth={1.5} />
-                        <motion.span
-                          initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }}
-                          transition={{ type: "spring", duration: 0.6, bounce: 0.35, delay: 0.3 }}
-                          className="text-4xl font-bold text-green-700 leading-none tabular-nums"
-                        >{outcomes.length || goalTable.length}</motion.span>
-                        <span className="text-[11px] tracking-widest text-green-600/70 uppercase mt-2">Ziel</span>
-                      </div>
-                    </div>
+                    {metrics.beforeAfter.length > 0 && <BeforeAfterGrid items={metrics.beforeAfter} />}
+                    {metrics.money && <RoiSimulator setup={metrics.money.setup} monthly={metrics.money.monthly} />}
                   </motion.div>
                 )}
 
@@ -728,37 +675,27 @@ function ConceptContent() {
 
                 {kpiItems.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {kpiItems.map(({ label, val, sub, Icon }, i) => {
-                      const pct = pctOf(val);
-                      return (
-                        <motion.div
-                          key={label}
-                          initial={{ opacity: 0, y: 14 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ type: "spring", duration: 0.5, bounce: 0.08, delay: i * 0.08 }}
-                          whileHover={{ y: -2 }}
-                          className="bg-white border border-zinc-200 rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow duration-200 cursor-default"
-                        >
-                          <div className="flex items-center justify-between mb-4">
-                            <p className="text-xs tracking-widest text-zinc-500 uppercase">{label}</p>
-                            <Icon className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
-                          </div>
-                          {pct !== null ? (
-                            <div className="flex items-center gap-4">
-                              <Donut pct={pct} />
-                              <p className="text-xs text-zinc-500 leading-snug break-words min-w-0">{val}</p>
-                            </div>
-                          ) : (
-                            <>
-                              <p className="text-2xl font-bold text-zinc-900 tracking-tight leading-none mb-1.5 break-words">{val}</p>
-                              <p className="text-xs text-zinc-400">{sub}</p>
-                            </>
-                          )}
-                        </motion.div>
-                      );
-                    })}
+                    {kpiItems.map(({ label, val, sub, Icon }, i) => (
+                      <motion.div
+                        key={label}
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ type: "spring", duration: 0.5, bounce: 0.08, delay: i * 0.08 }}
+                        whileHover={{ y: -2 }}
+                        className="bg-white border border-zinc-200 rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow duration-200 cursor-default"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <p className="text-xs tracking-widest text-zinc-500 uppercase">{label}</p>
+                          <Icon className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
+                        </div>
+                        <p className="text-2xl font-bold text-zinc-900 tracking-tight leading-none mb-1.5 break-words">{val}</p>
+                        <p className="text-xs text-zinc-400">{sub}</p>
+                      </motion.div>
+                    ))}
                   </div>
                 )}
+
+                {metrics.effort && <EffortPie mix={metrics.effort} />}
 
                 {steps.length > 0 && (
                   <motion.div
