@@ -22,10 +22,25 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMsg({ text: "E-Mail oder Passwort ist falsch.", ok: false }); else router.push("/chat");
     } else {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({
+        email, password,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
       if (error) setMsg({ text: error.message, ok: false });
-      else { setMsg({ text: "Account erstellt — bitte einloggen.", ok: true }); setTab("login"); }
+      else { setMsg({ text: "Fast geschafft! Bestätige deine E-Mail über den Link, den wir dir gerade geschickt haben.", ok: true }); setTab("login"); }
     }
+    setLoading(false);
+  }
+
+  async function handleForgot() {
+    if (!email) { setMsg({ text: "Bitte zuerst deine E-Mail-Adresse eingeben.", ok: false }); return; }
+    setLoading(true); setMsg(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset`,
+    });
+    setMsg(error
+      ? { text: error.message, ok: false }
+      : { text: "Falls ein Konto mit dieser E-Mail existiert, haben wir dir einen Link zum Zurücksetzen geschickt.", ok: true });
     setLoading(false);
   }
 
@@ -58,10 +73,18 @@ export default function LoginPage() {
                 onBlur={e => (e.target as HTMLInputElement).style.borderColor = "var(--border)"} />
             </div>
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 6 }}>
-                Passwort
-                {tab === "signup" && <span style={{ fontWeight: 400, color: "var(--text-3)" }}> · min. 8 Zeichen</span>}
-              </label>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)" }}>
+                  Passwort
+                  {tab === "signup" && <span style={{ fontWeight: 400, color: "var(--text-3)" }}> · min. 8 Zeichen</span>}
+                </label>
+                {tab === "login" && (
+                  <button type="button" onClick={handleForgot}
+                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12, color: "var(--green)", fontFamily: "inherit" }}>
+                    Passwort vergessen?
+                  </button>
+                )}
+              </div>
               <div style={{ position: "relative" }}>
                 <input type={showPw ? "text" : "password"} required value={password}
                   autoComplete={tab === "login" ? "current-password" : "new-password"}
