@@ -86,6 +86,11 @@ export default function LoginPage() {
               {loading ? "Bitte warten…" : tab === "login" ? "Einloggen →" : "Account erstellen →"}
             </button>
           </form>
+          <div style={{ display: "flex", gap: 16, marginTop: 24, fontSize: 12 }}>
+            <a href="/impressum" style={{ color: "var(--text-3)", textDecoration: "none" }}>Impressum</a>
+            <a href="/datenschutz" style={{ color: "var(--text-3)", textDecoration: "none" }}>Datenschutz</a>
+            <a href="/agb" style={{ color: "var(--text-3)", textDecoration: "none" }}>AGB</a>
+          </div>
         </div>
       </div>
       {/* Right panel — hidden on mobile */}

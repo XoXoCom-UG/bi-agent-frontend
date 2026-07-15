@@ -113,6 +113,16 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
                     {t.label}
                   </motion.button>
                 ))}
+
+                {/* Legal links */}
+                <div className="mt-auto pt-3 flex flex-col gap-1 px-2">
+                  {[["Impressum", "/impressum"], ["Datenschutz", "/datenschutz"], ["AGB", "/agb"]].map(([label, href]) => (
+                    <a key={href} href={href} target="_blank" rel="noopener noreferrer"
+                      className="text-[11px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
+                      {label}
+                    </a>
+                  ))}
+                </div>
               </div>
 
               {/* Right content */}
