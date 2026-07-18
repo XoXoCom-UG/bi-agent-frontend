@@ -46,6 +46,10 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
   const [sending, setSending] = useState(false);
   const persona = useChatStore(s => s.persona);
   const setPersona = useChatStore(s => s.setPersona);
+  const startTour = useChatStore(s => s.startTour);
+  // First-run greeting: the assistant introduces itself after a short delay
+  // (replaces the old welcome modal). Only ever shown once per browser.
+  const [greeting, setGreeting] = useState(false);
   // Assisted-edit state: a proposed change awaiting "Übernehmen", and the last
   // applied change (for a one-click "Rückgängig").
   const [pendingEdit, setPendingEdit] = useState<{ kind: "concept" | "roadmap"; updated: ConceptData | RoadmapData } | null>(null);
@@ -56,6 +60,17 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
     const p = localStorage.getItem("matfit_persona");
     if (p === "kritiker" || p === "berater") setPersona(p);
   }, [setPersona]);
+
+  // Show the first-run greeting 3.5s after arrival (a gentle "plopp"), unless
+  // the user has already seen the tour prompt before.
+  useEffect(() => {
+    if (localStorage.getItem("matfit_tour_done")) return;
+    const t = setTimeout(() => setGreeting(true), 3500);
+    return () => clearTimeout(t);
+  }, []);
+  function acceptTour() { setGreeting(false); startTour(); }
+  function dismissGreeting() { localStorage.setItem("matfit_tour_done", "1"); setGreeting(false); }
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastNonce = useRef(0);
@@ -192,6 +207,32 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
           </p>
         ) : messages.length === 0 && !sending ? (
           <div>
+            {/* First-run greeting — the assistant speaks up ("plopp") */}
+            <AnimatePresence>
+              {greeting && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8, y: 8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                  className="mb-5"
+                >
+                  <div className="help-md text-[12px] leading-relaxed rounded-xl px-3 py-2.5 bg-green-50 dark:bg-green-950/40 text-zinc-700 dark:text-zinc-200 border border-green-200 dark:border-green-900">
+                    Hey, ich bin Matfit — dein K.I.-Agent mit Tier-1-Berater-Mindset! Hier arbeiten wir gemeinsam an deinen Zielen. Kennst du die Anwendung schon, oder soll ich dir schnell alles zeigen?
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <button onClick={acceptTour}
+                      className="px-2.5 py-1 rounded-full bg-green-600 hover:bg-green-700 text-white text-[11px] font-semibold transition-colors duration-150">
+                      Ja, zeig&apos;s mir
+                    </button>
+                    <button onClick={dismissGreeting}
+                      className="px-2.5 py-1 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[11px] text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors duration-150">
+                      Kenn ich schon
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             <ul className="space-y-2.5 mb-5">
               {CAPABILITIES.map(({ Icon, text }) => (
                 <li key={text} className="flex items-start gap-2.5 text-[12.5px] text-zinc-600 dark:text-zinc-300 leading-snug">

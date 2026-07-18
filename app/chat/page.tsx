@@ -11,8 +11,8 @@ import { Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Zap, ArrowUp, MessageSquare, CheckCircle2, Copy, Check,
-  Folder, Plus, LayoutDashboard, Sparkles,
+  Zap, ArrowUp, ArrowRight, MessageSquare, CheckCircle2, Copy, Check,
+  Folder, Plus, LayoutDashboard, Sparkles, Wrench,
 } from "lucide-react";
 
 // ── Phase list (long, non-repeating within a response) ───────────────────────
@@ -505,53 +505,48 @@ export default function ChatPage() {
                   )}
                 </AnimatePresence>
 
-                {/* Action card */}
-                <div className="grid grid-cols-1 gap-3 mb-8 text-left">
-                  {([
-                    {
-                      icon: <Plus className="w-4 h-4" strokeWidth={1.5} />,
-                      label: "Starte Projekt",
-                      sub: "Geführtes Interview → Konzept → Roadmap.",
-                      cta: "Jetzt starten →",
-                      accent: true,
-                      action: () => setCreatingProject(true),
-                    },
-                  ] as const).map((c, idx) => (
-                    <motion.div
-                      key={c.label}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ type: "spring", duration: 0.5, bounce: 0.06, delay: 0.18 + idx * 0.07 }}
-                      whileHover={{ y: -3, transition: BTN_SPRING }}
-                      whileTap={{ scale: 0.975, transition: BTN_SPRING }}
-                      onClick={c.action}
-                      className={cn(
-                        "relative cursor-pointer rounded-2xl p-5 overflow-hidden border transition-shadow duration-200 hover:shadow-lg",
-                        c.accent
-                          ? "bg-green-600 border-green-500 hover:shadow-green-500/20"
-                          : "bg-white dark:bg-zinc-800/80 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-zinc-200/60 dark:hover:shadow-black/20"
-                      )}
-                    >
-                      {c.accent && (
-                        <div className="absolute inset-0 pointer-events-none"
-                          style={{ background: "radial-gradient(ellipse 80% 60% at 0% 0%, rgba(255,255,255,0.12), transparent)" }} />
-                      )}
-                      <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center mb-4",
-                        c.accent ? "bg-white/20 text-white" : "bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400")}>
-                        {c.icon}
-                      </div>
-                      <p className={cn("font-semibold text-sm mb-1.5", c.accent ? "text-white" : "text-zinc-900 dark:text-zinc-50")}>
-                        {c.label}
-                      </p>
-                      <p className={cn("text-xs leading-relaxed mb-4", c.accent ? "text-green-100" : "text-zinc-500 dark:text-zinc-400")}>
-                        {c.sub}
-                      </p>
-                      <span className={cn("text-xs font-semibold", c.accent ? "text-white/80" : "text-green-600")}>
-                        {c.cta}
-                      </span>
-                    </motion.div>
+                {/* Primary action — a single, compact, centered card */}
+                <motion.button
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", duration: 0.5, bounce: 0.06, delay: 0.18 }}
+                  whileHover={{ y: -3, transition: BTN_SPRING }}
+                  whileTap={{ scale: 0.985, transition: BTN_SPRING }}
+                  onClick={() => setCreatingProject(true)}
+                  className="group/start relative w-full max-w-sm mx-auto flex items-center gap-4 rounded-2xl px-5 py-4 overflow-hidden border border-green-500 text-left shadow-lg shadow-green-600/25 hover:shadow-xl hover:shadow-green-600/30 transition-shadow duration-200"
+                  style={{ background: "linear-gradient(135deg, #16a34a 0%, #15803d 60%, #14532d 100%)" }}
+                >
+                  {/* Sheen sweep on hover */}
+                  <span className="pointer-events-none absolute inset-0 -translate-x-full group-hover/start:translate-x-full transition-transform duration-700 ease-out"
+                    style={{ background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.18) 50%, transparent 60%)" }} />
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-white/20 text-white ring-1 ring-white/30 transition-transform duration-200 group-hover/start:scale-110 group-hover/start:rotate-[-4deg]">
+                    <Plus className="w-4 h-4" strokeWidth={1.5} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-sm text-white">Starte Projekt</p>
+                    <p className="text-xs leading-relaxed text-green-100">Geführtes Interview → Konzept → Roadmap.</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 shrink-0 text-white opacity-70 -translate-x-1 group-hover/start:opacity-100 group-hover/start:translate-x-0 transition-all duration-200" strokeWidth={2} />
+                </motion.button>
+
+                {/* What you get — fills the space and states the value */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.34, duration: 0.4 }}
+                  className="mt-8 flex items-center justify-center gap-6 text-zinc-500 dark:text-zinc-400"
+                >
+                  {[
+                    { Icon: Zap, label: "Konzept" },
+                    { Icon: LayoutDashboard, label: "Roadmap" },
+                    { Icon: Wrench, label: "Tooling" },
+                  ].map(({ Icon, label }) => (
+                    <div key={label} className="flex items-center gap-1.5">
+                      <Icon className="w-3.5 h-3.5 text-green-600" strokeWidth={1.5} />
+                      <span className="text-xs font-medium">{label}</span>
+                    </div>
                   ))}
-                </div>
+                </motion.div>
               </div>
             </div>
           ) : (

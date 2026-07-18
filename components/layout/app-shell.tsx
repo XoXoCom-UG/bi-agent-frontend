@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { SettingsModal } from "./settings-modal";
 import { AssistantDock } from "./right-panel";
-import { TutorialOverlay, TutorialPrompt } from "./tutorial";
+import { TutorialOverlay } from "./tutorial";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Zap, Map, Folder, FolderOpen, Plus, ChevronDown, Check, X,
@@ -167,8 +167,7 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
         </div>
       )}
 
-      {/* Onboarding tour */}
-      <TutorialPrompt />
+      {/* Onboarding tour (the first-run greeting now lives in the assistant panel) */}
       <TutorialOverlay />
     </div>
   );

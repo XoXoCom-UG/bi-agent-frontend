@@ -27,10 +27,10 @@ interface TourStep {
 const STEPS: TourStep[] = [
   { target: "projekte", chapter: "Grundlagen", title: "Deine Projekte", goto: "/chat", advance: "weiter",
     text: "Als Erstes: Hier startest du ein Projekt, wechselst zwischen Konversationen und kannst mit 15-Minuten-Undo sicher löschen." },
-  { target: "composer", chapter: "Grundlagen", title: "Frag den Agenten", goto: "/chat", advance: "weiter",
-    text: "Weiter geht's hier: Du stellst deine Frage oder startest das geführte Interview. Das Folgende ist ein echtes Beispiel-Gespräch." },
-  { target: "assistant", chapter: "Assistent", title: "Dein persönlicher Assistent", goto: "/chat", advance: "weiter",
-    text: "Rechts an deiner Seite wartet dein persönlicher Assistent — frag ihn jederzeit etwas. Tipp: markiere Text in einer Antwort, um direkt darüber zu sprechen." },
+  { target: "composer", chapter: "Grundlagen", title: "Links: der Projekt-Agent", goto: "/chat", advance: "weiter",
+    text: "Links arbeitet dein Projekt-Agent. Mit ihm führst du das geführte Interview und baust Schritt für Schritt dein Transformation Concept und deine Roadmap auf. Das Folgende ist ein echtes Beispiel-Gespräch." },
+  { target: "assistant", chapter: "Assistent", title: "Rechts: dein persönlicher Assistent", goto: "/chat", advance: "weiter",
+    text: "Rechts steht dir dein persönlicher Assistent zur Seite — jederzeit ansprechbar, ohne deinen Hauptchat zu unterbrechen. Mit ihm besprichst du Lösungswege und feilst an den Ergebnissen. Tipp: markiere Text in einer Antwort, um direkt darüber zu sprechen." },
   { target: "persona", chapter: "Assistent", title: "Sein Stil", goto: "/chat", advance: "weiter",
     text: "Du entscheidest, wie er antwortet: als Tier-1-Berater mit klaren Empfehlungen, oder im Kritiker-Modus, der Risiken und Schwächen aufdeckt." },
   { target: "concept", chapter: "Ergebnisse", title: "Probier es aus: Transformation Concept", goto: "/chat", advance: "click",
@@ -215,46 +215,3 @@ export function TutorialOverlay() {
   );
 }
 
-// First-run prompt: asks before starting (only if never seen).
-export function TutorialPrompt() {
-  const startTour = useChatStore(s => s.startTour);
-  const tourActive = useChatStore(s => s.tourActive);
-  const [ask, setAsk] = useState(false);
-
-  useEffect(() => {
-    if (localStorage.getItem("matfit_tour_done")) return;
-    const t = setTimeout(() => setAsk(true), 900);
-    return () => clearTimeout(t);
-  }, []);
-
-  if (tourActive || !ask) return null;
-
-  function later() { localStorage.setItem("matfit_tour_done", "1"); setAsk(false); }
-  function start() { setAsk(false); startTour(); }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-      className="no-print fixed bottom-5 right-5 z-[90] w-[300px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-xl shadow-black/20 p-4">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-7 h-7 rounded-lg bg-green-50 dark:bg-green-950/60 flex items-center justify-center">
-          <Sparkles className="w-4 h-4 text-green-600" strokeWidth={1.5} />
-        </div>
-        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Willkommen bei matfit.ai!</p>
-      </div>
-      <p className="text-[12.5px] text-zinc-600 dark:text-zinc-300 leading-relaxed mb-3">
-        Soll ich dir in einer kurzen Tour zeigen, wie alles funktioniert?
-      </p>
-      <div className="flex items-center gap-2">
-        <button onClick={start}
-          className="flex-1 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg py-2 transition-colors">
-          Ja, zeig&apos;s mir
-        </button>
-        <button onClick={later}
-          className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 px-3 py-2">
-          Später
-        </button>
-      </div>
-    </motion.div>
-  );
-}
