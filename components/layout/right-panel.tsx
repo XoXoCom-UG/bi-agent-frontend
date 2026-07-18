@@ -44,7 +44,8 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [persona, setPersona] = useState<"berater" | "kritiker">("berater");
+  const persona = useChatStore(s => s.persona);
+  const setPersona = useChatStore(s => s.setPersona);
   // Assisted-edit state: a proposed change awaiting "Übernehmen", and the last
   // applied change (for a one-click "Rückgängig").
   const [pendingEdit, setPendingEdit] = useState<{ kind: "concept" | "roadmap"; updated: ConceptData | RoadmapData } | null>(null);
@@ -54,11 +55,7 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
   useEffect(() => {
     const p = localStorage.getItem("matfit_persona");
     if (p === "kritiker" || p === "berater") setPersona(p);
-  }, []);
-  function choosePersona(p: "berater" | "kritiker") {
-    setPersona(p);
-    localStorage.setItem("matfit_persona", p);
-  }
+  }, [setPersona]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastNonce = useRef(0);
@@ -169,18 +166,6 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
             <Sparkles className="w-3.5 h-3.5 text-green-600" strokeWidth={1.5} />
           </div>
           <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 flex-1">Persönlicher Assistent</p>
-        </div>
-        {/* Persona selector */}
-        <div data-tour="persona" className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5">
-          {([["berater", "Tier-1-Berater"], ["kritiker", "Kritiker"]] as const).map(([key, label]) => (
-            <button key={key} onClick={() => choosePersona(key)}
-              className={cn("flex-1 text-[11px] font-medium rounded-md py-1 transition-colors",
-                persona === key
-                  ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 shadow-sm"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200")}>
-              {label}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -317,8 +302,8 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
 // ── Panel shell: persistent column on desktop, slide-in drawer on mobile ──────
 
 const MIN_W = 240;
-const MAX_W = 520;
-const DEFAULT_W = 280;
+const MAX_W = 640;
+const DEFAULT_W = 280; // SSR-safe fallback before we can measure window width
 
 export function AssistantDock({ token, projectId, scopeKey }: { token: string | null; projectId: string | null; scopeKey: string }) {
   const openMobile = useChatStore(s => s.assistantOpenMobile);
@@ -332,7 +317,9 @@ export function AssistantDock({ token, projectId, scopeKey }: { token: string | 
 
   useEffect(() => {
     const saved = Number(localStorage.getItem("matfit_assistant_w"));
-    if (saved >= MIN_W && saved <= MAX_W) apply(saved);
+    if (saved >= MIN_W && saved <= MAX_W) { apply(saved); return; }
+    // No saved preference yet — default to roughly a third of the screen.
+    apply(Math.min(MAX_W, Math.max(MIN_W, Math.round(window.innerWidth / 3))));
   }, []);
 
   useEffect(() => {

@@ -144,17 +144,6 @@ function MultiChoiceChips({ choices, onSubmit }: { choices: string[]; onSubmit: 
   );
 }
 
-function Btn({ children, onClick, className, disabled }: {
-  children: React.ReactNode; onClick?: () => void; className?: string; disabled?: boolean;
-}) {
-  return (
-    <motion.button whileHover={disabled ? {} : { y: -1 }} whileTap={disabled ? {} : { scale: 0.97 }}
-      transition={BTN_SPRING} onClick={onClick} disabled={disabled} className={className}>
-      {children}
-    </motion.button>
-  );
-}
-
 // ── Message actions (copy — right-aligned) ────────────────────────────────────
 function MsgActions({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -308,6 +297,11 @@ export default function ChatPage() {
       <div className="thinking-spinner" style={{ width: 28, height: 28 }} />
     </div>
   );
+
+  // The welcome screen (no project, no conversation) only offers "Starte Projekt".
+  // Showing a chat bar there is misleading, so the composer is hidden until the
+  // user is actually in a project or a conversation.
+  const onWelcome = msgs.length === 0 && !store.sending && !activeProject;
 
   return (
     <AppShell active="chat">
@@ -463,8 +457,8 @@ export default function ChatPage() {
                     className="text-[32px] md:text-[40px] font-extrabold text-zinc-900 dark:text-zinc-50 leading-[1.1] mb-4"
                     style={{ letterSpacing: "-0.03em" }}
                   >
-                    Was möchtest du<br />
-                    <span className="text-green-600">heute lösen?</span>
+                    Lass uns prüfen, welches A.I. Setup<br />
+                    am besten deine <span className="text-green-600">Ziele erreicht</span>
                   </h2>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-10 leading-relaxed">
                     Transformation Concepts. Roadmaps. IT-Know-how.<br className="hidden sm:block" />
@@ -511,8 +505,8 @@ export default function ChatPage() {
                   )}
                 </AnimatePresence>
 
-                {/* Action cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8 text-left">
+                {/* Action card */}
+                <div className="grid grid-cols-1 gap-3 mb-8 text-left">
                   {([
                     {
                       icon: <Plus className="w-4 h-4" strokeWidth={1.5} />,
@@ -521,14 +515,6 @@ export default function ChatPage() {
                       cta: "Jetzt starten →",
                       accent: true,
                       action: () => setCreatingProject(true),
-                    },
-                    {
-                      icon: <MessageSquare className="w-4 h-4" strokeWidth={1.5} />,
-                      label: "Schnelle Frage",
-                      sub: "Frag alles — IT-Architektur, Tools, Strategie.",
-                      cta: "Frage stellen →",
-                      accent: false,
-                      action: () => inputRef.current?.focus(),
                     },
                   ] as const).map((c, idx) => (
                     <motion.div
@@ -566,22 +552,6 @@ export default function ChatPage() {
                     </motion.div>
                   ))}
                 </div>
-
-                {/* Topic chips */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.38, duration: 0.4 }}
-                  className="flex flex-wrap gap-2 justify-center"
-                >
-                  <span className="text-xs text-zinc-400 self-center mr-1">Probier:</span>
-                  {["Cloud Migration", "Make.com vs Zapier", "IT-Sicherheitsaudit", "ERP-Auswahl", "DevOps einführen"].map(p => (
-                    <Btn key={p}
-                      onClick={() => { setInput(p); inputRef.current?.focus(); }}
-                      className="px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[12px] text-zinc-600 dark:text-zinc-400 hover:border-green-300 dark:hover:border-green-700 hover:text-green-700 dark:hover:text-green-400 hover:bg-green-50/60 dark:hover:bg-green-950/30 transition-colors duration-150"
-                    >{p}</Btn>
-                  ))}
-                </motion.div>
               </div>
             </div>
           ) : (
@@ -660,7 +630,8 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Composer */}
+        {/* Composer — hidden on the welcome screen (only "Starte Projekt" there) */}
+        {!onWelcome && (
         <footer className="shrink-0 px-4 md:px-8 lg:px-12 py-4 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <div className="max-w-5xl mx-auto w-full">
             {/* Research is hidden for now — it becomes its own feature later. */}
@@ -693,6 +664,7 @@ export default function ChatPage() {
             </div>
           </div>
         </footer>
+        )}
     </AppShell>
   );
 }

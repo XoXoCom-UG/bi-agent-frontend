@@ -39,6 +39,8 @@ interface ChatStore {
   sending: boolean;
   mode: "chat" | "research";
   guidedProject: boolean;
+  // Assistant reply style, chosen in Settings (default: Tier-1-Berater).
+  persona: "berater" | "kritiker";
   thinkingPhase: string;
   sidebarOpen: boolean;
 
@@ -79,6 +81,7 @@ interface ChatStore {
   setSending: (b: boolean) => void;
   setMode: (m: "chat" | "research") => void;
   setGuidedProject: (b: boolean) => void;
+  setPersona: (p: "berater" | "kritiker") => void;
   setThinkingPhase: (p: string) => void;
   setSidebarOpen: (b: boolean) => void;
   reorderProjects: (ids: string[]) => void;
@@ -109,6 +112,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   sending: false,
   mode: "chat",
   guidedProject: false,
+  persona: "berater",
   thinkingPhase: "",
   sidebarOpen: false,
   assistantContext: null,
@@ -136,6 +140,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   setSending: (b) => set({ sending: b }),
   setMode: (m) => set({ mode: m }),
   setGuidedProject: (b) => set({ guidedProject: b }),
+  setPersona: (p) => { localStorage.setItem("matfit_persona", p); set({ persona: p }); },
   setThinkingPhase: (p) => set({ thinkingPhase: p }),
   setSidebarOpen: (b) => set({ sidebarOpen: b }),
   reorderProjects: (ids) =>

@@ -9,9 +9,9 @@ import { Sparkles, X, ArrowRight, Check } from "lucide-react";
 /*
  * Guided onboarding tour — the assistant "coach" (right voice) narrates while a
  * spotlight highlights the matching element on the page ("klick hier"). Chapters
- * with a progress bar; a small confetti burst on each step. Delivered via the
- * assistant so it feels personal. Acceptance criteria (Patryk): only new users,
- * only first time, always ask first, restart from Settings.
+ * with a progress bar. Delivered via the assistant so it feels personal.
+ * Acceptance criteria (Patryk): only new users, only first time, always ask
+ * first, restart from Settings.
  */
 
 interface TourStep {
@@ -26,48 +26,26 @@ interface TourStep {
 // One forward journey: chat → (user clicks) Concept → (user clicks) Roadmap.
 const STEPS: TourStep[] = [
   { target: "projekte", chapter: "Grundlagen", title: "Deine Projekte", goto: "/chat", advance: "weiter",
-    text: "Hier startest du ein Projekt, wechselst zwischen Konversationen und löschst mit 15-Minuten-Undo." },
+    text: "Als Erstes: Hier startest du ein Projekt, wechselst zwischen Konversationen und kannst mit 15-Minuten-Undo sicher löschen." },
   { target: "composer", chapter: "Grundlagen", title: "Frag den Agenten", goto: "/chat", advance: "weiter",
-    text: "Hier stellst du deine Frage oder startest das geführte Interview. Das ist ein echtes Beispiel-Gespräch." },
+    text: "Weiter geht's hier: Du stellst deine Frage oder startest das geführte Interview. Das Folgende ist ein echtes Beispiel-Gespräch." },
   { target: "assistant", chapter: "Assistent", title: "Dein persönlicher Assistent", goto: "/chat", advance: "weiter",
-    text: "Immer an deiner Seite — frag jederzeit etwas. Tipp: markiere Text in einer Antwort, um genau darüber zu sprechen." },
+    text: "Rechts an deiner Seite wartet dein persönlicher Assistent — frag ihn jederzeit etwas. Tipp: markiere Text in einer Antwort, um direkt darüber zu sprechen." },
   { target: "persona", chapter: "Assistent", title: "Sein Stil", goto: "/chat", advance: "weiter",
-    text: "Wähle, wie er antwortet: Tier-1-Berater (klare Empfehlungen) oder Kritiker (deckt Risiken und Schwächen auf)." },
+    text: "Du entscheidest, wie er antwortet: als Tier-1-Berater mit klaren Empfehlungen, oder im Kritiker-Modus, der Risiken und Schwächen aufdeckt." },
   { target: "concept", chapter: "Ergebnisse", title: "Probier es aus: Transformation Concept", goto: "/chat", advance: "click",
-    text: "Klick jetzt oben auf »Transformation Concept« — du siehst sofort, was aus dem Gespräch entsteht." },
+    text: "Jetzt wird's konkret: Klick oben auf »Transformation Concept« und sieh sofort, was aus eurem Gespräch entsteht." },
   { target: "", chapter: "Ergebnisse", title: "Dein Konzept", goto: "/concept", advance: "weiter",
-    text: "Das ist ein fertiges Beispiel-Konzept: Ist-Zustand, Ziel-Zustand und Tooling als Tabellen — ganz ohne Warten." },
+    text: "Das hier ist ein fertiges Beispiel-Konzept: Ist-Zustand, Ziel-Zustand und Tooling übersichtlich als Tabellen — ganz ohne Warten." },
   { target: "roadmap", chapter: "Ergebnisse", title: "Und jetzt die Roadmap", goto: "/concept", advance: "click",
-    text: "Klick oben auf »Roadmap«, um den Umsetzungsplan zu sehen." },
+    text: "Und weiter geht's: Klick oben auf »Roadmap«, um zu sehen, wie daraus ein Umsetzungsplan wird." },
   { target: "", chapter: "Ergebnisse", title: "Deine Roadmap", goto: "/dashboard", advance: "weiter",
-    text: "Phasen, Tools und wie alle Bausteine zusammenwirken — auch das hier ist das Beispiel." },
+    text: "Das ist deine Roadmap: Phasen, Tools und wie alle Bausteine zusammenwirken — auch das hier ist das Beispiel." },
   { target: "profile", chapter: "Abschluss", title: "Profil & Einstellungen", goto: "/dashboard", advance: "weiter",
-    text: "Hier findest du dein Profil, das Design — und kannst diese Tour jederzeit neu starten. Viel Erfolg! 🎉" },
+    text: "Zum Schluss: Hier findest du dein Profil, das Design — und kannst diese Tour jederzeit neu starten. Viel Erfolg! 🎉" },
 ];
 
 const PAD = 8;
-
-function Confetti({ seed }: { seed: number }) {
-  const colors = ["#16a34a", "#22c55e", "#4ade80", "#a3e635", "#facc15"];
-  // Deterministic-ish spread by index (no Math.random needed at module level).
-  const parts = Array.from({ length: 16 }, (_, i) => {
-    const angle = (i / 16) * Math.PI * 2;
-    const dist = 60 + (i % 4) * 22;
-    return { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist - 20, c: colors[i % colors.length] };
-  });
-  return (
-    <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-visible">
-      {parts.map((p, i) => (
-        <motion.span key={`${seed}-${i}`}
-          initial={{ opacity: 1, x: 0, y: 0, scale: 1 }}
-          animate={{ opacity: 0, x: p.x, y: p.y, scale: 0.4 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-          className="absolute w-2 h-2 rounded-sm"
-          style={{ background: p.c }} />
-      ))}
-    </div>
-  );
-}
 
 export function TutorialOverlay() {
   const active = useChatStore(s => s.tourActive);
@@ -78,8 +56,9 @@ export function TutorialOverlay() {
   const router = useRouter();
   const pathname = usePathname();
   const [rect, setRect] = useState<DOMRect | null>(null);
-  const [burst, setBurst] = useState(0);
   const [mounted, setMounted] = useState(false);
+  // Explains the dimmed background the very first time the tour runs, ever.
+  const [showBgHint] = useState(() => typeof window !== "undefined" && !localStorage.getItem("matfit_tour_bg_hint_seen"));
 
   useEffect(() => setMounted(true), []);
 
@@ -109,7 +88,9 @@ export function TutorialOverlay() {
     return () => { clearTimeout(t); clearTimeout(t2); window.removeEventListener("resize", measure); window.removeEventListener("scroll", measure, true); };
   }, [active, step, measure, pathname]);
 
-  useEffect(() => { if (active) setBurst(b => b + 1); }, [active, step]);
+  useEffect(() => {
+    if (active && step === 0 && showBgHint) localStorage.setItem("matfit_tour_bg_hint_seen", "1");
+  }, [active, step, showBgHint]);
 
   // Hands-on steps: advance when the user actually clicks the highlighted element.
   useEffect(() => {
@@ -185,7 +166,6 @@ export function TutorialOverlay() {
           style={{ width: cardW, ...cardStyle }}
         >
           <div className="relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl shadow-black/40 border border-zinc-200 dark:border-zinc-700 overflow-hidden">
-            <Confetti seed={burst} />
             {/* progress */}
             <div className="h-1 bg-zinc-100 dark:bg-zinc-800">
               <motion.div className="h-full bg-green-500" initial={false} animate={{ width: `${progress}%` }}
@@ -204,6 +184,12 @@ export function TutorialOverlay() {
               </div>
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 mb-1">{cur.title}</h3>
               <p className="text-[12.5px] text-zinc-600 dark:text-zinc-300 leading-relaxed mb-3">{cur.text}</p>
+              {step === 0 && showBgHint && (
+                <div className="flex items-start gap-1.5 text-[11px] text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 rounded-lg px-2.5 py-2 mb-3">
+                  <Sparkles className="w-3 h-3 shrink-0 mt-0.5" strokeWidth={1.5} />
+                  Im Hintergrund siehst du ein Beispiel wie so etwas aussehen kann.
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <button onClick={finish} className="text-[11px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
                   Überspringen

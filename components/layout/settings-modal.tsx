@@ -15,6 +15,8 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
   const { theme, setTheme } = useTheme();
   const { user, signOut, token } = useAuth();
   const startTour = useChatStore(s => s.startTour);
+  const persona = useChatStore(s => s.persona);
+  const setPersona = useChatStore(s => s.setPersona);
   const [name, setName] = useState("");
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -208,6 +210,27 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
                           <div className="h-9 rounded-lg border border-zinc-100 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 flex items-center">
                             <span className="text-sm text-zinc-500 dark:text-zinc-400">{user?.email || "—"}</span>
                           </div>
+                        </div>
+
+                        {/* Assistant persona */}
+                        <div data-tour="persona" className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                          <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2 block">
+                            Assistenten-Stil
+                          </label>
+                          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5 max-w-xs">
+                            {([["berater", "Tier-1-Berater"], ["kritiker", "Kritiker-Modus"]] as const).map(([key, label]) => (
+                              <button key={key} onClick={() => setPersona(key)}
+                                className={cn("flex-1 text-xs font-medium rounded-md py-1.5 transition-colors",
+                                  persona === key
+                                    ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 shadow-sm"
+                                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200")}>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[11px] text-zinc-400 mt-2">
+                            Tier-1-Berater gibt dir klare Empfehlungen, der Kritiker-Modus deckt Risiken und Schwächen auf.
+                          </p>
                         </div>
 
                         {/* Tutorial */}
