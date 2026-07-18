@@ -28,6 +28,64 @@ const PHASES_CHAT = [
 
 const BTN_SPRING = { type: "spring", stiffness: 500, damping: 30 } as const;
 
+// ── Home hero: rotating accent word (blur-rise) ───────────────────────────────
+const ROTATE_WORDS = [
+  "Ziele erreicht",
+  "Kosten senkst",
+  "Prozesse automatisierst",
+  "Risiken reduzierst",
+  "Systeme modernisierst",
+];
+function RotatingWord() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = setInterval(() => setI(v => (v + 1) % ROTATE_WORDS.length), 2800);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span className="mf-slot text-green-600">
+      <span key={i} className="mf-rotator">{ROTATE_WORDS[i]}</span>
+    </span>
+  );
+}
+
+// ── Home hero: interactive background (aurora at rest → dot-field at cursor) ───
+function WelcomeBackground() {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const dotRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const [interacting, setInteracting] = useState(false);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let idle: ReturnType<typeof setTimeout>;
+    function onMove(e: PointerEvent) {
+      const wrap = wrapRef.current;
+      if (!wrap) return;
+      const r = wrap.getBoundingClientRect();
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      if (x < 0 || y < 0 || x > r.width || y > r.height) return; // pointer outside hero
+      dotRef.current?.style.setProperty("--mx", `${x}px`);
+      dotRef.current?.style.setProperty("--my", `${y}px`);
+      if (glowRef.current) { glowRef.current.style.left = `${x}px`; glowRef.current.style.top = `${y}px`; }
+      setInteracting(true);
+      clearTimeout(idle);
+      idle = setTimeout(() => setInteracting(false), 2200);
+    }
+    window.addEventListener("pointermove", onMove);
+    return () => { window.removeEventListener("pointermove", onMove); clearTimeout(idle); };
+  }, []);
+  return (
+    <div ref={wrapRef} aria-hidden="true"
+      className={cn("mf-bg pointer-events-none absolute inset-0 overflow-hidden", interacting && "mf-interacting")}>
+      <div className="mf-aurora mf-aurora-1" />
+      <div className="mf-aurora mf-aurora-2" />
+      <div ref={dotRef} className="mf-dotfield" />
+      <div ref={glowRef} className="mf-cursor-glow" />
+    </div>
+  );
+}
+
 // ── Thinking bubble with accumulated phases ───────────────────────────────────
 function ThinkingBubble({ phases, current }: { phases: string[]; current: number }) {
   const visiblePhases = phases.slice(0, Math.min(current + 1, phases.length));
@@ -421,15 +479,8 @@ export default function ChatPage() {
           ) : msgs.length === 0 && !store.sending ? (
             <div className="relative flex flex-col items-center justify-center min-h-full px-6 py-16 overflow-hidden">
 
-              {/* Ambient background glow */}
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <motion.div
-                  animate={{ scale: [1, 1.08, 1], opacity: [0.06, 0.11, 0.06] }}
-                  transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                  className="w-[600px] h-[400px] rounded-full"
-                  style={{ background: "radial-gradient(ellipse, #16a34a, transparent 70%)" }}
-                />
-              </div>
+              {/* Interactive ambient background */}
+              <WelcomeBackground />
 
               <div className="relative w-full max-w-lg text-center">
 
@@ -458,7 +509,7 @@ export default function ChatPage() {
                     style={{ letterSpacing: "-0.03em" }}
                   >
                     Lass uns prüfen, welches A.I. Setup<br />
-                    am besten deine <span className="text-green-600">Ziele erreicht</span>
+                    am besten deine <RotatingWord />
                   </h2>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-10 leading-relaxed">
                     Transformation Concepts. Roadmaps. IT-Know-how.<br className="hidden sm:block" />
