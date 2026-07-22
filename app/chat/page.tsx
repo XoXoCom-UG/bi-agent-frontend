@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Zap, ArrowUp, ArrowRight, MessageSquare, CheckCircle2, Copy, Check,
-  Folder, Plus, LayoutDashboard, Sparkles, Wrench,
+  Folder, Plus, LayoutDashboard, Sparkles, Wrench, ShieldCheck, Server, Lock,
 } from "lucide-react";
 
 // ── Phase list (long, non-repeating within a response) ───────────────────────
@@ -351,8 +351,31 @@ export default function ChatPage() {
   })();
 
   if (loading || !token) return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-      <div className="thinking-spinner" style={{ width: 28, height: 28 }} />
+    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950">
+      {/* Topbar skeleton */}
+      <div className="h-14 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-3 px-5 shrink-0">
+        <div className="skeleton h-4 w-20" />
+        <div className="skeleton h-8 w-24 rounded-lg ml-2" />
+        <div className="skeleton h-8 w-40 rounded-lg" />
+        <div className="flex-1" />
+        <div className="skeleton h-8 w-8 rounded-full" />
+      </div>
+      {/* Body skeleton */}
+      <div className="flex-1 flex">
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
+          <div className="skeleton h-9 w-72 max-w-[80%]" />
+          <div className="skeleton h-9 w-96 max-w-[80%]" />
+          <div className="skeleton h-4 w-64 max-w-[70%] mt-2" />
+          <div className="skeleton h-16 w-full max-w-sm rounded-2xl mt-6" />
+        </div>
+        <div className="hidden lg:flex flex-col gap-3 w-[320px] border-l border-zinc-100 dark:border-zinc-800 p-4">
+          <div className="skeleton h-5 w-40" />
+          <div className="skeleton h-16 w-full rounded-xl mt-2" />
+          <div className="skeleton h-9 w-full rounded-lg" />
+          <div className="skeleton h-9 w-full rounded-lg" />
+          <div className="skeleton h-9 w-full rounded-lg" />
+        </div>
+      </div>
     </div>
   );
 
@@ -598,6 +621,25 @@ export default function ChatPage() {
                     </div>
                   ))}
                 </motion.div>
+
+                {/* Trust / compliance strip */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5, duration: 0.4 }}
+                  className="mt-10 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] font-medium text-zinc-400 dark:text-zinc-500"
+                >
+                  {[
+                    { Icon: ShieldCheck, label: "DSGVO-konform" },
+                    { Icon: Server, label: "Daten in der EU" },
+                    { Icon: Lock, label: "Projekt-isoliert" },
+                  ].map(({ Icon, label }) => (
+                    <span key={label} className="inline-flex items-center gap-1.5">
+                      <Icon className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" strokeWidth={1.5} />
+                      {label}
+                    </span>
+                  ))}
+                </motion.div>
               </div>
             </div>
           ) : (
@@ -708,6 +750,9 @@ export default function ChatPage() {
                 <ArrowUp className="w-4 h-4" strokeWidth={2} />
               </motion.button>
             </div>
+            <p className="text-[10.5px] text-zinc-400 dark:text-zinc-500 text-center mt-2">
+              matfit.ai kann Fehler machen — prüfe wichtige Informationen. Antworten basieren auf deinem Projekt-Kontext.
+            </p>
           </div>
         </footer>
         )}

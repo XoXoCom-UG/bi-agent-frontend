@@ -149,3 +149,31 @@ html.dark .mf-cursor-glow { background: radial-gradient(circle, rgba(34,197,94,0
   }
   .print-area * { overflow: visible !important; }
 }
+
+/* ── Enterprise foundation: semantic colors, states, a11y ───────────────────── */
+:root { --ok:#16a34a; --warn:#b45309; --err:#dc2626; --info:#2563eb; }
+html.dark { --ok:#22c55e; --warn:#f59e0b; --err:#f87171; --info:#60a5fa; }
+
+/* Visible keyboard focus everywhere (mouse clicks stay clean via :focus-visible) */
+:where(a,button,[role="button"],input,textarea,select,summary,[tabindex]):focus-visible {
+  outline: 2px solid var(--green); outline-offset: 2px; border-radius: 6px;
+}
+
+/* Skeleton loaders */
+.skeleton { position: relative; overflow: hidden; background: #eceeec; border-radius: 8px; }
+html.dark .skeleton { background: #1f2320; }
+.skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent); animation: sk 1.4s infinite; }
+html.dark .skeleton::after { background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent); }
+@keyframes sk { 100% { transform: translateX(100%); } }
+
+/* Keyboard hint chip */
+.kbd { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 10px; line-height: 1;
+  padding: 2px 5px; border-radius: 5px; border: 1px solid #e5e7eb; background: #f9fafb; color: #6b7280; }
+html.dark .kbd { border-color: #3f3f46; background: #27272a; color: #a1a1aa; }
+
+/* Respect reduced-motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

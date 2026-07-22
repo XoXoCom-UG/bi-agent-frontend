@@ -8,10 +8,11 @@ import { cn } from "@/lib/utils";
 import { SettingsModal } from "./settings-modal";
 import { AssistantDock } from "./right-panel";
 import { TutorialOverlay } from "./tutorial";
+import { CommandPalette } from "./command-palette";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Zap, Map, Folder, FolderOpen, Plus, ChevronDown, Check, X,
-  GripVertical, MessageCircle, Sparkles, Trash2, RotateCcw,
+  GripVertical, MessageCircle, Sparkles, Trash2, RotateCcw, Search,
 } from "lucide-react";
 
 type ActiveScreen = "chat" | "concept" | "dashboard";
@@ -81,6 +82,7 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
   return (
     <div className="flex flex-col bg-zinc-50 dark:bg-zinc-950" style={{ height: "100vh", overflow: "hidden" }}>
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <CommandPalette onOpenSettings={() => setSettingsOpen(true)} />
 
       {/* ── Topbar — spans the full screen width ──────────────────────── */}
       <header className="no-print flex items-center gap-2 md:gap-3 px-3 md:px-5 h-14 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900 z-30">
@@ -123,7 +125,13 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
           {/* Right cluster — kept minimal: just the avatar. Click opens
               Einstellungen (profile + logout live inside the modal). */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* Mobile: open the assistant drawer (no floating button that covers the composer) */}
+            {/* Command palette trigger (⌘K) */}
+            <button onClick={() => window.dispatchEvent(new Event("matfit:cmdk"))} title="Suchen (⌘K)"
+              className="hidden sm:flex items-center gap-2 h-8 pl-2.5 pr-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+              <Search className="w-3.5 h-3.5" strokeWidth={1.6} />
+              <span className="kbd">⌘K</span>
+            </button>
+          {/* Mobile: open the assistant drawer (no floating button that covers the composer) */}
             <button onClick={() => store.setAssistantOpenMobile(true)} title="Assistent"
               className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40 transition-colors">
               <Sparkles className="w-4 h-4" strokeWidth={1.5} />
