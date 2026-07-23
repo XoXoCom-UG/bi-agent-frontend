@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence, useSpring } from "motion/react";
 import { deriveConceptMetrics } from "@/lib/metrics";
-import { RoiSimulator } from "@/components/charts/roi-simulator";
 import { BeforeAfterGrid, EffortPie } from "@/components/charts/concept-charts";
 
 // ── Magnetic button ───────────────────────────────────────────────────────────
@@ -558,15 +557,14 @@ function ConceptContent() {
 
                 {/* Visual dashboard — driven by the concept's own numbers. Each block
                     only appears when the underlying data is actually present. */}
-                {(metrics.beforeAfter.length > 0 || metrics.money) && (
+                {metrics.beforeAfter.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ type: "spring", duration: 0.5, bounce: 0 }}
                     className="flex flex-col gap-5"
                   >
-                    {metrics.beforeAfter.length > 0 && <BeforeAfterGrid items={metrics.beforeAfter} />}
-                    {metrics.money && <RoiSimulator setup={metrics.money.setup} monthly={metrics.money.monthly} />}
+                    <BeforeAfterGrid items={metrics.beforeAfter} />
                   </motion.div>
                 )}
 
@@ -771,32 +769,48 @@ function ConceptContent() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ type: "spring", duration: 0.5, bounce: 0, delay: 0.28 }}
-                    className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden"
+                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_8px_-3px_rgba(16,40,22,0.08),0_16px_36px_-20px_rgba(16,40,22,0.16)] overflow-hidden"
                   >
-                    <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-                      <h2 className="text-base font-semibold text-zinc-900">User Stories</h2>
-                      <span className="text-xs text-zinc-400">Product Owner</span>
+                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-green-50 dark:bg-green-950/60 flex items-center justify-center ring-1 ring-green-100 dark:ring-green-900 shrink-0">
+                        <FileText className="w-4 h-4 text-green-600" strokeWidth={1.6} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-[15px] font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-none">User Stories</h2>
+                        <p className="text-xs text-zinc-400 mt-1">Reihenfolge — in dieser Folge umsetzen</p>
+                      </div>
+                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/50 px-2.5 py-1 rounded-full tabular-nums">
+                        {stories.length} Stories
+                      </span>
                     </div>
-                    {stories.map((s, i) => (
-                      <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        transition={{ delay: 0.3 + i * 0.06 }}
-                        className={`px-6 py-5 flex gap-4 ${i < stories.length - 1 ? "border-b border-zinc-100" : ""}`}>
-                        <motion.div whileHover={{ scale: 1.05 }}
-                          className="w-7 h-7 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-xs font-semibold text-zinc-600 flex-shrink-0 mt-0.5">
-                          {s.size || "M"}
-                        </motion.div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-zinc-900 mb-1">{s.title}</p>
-                          <p className="text-sm leading-relaxed text-zinc-500 mb-2">{s.story}</p>
+                    <div className="p-5 grid sm:grid-cols-2 gap-4">
+                      {stories.map((s, i) => (
+                        <motion.div key={i}
+                          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3 + i * 0.05, type: "spring", duration: 0.4, bounce: 0 }}
+                          className="group/card relative flex flex-col rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/40 p-4 hover:border-green-300 dark:hover:border-green-800 hover:shadow-md transition-all duration-200"
+                        >
+                          <div className="flex items-center gap-2.5 mb-2">
+                            <span className="shrink-0 w-6 h-6 rounded-md bg-white dark:bg-zinc-900 ring-1 ring-zinc-200 dark:ring-zinc-700 text-[11px] font-bold text-zinc-500 dark:text-zinc-400 flex items-center justify-center tabular-nums">
+                              {i + 1}
+                            </span>
+                            <p className="flex-1 min-w-0 text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug">{s.title}</p>
+                            {s.size && (
+                              <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 ring-1 ring-zinc-200 dark:ring-zinc-700 px-2 py-0.5 rounded-full" title="Aufwand">
+                                {s.size}
+                              </span>
+                            )}
+                          </div>
+                          {s.story && <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400 mb-3">{s.story}</p>}
                           {s.acceptance_criteria && (
-                            <p className="text-xs text-green-600 font-medium flex items-center gap-1.5">
-                              <CheckCircle2 className="w-3 h-3" strokeWidth={2} />
+                            <p className="mt-auto text-xs text-green-700 dark:text-green-400 font-medium flex items-start gap-1.5 border-t border-zinc-200/70 dark:border-zinc-800 pt-2.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" strokeWidth={2} />
                               {s.acceptance_criteria}
                             </p>
                           )}
-                        </div>
-                      </motion.div>
-                    ))}
+                        </motion.div>
+                      ))}
+                    </div>
                   </motion.div>
                 )}
               </div>

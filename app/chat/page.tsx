@@ -28,28 +28,6 @@ const PHASES_CHAT = [
 
 const BTN_SPRING = { type: "spring", stiffness: 500, damping: 30 } as const;
 
-// ── Home hero: rotating accent word (blur-rise) ───────────────────────────────
-const ROTATE_WORDS = [
-  "Ziele erreicht",
-  "Kosten senkst",
-  "Prozesse automatisierst",
-  "Risiken reduzierst",
-  "Systeme modernisierst",
-];
-function RotatingWord() {
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const t = setInterval(() => setI(v => (v + 1) % ROTATE_WORDS.length), 2800);
-    return () => clearInterval(t);
-  }, []);
-  return (
-    <span className="mf-slot text-green-600">
-      <span key={i} className="mf-rotator">{ROTATE_WORDS[i]}</span>
-    </span>
-  );
-}
-
 // ── Home hero: interactive background (aurora at rest → dot-field at cursor) ───
 function WelcomeBackground() {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -540,7 +518,7 @@ export default function ChatPage() {
                     style={{ letterSpacing: "-0.03em" }}
                   >
                     Lass uns prüfen, welches A.I. Setup<br />
-                    am besten deine <RotatingWord />
+                    am besten deine <span className="text-green-600">Ziele erreicht</span>
                   </h2>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-10 leading-relaxed">
                     Transformation Concepts. Roadmaps. IT-Know-how.<br className="hidden sm:block" />
