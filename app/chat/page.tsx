@@ -631,6 +631,42 @@ export default function ChatPage() {
                   Beispiel — nur zur Ansicht während der Tour. Deine echten Gespräche startest du danach.
                 </div>
               )}
+
+              {/* Empty project chat — an inviting prompt instead of a blank screen */}
+              {msgs.length === 0 && !demo && !store.sending && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", duration: 0.5, bounce: 0.04 }}
+                  className="flex flex-col items-center text-center py-20 max-w-md mx-auto"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-green-50 dark:bg-green-950/60 flex items-center justify-center mb-4 ring-1 ring-green-100 dark:ring-green-900">
+                    <Sparkles className="w-5 h-5 text-green-600" strokeWidth={1.5} />
+                  </div>
+                  <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 mb-1.5" style={{ letterSpacing: "-0.02em" }}>
+                    Erzähl mir von deinem Vorhaben
+                  </h3>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mb-6">
+                    Beschreibe kurz dein Projekt oder deine Herausforderung — ich stelle dir dann die richtigen Fragen, und wir bauen gemeinsam Konzept &amp; Roadmap.
+                  </p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {["Wir wollen in die Cloud migrieren", "Wir brauchen ein IT-Sicherheitskonzept", "Welches ERP passt zu uns?"].map((ex, i) => (
+                      <motion.button
+                        key={ex}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.16 + i * 0.06, type: "spring", duration: 0.4, bounce: 0 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => { setInput(ex); inputRef.current?.focus(); }}
+                        className="px-3.5 py-2 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/60 text-[12.5px] text-zinc-600 dark:text-zinc-300 hover:border-green-300 dark:hover:border-green-700 hover:text-green-700 dark:hover:text-green-400 hover:bg-green-50/60 dark:hover:bg-green-950/30 transition-colors duration-150"
+                      >
+                        {ex}
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
               {msgs.map((m, i) => {
                 const isUser = m.role === "user";
                 let content = toText(m.content);
@@ -668,14 +704,28 @@ export default function ChatPage() {
                       {multi.length > 0 && isLastAssistant && <MultiChoiceChips choices={multi} onSubmit={send} />}
                       {openTarget === "concept" && (
                         <button onClick={() => router.push(`/concept?session=${store.sessionId}&gen=1`)}
-                          className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors rounded-xl px-4 py-2.5 shadow-sm shadow-green-600/20">
-                          <Zap className="w-4 h-4" strokeWidth={1.5} /> Transformation Concept erstellen
+                          className="group/cta mt-3 relative inline-flex items-center gap-3 overflow-hidden text-sm font-semibold text-white rounded-2xl pl-3 pr-5 py-2.5 shadow-lg shadow-green-600/25 hover:shadow-xl hover:shadow-green-600/30 active:scale-[0.98] transition-all duration-200"
+                          style={{ background: "linear-gradient(140deg, #16a34a 0%, #15803d 60%, #14532d 100%)" }}>
+                          <span className="pointer-events-none absolute inset-0 -translate-x-full group-hover/cta:translate-x-full transition-transform duration-700 ease-out"
+                            style={{ background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.22) 50%, transparent 60%)" }} />
+                          <span className="w-8 h-8 rounded-xl bg-white/20 ring-1 ring-white/25 flex items-center justify-center shrink-0 transition-transform duration-200 group-hover/cta:scale-105 group-hover/cta:-rotate-[4deg]">
+                            <Zap className="w-4 h-4" strokeWidth={1.6} />
+                          </span>
+                          Transformation Concept erstellen
+                          <ArrowRight className="w-4 h-4 opacity-80 -translate-x-0.5 group-hover/cta:translate-x-0.5 transition-transform duration-200" strokeWidth={2} />
                         </button>
                       )}
                       {openTarget === "roadmap" && (
                         <button onClick={() => router.push(`/dashboard?session=${store.sessionId}`)}
-                          className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors rounded-xl px-4 py-2.5 shadow-sm shadow-green-600/20">
-                          <LayoutDashboard className="w-4 h-4" strokeWidth={1.5} /> Roadmap erstellen
+                          className="group/cta mt-3 relative inline-flex items-center gap-3 overflow-hidden text-sm font-semibold text-white rounded-2xl pl-3 pr-5 py-2.5 shadow-lg shadow-green-600/25 hover:shadow-xl hover:shadow-green-600/30 active:scale-[0.98] transition-all duration-200"
+                          style={{ background: "linear-gradient(140deg, #16a34a 0%, #15803d 60%, #14532d 100%)" }}>
+                          <span className="pointer-events-none absolute inset-0 -translate-x-full group-hover/cta:translate-x-full transition-transform duration-700 ease-out"
+                            style={{ background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.22) 50%, transparent 60%)" }} />
+                          <span className="w-8 h-8 rounded-xl bg-white/20 ring-1 ring-white/25 flex items-center justify-center shrink-0 transition-transform duration-200 group-hover/cta:scale-105 group-hover/cta:-rotate-[4deg]">
+                            <LayoutDashboard className="w-4 h-4" strokeWidth={1.6} />
+                          </span>
+                          Roadmap erstellen
+                          <ArrowRight className="w-4 h-4 opacity-80 -translate-x-0.5 group-hover/cta:translate-x-0.5 transition-transform duration-200" strokeWidth={2} />
                         </button>
                       )}
                     </div>

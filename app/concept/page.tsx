@@ -575,55 +575,63 @@ function ConceptContent() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ type: "spring", duration: 0.5, bounce: 0 }}
-                  className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden"
+                  className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_8px_-3px_rgba(16,40,22,0.08),0_16px_36px_-20px_rgba(16,40,22,0.16)] overflow-hidden"
                 >
-                  <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-                    <h2 className="text-base font-semibold text-zinc-900">Ziel-Zustand</h2>
-                    {goal.summary && <span className="text-xs text-zinc-400 truncate max-w-[50%]">{goal.summary}</span>}
+                  <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-green-50 dark:bg-green-950/60 flex items-center justify-center ring-1 ring-green-100 dark:ring-green-900 shrink-0">
+                      <Zap className="w-4 h-4 text-green-600" strokeWidth={1.6} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-[15px] font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-none">Ziel-Zustand</h2>
+                      {goal.summary && <p className="text-xs text-zinc-400 truncate mt-1">{goal.summary}</p>}
+                    </div>
+                    {goalTable.length > 0 && (
+                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/50 px-2.5 py-1 rounded-full tabular-nums">
+                        {goalTable.length} Schritte
+                      </span>
+                    )}
                   </div>
                   {goalTable.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-zinc-50">
-                          <tr>
-                            {["Ziel", "Annahme bestes Tooling", "Mögliche Alternativen"].map(h => (
-                              <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
-                            ))}
-                            <th className="w-8" />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {goalTable.map((row, i) => (
-                            <tr key={i} className="group/row border-t border-zinc-100 hover:bg-zinc-50/60 align-top">
-                              <td className="px-5 py-3.5 text-sm text-zinc-800 font-medium leading-snug">{row.ziel}</td>
-                              <td className="px-5 py-3.5 text-sm text-zinc-600 leading-snug">{row.tooling}</td>
-                              <td className="px-5 py-3.5">
-                                <ul className="space-y-1">
-                                  {(row.alternativen ?? []).map((a, j) => (
-                                    <li key={j} className="flex gap-2 items-start text-sm text-zinc-500 leading-snug">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 shrink-0 mt-1.5" />
-                                      {a}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </td>
-                              <td className="pr-3 py-3.5 align-middle">
-                                <button onClick={() => store.startEdit("concept", `Ziel: ${row.ziel}`)}
-                                  title="Mit dem Assistenten bearbeiten"
-                                  className="opacity-0 group-hover/row:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center text-zinc-400 hover:text-green-600 hover:bg-green-50 transition-all">
-                                  <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                      {goalTable.map((row, i) => (
+                        <div key={i} className="group/row relative flex gap-4 px-6 py-4 hover:bg-green-50/40 dark:hover:bg-green-950/20 transition-colors duration-150">
+                          <div className="shrink-0 w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs font-bold flex items-center justify-center tabular-nums mt-0.5 transition-colors duration-150 group-hover/row:bg-green-600 group-hover/row:text-white">
+                            {String(i + 1).padStart(2, "0")}
+                          </div>
+                          <div className="flex-1 min-w-0 grid md:grid-cols-[1.05fr_1fr_1fr] gap-x-6 gap-y-3">
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">Ziel</p>
+                              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug">{row.ziel}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">Empfohlenes Tooling</p>
+                              <span className="inline-flex items-start gap-1.5 text-sm text-zinc-700 dark:text-zinc-200 font-medium leading-snug">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0 mt-0.5" strokeWidth={2} />
+                                {row.tooling}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Alternativen</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {(row.alternativen ?? []).map((a, j) => (
+                                  <span key={j} className="text-[11.5px] text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 rounded-md px-2 py-0.5 leading-relaxed">{a}</span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <button onClick={() => store.startEdit("concept", `Ziel: ${row.ziel}`)}
+                            title="Mit dem Assistenten bearbeiten"
+                            className="opacity-0 group-hover/row:opacity-100 shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-zinc-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40 transition-all self-start mt-0.5">
+                            <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   ) : (
-                    <ul className="px-6 py-4 space-y-2">
+                    <ul className="px-6 py-4 space-y-2.5">
                       {outcomes.map((o, i) => (
-                        <li key={i} className="flex gap-2.5 items-start text-sm text-zinc-700 leading-snug">
-                          <span className="w-2 h-2 rounded-full bg-zinc-400 flex-shrink-0 mt-1.5" />
+                        <li key={i} className="flex gap-2.5 items-start text-sm text-zinc-700 dark:text-zinc-300 leading-snug">
+                          <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0 mt-0.5" strokeWidth={2} />
                           {o}
                         </li>
                       ))}
@@ -636,40 +644,29 @@ function ConceptContent() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ type: "spring", duration: 0.5, bounce: 0, delay: 0.06 }}
-                  className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden"
+                  className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_8px_-3px_rgba(16,40,22,0.08),0_16px_36px_-20px_rgba(16,40,22,0.16)] overflow-hidden"
                 >
-                  <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-                    <h2 className="text-base font-semibold text-zinc-900">Ist-Zustand</h2>
-                    {now.summary && <span className="text-xs text-zinc-400 truncate max-w-[50%]">{now.summary}</span>}
+                  <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center ring-1 ring-amber-100 dark:ring-amber-900/60 shrink-0">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500" strokeWidth={1.6} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-[15px] font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-none">Ist-Zustand</h2>
+                      <p className="text-xs text-zinc-400 truncate mt-1">{now.summary || "Aktuelle Schwachpunkte"}</p>
+                    </div>
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-zinc-50">
-                        <tr>
-                          <th className="px-5 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wide">Schwachpunkt heute</th>
-                          <th className="w-8" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pains.map((p, i) => (
-                          <tr key={i} className="group/row border-t border-zinc-100 hover:bg-zinc-50/60">
-                            <td className="px-5 py-3 text-sm text-zinc-600 leading-snug">
-                              <span className="flex gap-2.5 items-start">
-                                <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 shrink-0 mt-1.5" />
-                                {p}
-                              </span>
-                            </td>
-                            <td className="pr-3 py-2 align-middle">
-                              <button onClick={() => store.startEdit("concept", `Ist-Zustand: ${p.slice(0, 40)}`)}
-                                title="Mit dem Assistenten bearbeiten"
-                                className="opacity-0 group-hover/row:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center text-zinc-400 hover:text-green-600 hover:bg-green-50 transition-all">
-                                <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {pains.map((p, i) => (
+                      <div key={i} className="group/row flex gap-3.5 px-6 py-3.5 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition-colors duration-150">
+                        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" strokeWidth={1.7} />
+                        <span className="flex-1 min-w-0 text-sm text-zinc-700 dark:text-zinc-300 leading-snug">{p}</span>
+                        <button onClick={() => store.startEdit("concept", `Ist-Zustand: ${p.slice(0, 40)}`)}
+                          title="Mit dem Assistenten bearbeiten"
+                          className="opacity-0 group-hover/row:opacity-100 shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-zinc-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40 transition-all self-start">
+                          <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </motion.div>
 
