@@ -68,6 +68,10 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
     const t = setTimeout(() => setGreeting(true), 3500);
     return () => clearTimeout(t);
   }, []);
+
+  // "Schnelle Frage" clicked on the home screen → pop the greeting on demand.
+  const greetNonce = useChatStore(s => s.assistantGreetNonce);
+  useEffect(() => { if (greetNonce > 0) setGreeting(true); }, [greetNonce]);
   function acceptTour() { setGreeting(false); startTour(); }
   function dismissGreeting() { localStorage.setItem("matfit_tour_done", "1"); setGreeting(false); }
 

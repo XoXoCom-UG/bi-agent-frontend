@@ -48,6 +48,8 @@ interface ChatStore {
   assistantContext: AssistantContext | null;
   assistantContextNonce: number;
   assistantOpenMobile: boolean;
+  // Bumped when the user clicks "Schnelle Frage" — the right assistant pops open.
+  assistantGreetNonce: number;
   // A short description of what the user currently sees on the left (chat /
   // concept / roadmap), so the right-side assistant knows the context.
   leftContext: string;
@@ -87,6 +89,7 @@ interface ChatStore {
   reorderProjects: (ids: string[]) => void;
   pushAssistant: (ctx: AssistantContext) => void;
   setAssistantOpenMobile: (b: boolean) => void;
+  popAssistantGreeting: () => void;
   setLeftContext: (c: string) => void;
   queueDelete: (d: PendingDelete) => void;
   dropPending: (id: string) => void;
@@ -118,6 +121,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   assistantContext: null,
   assistantContextNonce: 0,
   assistantOpenMobile: false,
+  assistantGreetNonce: 0,
   leftContext: "",
   pendingDeletes: [],
   sessionCache: {},
@@ -158,6 +162,7 @@ export const useChatStore = create<ChatStore>((set) => ({
       assistantOpenMobile: true,
     })),
   setAssistantOpenMobile: (b) => set({ assistantOpenMobile: b }),
+  popAssistantGreeting: () => set((s) => ({ assistantGreetNonce: s.assistantGreetNonce + 1, assistantOpenMobile: true })),
   setLeftContext: (c) => set({ leftContext: c }),
   queueDelete: (d) => set((s) => ({ pendingDeletes: [...s.pendingDeletes.filter(p => p.id !== d.id), d] })),
   dropPending: (id) => set((s) => ({ pendingDeletes: s.pendingDeletes.filter(p => p.id !== id) })),

@@ -237,9 +237,9 @@ export default function ChatPage() {
   const [selBtn, setSelBtn] = useState<{ x: number; y: number; text: string } | null>(null);
 
   // Inline project creation on the welcome screen
-  const [creatingProject, setCreatingProject] = useState(false);
-  const [projName, setProjName] = useState("");
   const [projSaving, setProjSaving] = useState(false);
+  // "Starte Projekt" clicked → reveal the left agent's composer directly.
+  const [startedProject, setStartedProject] = useState(false);
 
   useEffect(() => { if (!loading && !token) router.replace("/login"); }, [token, loading]);
   // Keep the message list pinned to the newest content — scroll ONLY the list
@@ -260,6 +260,11 @@ export default function ChatPage() {
   }, [store.messages]);
 
   const activeProject = store.projects.find(p => p.project_id === store.activeProjectId) ?? null;
+
+  // Back to the true welcome screen (e.g. logo → newChat) resets the reveal.
+  useEffect(() => {
+    if (!store.activeProjectId && store.messages.length === 0) setStartedProject(false);
+  }, [store.activeProjectId, store.messages.length]);
 
   const allPhases = PHASES_CHAT;
 
@@ -300,17 +305,20 @@ export default function ChatPage() {
     } finally { stopThinking(); }
   }
 
-  async function createProjectAndStart() {
-    if (!projName.trim() || !token || projSaving) return;
+  // "Starte Projekt" → reveal the left agent's text field right away (no name
+  // prompt), start the guided interview, and create the project in the
+  // background so it stays scoped/saved.
+  async function startProjectDirect() {
+    if (!token || projSaving) return;
     setProjSaving(true);
+    store.newChat();
+    store.setGuidedProject(true);
+    setStartedProject(true);
+    setTimeout(() => inputRef.current?.focus(), 80);
     try {
-      const p = await api.createProject(token, projName.trim());
+      const p = await api.createProject(token, "Neues Projekt");
       store.setProjects([p, ...store.projects]);
-      store.newChat();
       store.setActiveProject(p.project_id);
-      store.setGuidedProject(true);
-      setCreatingProject(false); setProjName("");
-      setTimeout(() => inputRef.current?.focus(), 80);
     } catch {} finally { setProjSaving(false); }
   }
 
@@ -406,7 +414,7 @@ export default function ChatPage() {
             )}
           </AnimatePresence>
 
-          {msgs.length === 0 && !store.sending && activeProject ? (
+          {msgs.length === 0 && !store.sending && activeProject && !startedProject ? (
             /* ── Project hub: the three buttons, centered ── */
             <div className="flex flex-col items-center justify-center min-h-full px-6 py-16">
               <motion.div
@@ -499,7 +507,7 @@ export default function ChatPage() {
                 </div>
               </motion.div>
             </div>
-          ) : msgs.length === 0 && !store.sending ? (
+          ) : msgs.length === 0 && !store.sending && !startedProject ? (
             <div className="relative flex flex-col items-center justify-center min-h-full px-6 py-16 overflow-hidden">
 
               {/* Interactive ambient background */}
@@ -540,53 +548,14 @@ export default function ChatPage() {
                   </p>
                 </motion.div>
 
-                {/* Inline project creation */}
-                <AnimatePresence>
-                  {creatingProject && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-                      className="overflow-hidden mb-4"
-                    >
-                      <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 border-2 border-green-400 dark:border-green-600 rounded-2xl px-4 py-3 shadow-sm text-left">
-                        <Folder className="w-4 h-4 text-green-500 shrink-0" strokeWidth={1.5} />
-                        <input
-                          autoFocus
-                          value={projName}
-                          onChange={e => setProjName(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === "Enter") createProjectAndStart();
-                            if (e.key === "Escape") { setCreatingProject(false); setProjName(""); }
-                          }}
-                          placeholder="Wie heißt dein Projekt?"
-                          maxLength={48}
-                          className="flex-1 bg-transparent text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 outline-none min-w-0"
-                        />
-                        <button
-                          onClick={createProjectAndStart}
-                          disabled={!projName.trim() || projSaving}
-                          className={cn("text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shrink-0",
-                            projName.trim()
-                              ? "bg-green-600 hover:bg-green-700 text-white"
-                              : "bg-zinc-100 dark:bg-zinc-700 text-zinc-400 cursor-default")}
-                        >
-                          Los geht&apos;s
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Primary action — a single, compact, centered card */}
+                {/* Primary action + Schnelle Frage */}
                 <motion.button
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ type: "spring", duration: 0.5, bounce: 0.06, delay: 0.18 }}
                   whileHover={{ y: -3, transition: BTN_SPRING }}
                   whileTap={{ scale: 0.985, transition: BTN_SPRING }}
-                  onClick={() => setCreatingProject(true)}
+                  onClick={startProjectDirect}
                   className="group/start relative w-full max-w-sm mx-auto flex items-center gap-4 rounded-2xl px-5 py-4 overflow-hidden border border-green-500 text-left shadow-lg shadow-green-600/25 hover:shadow-xl hover:shadow-green-600/30 transition-shadow duration-200"
                   style={{ background: "linear-gradient(135deg, #16a34a 0%, #15803d 60%, #14532d 100%)" }}
                 >
@@ -601,6 +570,18 @@ export default function ChatPage() {
                     <p className="text-xs leading-relaxed text-green-100">Geführtes Interview → Konzept → Roadmap.</p>
                   </div>
                   <ArrowRight className="w-4 h-4 shrink-0 text-white opacity-70 -translate-x-1 group-hover/start:opacity-100 group-hover/start:translate-x-0 transition-all duration-200" strokeWidth={2} />
+                </motion.button>
+
+                <motion.button
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", duration: 0.5, bounce: 0.06, delay: 0.24 }}
+                  whileTap={{ scale: 0.985, transition: BTN_SPRING }}
+                  onClick={() => store.popAssistantGreeting()}
+                  className="mt-3 w-full max-w-sm mx-auto flex items-center justify-center gap-2 rounded-2xl px-5 py-3 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-300 hover:border-green-300 dark:hover:border-green-800 hover:text-green-700 dark:hover:text-green-400 transition-colors duration-150 text-sm font-medium"
+                >
+                  <MessageSquare className="w-4 h-4" strokeWidth={1.5} />
+                  Schnelle Frage — frag den Assistenten
                 </motion.button>
 
                 {/* What you get — fills the space and states the value */}
@@ -718,8 +699,9 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Composer — hidden on the welcome screen (only "Starte Projekt" there) */}
-        {!onWelcome && (
+        {/* Composer — the left agent's text field. Hidden on the welcome screen;
+            revealed once the user clicks "Starte Projekt" (or is in a chat). */}
+        {(!onWelcome || startedProject) && (
         <footer className="shrink-0 px-4 md:px-8 lg:px-12 py-4 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <div className="max-w-5xl mx-auto w-full">
             {/* Research is hidden for now — it becomes its own feature later. */}
@@ -733,7 +715,7 @@ export default function ChatPage() {
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
                 onInput={e => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${Math.min(t.scrollHeight, 180)}px`; }}
-                placeholder="Ask anything… (Enter to send)"
+                placeholder="Beschreibe dein Projekt…"
                 className="flex-1 bg-transparent border-none resize-none text-sm text-zinc-900 dark:text-zinc-100 outline-none leading-relaxed placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                 style={{ minHeight: 26, maxHeight: 180, fontFamily: "inherit" }} />
               <motion.button
