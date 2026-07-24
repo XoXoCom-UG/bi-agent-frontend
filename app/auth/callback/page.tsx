@@ -12,14 +12,34 @@ export default function AuthCallbackPage() {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    let tries = 0;
-    const iv = setInterval(async () => {
-      tries++;
-      const { data } = await supabase.auth.getSession();
-      if (data.session) { clearInterval(iv); router.replace("/chat"); }
-      else if (tries > 12) { clearInterval(iv); setFailed(true); }
-    }, 400);
-    return () => clearInterval(iv);
+    let cancelled = false;
+    let iv: ReturnType<typeof setInterval> | undefined;
+
+    (async () => {
+      // 1) Session already established (implicit flow / already exchanged).
+      const { data: s0 } = await supabase.auth.getSession();
+      if (s0.session) { router.replace("/chat"); return; }
+
+      // 2) PKCE: explicitly exchange the ?code= for a session. This is what
+      //    Google OAuth needs — the browser client does NOT auto-exchange it.
+      const code = new URLSearchParams(window.location.search).get("code");
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (cancelled) return;
+        if (!error) { router.replace("/chat"); return; }
+      }
+
+      // 3) Fallback: poll briefly (e.g. hash-based e-mail confirmation links).
+      let tries = 0;
+      iv = setInterval(async () => {
+        tries++;
+        const { data } = await supabase.auth.getSession();
+        if (data.session) { clearInterval(iv); router.replace("/chat"); }
+        else if (tries > 12) { clearInterval(iv); setFailed(true); }
+      }, 400);
+    })();
+
+    return () => { cancelled = true; if (iv) clearInterval(iv); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
