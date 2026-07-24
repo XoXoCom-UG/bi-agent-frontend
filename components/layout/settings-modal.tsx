@@ -46,12 +46,15 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
     if (token) {
       try {
         const current = await api.getProfile(token).catch(() => ({} as Record<string, string>));
-        await api.saveProfile(token, { ...current, name: n });
+        // Write both name fields — the backend's canonical "display name"
+        // field isn't fully pinned down, so cover both to avoid silently
+        // saving to a field nothing reads back from.
+        await api.saveProfile(token, { ...current, name: n, display_name: n });
         setProfileName(n);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1800);
       } catch { setSaveError(true); }
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1800);
   }
 
   const TABS: { id: Tab; label: string; Icon: React.ElementType }[] = [
@@ -195,8 +198,8 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
                             </motion.button>
                           </div>
                           {saveError && (
-                            <p className="text-[11px] text-amber-600 mt-1.5">
-                              Lokal gespeichert — Server nicht erreichbar, wird beim nächsten Mal synchronisiert.
+                            <p className="text-[11px] text-red-600 mt-1.5">
+                              Speichern fehlgeschlagen — bitte versuche es erneut.
                             </p>
                           )}
                         </div>

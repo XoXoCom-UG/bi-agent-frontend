@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token || !userId) { setProfileName(""); return; }
     let alive = true;
     api.getProfile(token)
-      .then(p => { if (alive) setProfileName(p.name || p.display_name || ""); })
+      .then(p => { if (alive) setProfileName(p.display_name || p.name || ""); })
       .catch(() => { if (alive) setProfileName(""); });
     return () => { alive = false; };
   }, [token, userId]);

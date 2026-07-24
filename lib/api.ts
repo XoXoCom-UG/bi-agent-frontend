@@ -17,6 +17,7 @@ async function request<T>(
   token?: string | null
 ): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
+    cache: "no-store",
     ...init,
     headers: { ...headers(token), ...(init.headers ?? {}) },
   });
