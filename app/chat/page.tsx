@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Zap, ArrowUp, ArrowRight, MessageSquare, CheckCircle2, Copy, Check,
-  Folder, Plus, LayoutDashboard, Sparkles, Wrench, ShieldCheck, Server, Lock,
+  Folder, Plus, LayoutDashboard, Sparkles, Wrench, ShieldCheck, Server, Lock, Pencil,
 } from "lucide-react";
 
 // ── Phase list (long, non-repeating within a response) ───────────────────────
@@ -218,6 +218,23 @@ export default function ChatPage() {
   const [projSaving, setProjSaving] = useState(false);
   // "Starte Projekt" clicked → reveal the left agent's composer directly.
   const [startedProject, setStartedProject] = useState(false);
+
+  // "Hire an Agent" start: the left agent introduces itself, numbered and
+  // renameable (UI-only — does not touch the agent's prompting).
+  const [displayName, setDisplayName] = useState("");
+  const [consultantName, setConsultantName] = useState("CONSULTANT-1");
+  const [renaming, setRenaming] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  useEffect(() => {
+    setDisplayName(localStorage.getItem("matfit_name") || "");
+    setConsultantName(localStorage.getItem("matfit_agent_consultant") || "CONSULTANT-1");
+  }, []);
+  function saveConsultantName() {
+    const n = nameDraft.trim() || "CONSULTANT-1";
+    localStorage.setItem("matfit_agent_consultant", n);
+    setConsultantName(n);
+    setRenaming(false);
+  }
 
   useEffect(() => { if (!loading && !token) router.replace("/login"); }, [token, loading]);
   // Keep the message list pinned to the newest content — scroll ONLY the list
@@ -504,26 +521,46 @@ export default function ChatPage() {
                   <span className="text-3xl font-bold text-green-600" style={{ letterSpacing: "-0.04em" }}>.ai</span>
                 </motion.div>
 
-                {/* Headline */}
+                {/* AI Agent intro — "Hire an Agent" (UI only, no prompting change) */}
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ type: "spring", duration: 0.55, bounce: 0.05, delay: 0.08 }}
                 >
-                  <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-green-600 mb-4">
-                    KI-gestützte IT-Beratung
+                  <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-green-600 mb-4">
+                    AI Agent
                   </p>
                   <h2
-                    className="text-[32px] md:text-[40px] font-extrabold text-zinc-900 dark:text-zinc-50 leading-[1.1] mb-4"
+                    className="text-[28px] md:text-[36px] font-extrabold text-zinc-900 dark:text-zinc-50 leading-[1.12] mb-4"
                     style={{ letterSpacing: "-0.03em" }}
                   >
-                    Lass uns prüfen, welches A.I. Setup<br />
-                    am besten deine <span className="text-green-600">Ziele erreicht</span>
+                    Hey{displayName ? ` ${displayName}` : ""}, ich bin{" "}
+                    {renaming ? (
+                      <input
+                        autoFocus
+                        value={nameDraft}
+                        onChange={e => setNameDraft(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") saveConsultantName(); if (e.key === "Escape") setRenaming(false); }}
+                        onBlur={saveConsultantName}
+                        maxLength={24}
+                        className="inline-block w-[9ch] max-w-[60vw] bg-transparent border-b-2 border-green-400 text-green-600 text-center outline-none"
+                      />
+                    ) : (
+                      <span className="text-green-600">{consultantName}</span>
+                    )}.
                   </h2>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-10 leading-relaxed">
-                    Transformation Concepts. Roadmaps. IT-Know-how.<br className="hidden sm:block" />
-                    Alles auf Basis echter Beratungserfahrung.
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed max-w-md mx-auto">
+                    Jeder Agent ist durchnummeriert und erinnert sich an jede vergangene Interaktion.
                   </p>
+                  {!renaming && (
+                    <button
+                      onClick={() => { setNameDraft(consultantName); setRenaming(true); }}
+                      className="mb-10 inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-green-700 dark:hover:text-green-400 transition-colors"
+                    >
+                      <Pencil className="w-3 h-3" strokeWidth={1.7} />
+                      Diesen Agenten umbenennen
+                    </button>
+                  )}
                 </motion.div>
 
                 {/* Primary action + Schnelle Frage */}

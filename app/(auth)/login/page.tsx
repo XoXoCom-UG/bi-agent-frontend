@@ -44,6 +44,16 @@ export default function LoginPage() {
     setLoading(false);
   }
 
+  async function handleGoogle() {
+    setLoading(true); setMsg(null);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    // On success the browser redirects to Google, so we only reset on error.
+    if (error) { setMsg({ text: "Google-Anmeldung fehlgeschlagen. Bitte versuche es erneut.", ok: false }); setLoading(false); }
+  }
+
   const inp: React.CSSProperties = { width: "100%", height: 42, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)", padding: "0 13px", fontSize: 14, fontFamily: "inherit", outline: "none", transition: "border-color 0.15s" };
 
   return (
@@ -109,6 +119,27 @@ export default function LoginPage() {
               {loading ? "Bitte warten…" : tab === "login" ? "Einloggen →" : "Account erstellen →"}
             </button>
           </form>
+
+          {/* Divider */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
+            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+            <span style={{ fontSize: 12, color: "var(--text-3)" }}>oder</span>
+            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+          </div>
+
+          {/* Google OAuth */}
+          <button type="button" onClick={handleGoogle} disabled={loading}
+            style={{ width: "100%", height: 44, borderRadius: 10, border: "1px solid var(--border)", background: "#fff", color: "var(--text)", fontWeight: 600, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, transition: "border-color 0.15s, box-shadow 0.15s" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--green)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 1px 6px rgba(0,0,0,0.06)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "none"; }}>
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.91c1.7-1.57 2.69-3.88 2.69-6.62z"/>
+              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.91-2.26c-.81.54-1.84.86-3.05.86-2.34 0-4.33-1.58-5.04-3.71H.96v2.33A9 9 0 0 0 9 18z"/>
+              <path fill="#FBBC05" d="M3.96 10.71A5.41 5.41 0 0 1 3.68 9c0-.6.1-1.18.28-1.71V4.96H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.04l3-2.33z"/>
+              <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.96l3 2.33C4.67 5.16 6.66 3.58 9 3.58z"/>
+            </svg>
+            Mit Google anmelden
+          </button>
           <div style={{ display: "flex", gap: 16, marginTop: 24, fontSize: 12 }}>
             <a href="/impressum" style={{ color: "var(--text-3)", textDecoration: "none" }}>Impressum</a>
             <a href="/datenschutz" style={{ color: "var(--text-3)", textDecoration: "none" }}>Datenschutz</a>

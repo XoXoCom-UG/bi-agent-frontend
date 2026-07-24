@@ -50,6 +50,21 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
   // First-run greeting: the assistant introduces itself after a short delay
   // (replaces the old welcome modal). Only ever shown once per browser.
   const [greeting, setGreeting] = useState(false);
+  // "Hire an Agent": the right agent is numbered (COACH-1) and renameable.
+  const [displayName, setDisplayName] = useState("");
+  const [coachName, setCoachName] = useState("COACH-1");
+  const [renamingCoach, setRenamingCoach] = useState(false);
+  const [coachDraft, setCoachDraft] = useState("");
+  useEffect(() => {
+    setDisplayName(localStorage.getItem("matfit_name") || "");
+    setCoachName(localStorage.getItem("matfit_agent_coach") || "COACH-1");
+  }, []);
+  function saveCoachName() {
+    const n = coachDraft.trim() || "COACH-1";
+    localStorage.setItem("matfit_agent_coach", n);
+    setCoachName(n);
+    setRenamingCoach(false);
+  }
   // Assisted-edit state: a proposed change awaiting "Übernehmen", and the last
   // applied change (for a one-click "Rückgängig").
   const [pendingEdit, setPendingEdit] = useState<{ kind: "concept" | "roadmap"; updated: ConceptData | RoadmapData } | null>(null);
@@ -211,6 +226,34 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
           </p>
         ) : messages.length === 0 && !sending ? (
           <div>
+            {/* Coach agent identity — numbered & renameable ("Hire an Agent") */}
+            <div className="mb-5">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-6 h-6 rounded-lg bg-green-600 text-white text-[10px] font-bold flex items-center justify-center" style={{ fontFamily: "Georgia, serif" }}>C</span>
+                <span className="text-[9.5px] font-semibold uppercase tracking-widest text-green-600">AI Agent</span>
+                {renamingCoach ? (
+                  <input
+                    autoFocus
+                    value={coachDraft}
+                    onChange={e => setCoachDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") saveCoachName(); if (e.key === "Escape") setRenamingCoach(false); }}
+                    onBlur={saveCoachName}
+                    maxLength={24}
+                    className="w-28 bg-transparent border-b border-green-400 text-[12.5px] font-bold text-zinc-900 dark:text-zinc-100 outline-none"
+                  />
+                ) : (
+                  <button onClick={() => { setCoachDraft(coachName); setRenamingCoach(true); }}
+                    className="group/rn inline-flex items-center gap-1.5 text-[12.5px] font-bold text-zinc-900 dark:text-zinc-100">
+                    {coachName}
+                    <Pencil className="w-3 h-3 text-zinc-400 group-hover/rn:text-green-600 transition-colors" strokeWidth={1.7} />
+                  </button>
+                )}
+              </div>
+              <p className="text-[12.5px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                Hey{displayName ? ` ${displayName}` : ""}, ich begleite dich bei jedem Schritt und behalte den Überblick — jederzeit ansprechbar, ohne deinen Hauptchat zu unterbrechen.
+              </p>
+            </div>
+
             {/* First-run greeting — the assistant speaks up ("plopp") */}
             <AnimatePresence>
               {greeting && (
@@ -222,7 +265,7 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
                   className="mb-5"
                 >
                   <div className="help-md text-[12px] leading-relaxed rounded-xl px-3 py-2.5 bg-green-50 dark:bg-green-950/40 text-zinc-700 dark:text-zinc-200 border border-green-200 dark:border-green-900">
-                    Hey, ich bin Matfit — dein K.I.-Agent mit Tier-1-Berater-Mindset! Hier arbeiten wir gemeinsam an deinen Zielen. Kennst du die Anwendung schon, oder soll ich dir schnell alles zeigen?
+                    Kennst du die Anwendung schon, oder soll ich dir schnell alles zeigen?
                   </div>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     <button onClick={acceptTour}
