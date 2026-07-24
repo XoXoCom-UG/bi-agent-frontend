@@ -26,17 +26,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    // Always resolve loading — even on error — so the app never hangs on the
+    // skeleton (a corrupt session cookie used to strand it forever).
+    supabase.auth.getSession()
+      .then(({ data }) => setSession(data.session))
+      .catch(() => setSession(null))
+      .finally(() => setLoading(false));
+
+    // Safety net: if getSession never settles (network stall), stop loading.
+    const failsafe = setTimeout(() => setLoading(false), 5000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => { subscription.unsubscribe(); clearTimeout(failsafe); };
   }, []);
 
   const signOut = async () => {
