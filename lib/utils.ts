@@ -5,6 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// localStorage keys that must not leak between accounts on a shared browser
+// (e.g. per-user agent nicknames) get the user id folded in.
+export function scopedKey(base: string, userId: string | null) {
+  return userId ? `${base}:${userId}` : base;
+}
+
 export function truncate(s: string | undefined, n: number) {
   if (!s) return "—";
   return s.length > n ? s.slice(0, n) + "…" : s;

@@ -2,8 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import { api, Message, ConceptData, RoadmapData } from "@/lib/api";
 import { md } from "@/lib/markdown";
-import { cn } from "@/lib/utils";
+import { cn, scopedKey } from "@/lib/utils";
 import { useChatStore, AssistantContext } from "@/lib/chat-store";
+import { useAuth } from "@/lib/auth-context";
 import { motion, AnimatePresence } from "motion/react";
 import { X, ArrowUp, Sparkles, Pencil, MessageCircle, HelpCircle, MousePointerClick, Check, RotateCcw } from "lucide-react";
 
@@ -51,17 +52,19 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
   // (replaces the old welcome modal). Only ever shown once per browser.
   const [greeting, setGreeting] = useState(false);
   // "Hire an Agent": the right agent is numbered (COACH-1) and renameable.
-  const [displayName, setDisplayName] = useState("");
+  // The rename is scoped per account so it can't leak between users sharing
+  // this browser.
+  const { user, profileName: displayName } = useAuth();
   const [coachName, setCoachName] = useState("COACH-1");
   const [renamingCoach, setRenamingCoach] = useState(false);
   const [coachDraft, setCoachDraft] = useState("");
   useEffect(() => {
-    setDisplayName(localStorage.getItem("matfit_name") || "");
-    setCoachName(localStorage.getItem("matfit_agent_coach") || "COACH-1");
-  }, []);
+    setCoachName(localStorage.getItem(scopedKey("matfit_agent_coach", user?.id ?? null)) || "COACH-1");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
   function saveCoachName() {
     const n = coachDraft.trim() || "COACH-1";
-    localStorage.setItem("matfit_agent_coach", n);
+    localStorage.setItem(scopedKey("matfit_agent_coach", user?.id ?? null), n);
     setCoachName(n);
     setRenamingCoach(false);
   }

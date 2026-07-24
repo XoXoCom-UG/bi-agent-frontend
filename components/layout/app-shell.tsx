@@ -24,12 +24,11 @@ type ActiveScreen = "chat" | "concept" | "dashboard";
  * Concept / Roadmap). The persistent assistant lives on the right via AssistantDock.
  */
 export function AppShell({ active, children }: { active: ActiveScreen; children: React.ReactNode }) {
-  const { token, user } = useAuth();
+  const { token, user, profileName } = useAuth();
   const store = useChatStore();
   const router = useRouter();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [displayName, setDisplayName] = useState("");
 
   // Load projects + history once (the old sidebar used to do this).
   useEffect(() => {
@@ -38,13 +37,6 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
     api.getHistory(token).then(d => store.setHistory(d.sessions)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-
-  useEffect(() => {
-    setDisplayName(localStorage.getItem("matfit_name") || "");
-    const onStorage = () => setDisplayName(localStorage.getItem("matfit_name") || "");
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
 
   // Never let the settings modal sit on top of the running tour.
   useEffect(() => { if (store.tourActive) setSettingsOpen(false); }, [store.tourActive]);
@@ -139,7 +131,7 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
             <button data-tour="profile" onClick={() => setSettingsOpen(true)} title="Profil & Einstellungen"
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-green-800 dark:text-green-400 select-none hover:ring-2 hover:ring-green-200 dark:hover:ring-green-900 transition-all"
               style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
-              {(displayName || user?.email || "U")[0].toUpperCase()}
+              {(profileName || user?.email || "U")[0].toUpperCase()}
             </button>
           </div>
         </header>

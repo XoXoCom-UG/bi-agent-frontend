@@ -8,7 +8,7 @@ import { md } from "@/lib/markdown";
 import { AppShell } from "@/components/layout/app-shell";
 import { DEMO_MESSAGES } from "@/lib/demo";
 import { Badge } from "@/components/ui";
-import { cn } from "@/lib/utils";
+import { cn, scopedKey } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Zap, ArrowUp, ArrowRight, MessageSquare, CheckCircle2, Copy, Check,
@@ -201,7 +201,7 @@ function MsgActions({ text }: { text: string }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ChatPage() {
-  const { token, loading } = useAuth();
+  const { token, loading, user, profileName: displayName } = useAuth();
   const store = useChatStore();
   const router = useRouter();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -220,18 +220,18 @@ export default function ChatPage() {
   const [startedProject, setStartedProject] = useState(false);
 
   // "Hire an Agent" start: the left agent introduces itself, numbered and
-  // renameable (UI-only — does not touch the agent's prompting).
-  const [displayName, setDisplayName] = useState("");
+  // renameable (UI-only — does not touch the agent's prompting). The rename
+  // is scoped per account so it can't leak into another user's session.
   const [consultantName, setConsultantName] = useState("CONSULTANT-1");
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   useEffect(() => {
-    setDisplayName(localStorage.getItem("matfit_name") || "");
-    setConsultantName(localStorage.getItem("matfit_agent_consultant") || "CONSULTANT-1");
-  }, []);
+    setConsultantName(localStorage.getItem(scopedKey("matfit_agent_consultant", user?.id ?? null)) || "CONSULTANT-1");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
   function saveConsultantName() {
     const n = nameDraft.trim() || "CONSULTANT-1";
-    localStorage.setItem("matfit_agent_consultant", n);
+    localStorage.setItem(scopedKey("matfit_agent_consultant", user?.id ?? null), n);
     setConsultantName(n);
     setRenaming(false);
   }

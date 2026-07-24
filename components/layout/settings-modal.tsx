@@ -13,7 +13,7 @@ type Tab = "profil" | "darstellung";
 export function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("profil");
   const { theme, setTheme } = useTheme();
-  const { user, signOut, token } = useAuth();
+  const { user, signOut, token, profileName, setProfileName } = useAuth();
   const startTour = useChatStore(s => s.startTour);
   const persona = useChatStore(s => s.persona);
   const setPersona = useChatStore(s => s.setPersona);
@@ -33,22 +33,21 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
   }
 
   useEffect(() => {
-    if (open) setName(localStorage.getItem("matfit_name") || "");
-  }, [open]);
+    if (open) setName(profileName);
+  }, [open, profileName]);
 
   async function saveName() {
     const n = name.trim();
-    localStorage.setItem("matfit_name", n);
-    // Notify the sidebar in THIS tab (the "storage" event only fires cross-tab).
-    window.dispatchEvent(new StorageEvent("storage", { key: "matfit_name", newValue: n }));
     setSaveError(false);
-    // Persist to the backend profile too, so the name survives devices/sessions.
-    // Read-merge-write: the save endpoint overwrites every field, so sending
-    // only {name} would wipe what the agent has learned about the user.
+    // Persist to the backend profile — the single source of truth, scoped to
+    // this account via the token. Read-merge-write: the save endpoint
+    // overwrites every field, so sending only {name} would wipe what the
+    // agent has learned about the user.
     if (token) {
       try {
         const current = await api.getProfile(token).catch(() => ({} as Record<string, string>));
         await api.saveProfile(token, { ...current, name: n });
+        setProfileName(n);
       } catch { setSaveError(true); }
     }
     setSaved(true);
