@@ -242,6 +242,23 @@ export interface GoalTableRow {
   alternativen: string[];
 }
 
+export type MeasureCategory = "tooling" | "agile" | "business" | "security";
+
+/** One recommended "Mehrwert" measure, freshly written per client by the agent.
+ *  Rendered by the switchable diagram views (bento / matrix / dependencies /
+ *  radar). Everything except id+title is optional so an older backend that
+ *  doesn't emit this section yet degrades silently. */
+export interface RecommendedMeasure {
+  id: string;
+  title: string;
+  category: MeasureCategory;
+  lens?: string;
+  description?: string;
+  impact?: "Low" | "Medium" | "High";
+  effort?: "S" | "M" | "L" | "XL";
+  depends_on?: string[];
+}
+
 export interface ConceptData {
   title?: string;
   now?: { summary?: string; pain_points?: string[] };
@@ -266,6 +283,9 @@ export interface ConceptData {
     error_rate?: string;
     cost_savings?: string;
   };
+  recommended_measures?: RecommendedMeasure[];
+  /** Distinct consultant perspectives across the measures, e.g. ["Agile Coaching", "Security Engineering"]. */
+  measures_lens_summary?: string[];
 }
 
 export interface ConceptResponse {

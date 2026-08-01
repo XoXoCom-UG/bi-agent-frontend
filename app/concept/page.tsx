@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence, useSpring } from "motion/react";
 import { deriveConceptMetrics } from "@/lib/metrics";
 import { BeforeAfterGrid, EffortPie } from "@/components/charts/concept-charts";
+import { MeasureViews } from "@/components/charts/measure-views";
 
 // ── Magnetic button ───────────────────────────────────────────────────────────
 function MagBtn({
@@ -309,6 +310,7 @@ function ConceptContent() {
   const pains     = now.pain_points ?? [];
   const outcomes  = goal.outcomes ?? [];
   const goalTable = goal.table ?? [];
+  const measures  = concept?.recommended_measures ?? [];
 
   const kpiItems = KPI_META
     .map(m => ({ ...m, val: (bv as Record<string, string | undefined>)[m.key] }))
@@ -667,6 +669,10 @@ function ConceptContent() {
                     ))}
                   </div>
                 </motion.div>
+
+                {/* Empfohlene Maßnahmen — renders only when the backend supplies
+                    them, so an older backend simply shows nothing here. */}
+                <MeasureViews measures={measures} lensSummary={concept?.measures_lens_summary} />
 
                 {kpiItems.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
