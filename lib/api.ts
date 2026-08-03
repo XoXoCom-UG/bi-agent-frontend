@@ -259,6 +259,14 @@ export interface RecommendedMeasure {
   depends_on?: string[];
 }
 
+/** One rendered result card. `component` resolves the React renderer;
+ *  `data` is validated server-side against the template's declared fields. */
+export interface ConceptCard {
+  template_id: string;
+  component: string;
+  data: Record<string, unknown>;
+}
+
 export interface ConceptData {
   title?: string;
   now?: { summary?: string; pain_points?: string[] };
@@ -286,6 +294,13 @@ export interface ConceptData {
   recommended_measures?: RecommendedMeasure[];
   /** Distinct consultant perspectives across the measures, e.g. ["Agile Coaching", "Security Engineering"]. */
   measures_lens_summary?: string[];
+  /** Result cards chosen to fit this concept's subject. Absent on concepts
+   *  generated before the feature existed — the UI then falls back to the
+   *  static KPI tiles built from business_value_summary. */
+  cards?: ConceptCard[];
+  /** Diagnostics: picked | picked_after_retry | fallback_* — why these cards. */
+  cards_source?: string;
+  cards_similarity?: number;
 }
 
 export interface ConceptResponse {

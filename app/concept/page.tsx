@@ -15,6 +15,7 @@ import { motion, AnimatePresence, useSpring } from "motion/react";
 import { deriveConceptMetrics } from "@/lib/metrics";
 import { BeforeAfterGrid, EffortPie } from "@/components/charts/concept-charts";
 import { MeasureViews } from "@/components/charts/measure-views";
+import { ConceptCardsSection } from "@/components/cards/card-template-renderer";
 
 // ── Magnetic button ───────────────────────────────────────────────────────────
 function MagBtn({
@@ -311,6 +312,7 @@ function ConceptContent() {
   const outcomes  = goal.outcomes ?? [];
   const goalTable = goal.table ?? [];
   const measures  = concept?.recommended_measures ?? [];
+  const cards     = concept?.cards ?? [];
 
   const kpiItems = KPI_META
     .map(m => ({ ...m, val: (bv as Record<string, string | undefined>)[m.key] }))
@@ -674,7 +676,11 @@ function ConceptContent() {
                     them, so an older backend simply shows nothing here. */}
                 <MeasureViews measures={measures} lensSummary={concept?.measures_lens_summary} />
 
-                {kpiItems.length > 0 && (
+                {/* Result cards, chosen per concept. Older concepts have no
+                    `cards`, so they keep rendering the three static KPI tiles. */}
+                {cards.length > 0 ? (
+                  <ConceptCardsSection cards={cards} />
+                ) : kpiItems.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {kpiItems.map(({ label, val, sub, Icon }, i) => (
                       <motion.div
