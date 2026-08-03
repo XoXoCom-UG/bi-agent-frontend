@@ -9,11 +9,13 @@ import { DEMO_CONCEPT } from "@/lib/demo";
 import { dateStr } from "@/lib/utils";
 import {
   Clock, AlertTriangle, TrendingDown, Zap,
-  ChevronRight, CheckCircle2, FileText, MessageSquare, ArrowLeft, Pencil,
+  ChevronRight, CheckCircle2, FileText, MessageSquare, ArrowLeft, Pencil, RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence, useSpring } from "motion/react";
 import { deriveConceptMetrics } from "@/lib/metrics";
 import { BeforeAfterGrid, EffortPie } from "@/components/charts/concept-charts";
+import { MeasureViews } from "@/components/charts/measure-views";
+import { ConceptCardsSection } from "@/components/cards/card-template-renderer";
 
 // ── Magnetic button ───────────────────────────────────────────────────────────
 function MagBtn({
@@ -85,14 +87,20 @@ function Typewriter({ text, speed = 46 }: { text: string; speed?: number }) {
 }
 
 // ── Generating overlay ────────────────────────────────────────────────────────
+// Paced against the measured backend time (~85s end to end). The stages used to
+// finish at 22s, which left the user watching a frozen last line for a full
+// minute — it read as a hang. The last stage is deliberately open-ended so a
+// slower-than-usual run still looks like progress rather than a freeze.
 const G_MESSAGES = [
   { text: "Lese und verstehe deine gesamte Konversation...", ms: 0 },
-  { text: "Identifiziere aktuelle IT-Probleme und Pain Points...", ms: 3800 },
-  { text: "Analysiere Transformationspotenziale...", ms: 7400 },
-  { text: "Berechne Business Value und erwarteten ROI...", ms: 11200 },
-  { text: "Entwickle konkrete Transformationsschritte...", ms: 15000 },
-  { text: "Formuliere User Stories für dein Entwicklungsteam...", ms: 18600 },
-  { text: "Erstelle die finale Zusammenfassung...", ms: 22000 },
+  { text: "Identifiziere aktuelle IT-Probleme und Pain Points...", ms: 7000 },
+  { text: "Analysiere Transformationspotenziale...", ms: 16000 },
+  { text: "Berechne Business Value und erwarteten ROI...", ms: 26000 },
+  { text: "Entwickle konkrete Maßnahmen für deinen Stack...", ms: 36000 },
+  { text: "Formuliere User Stories für dein Entwicklungsteam...", ms: 47000 },
+  { text: "Wähle die passenden Mehrwert-Maßnahmen aus...", ms: 58000 },
+  { text: "Stelle die passenden Kennzahlen-Karten zusammen...", ms: 68000 },
+  { text: "Erstelle die finale Zusammenfassung...", ms: 78000 },
 ];
 
 function GeneratingOverlay() {
@@ -209,6 +217,9 @@ function ConceptContent() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [openStep, setOpenStep] = useState<number | null>(null);
+  // Regenerating overwrites the concept saved for this session, so the button
+  // asks once instead of discarding it on a mis-click.
+  const [confirmRegen, setConfirmRegen] = useState(false);
 
   useEffect(() => { if (!loading && !token) router.replace("/login"); }, [token, loading]);
 
@@ -309,6 +320,8 @@ function ConceptContent() {
   const pains     = now.pain_points ?? [];
   const outcomes  = goal.outcomes ?? [];
   const goalTable = goal.table ?? [];
+  const measures  = concept?.recommended_measures ?? [];
+  const cards     = concept?.cards ?? [];
 
   const kpiItems = KPI_META
     .map(m => ({ ...m, val: (bv as Record<string, string | undefined>)[m.key] }))
@@ -360,6 +373,43 @@ function ConceptContent() {
               <p className="text-xs text-zinc-400">{steps.length} Maßnahmen · {stories.length} User Stories</p>
             )}
           </div>
+
+          {/* Regenerate — the only way to replace a concept that was saved before
+              a backend change, so it must stay reachable whenever one exists. */}
+          {concept && !store.demoActive && hasMessages && (
+            confirmRegen ? (
+              <div className="flex items-center gap-1.5">
+                <span className="hidden sm:inline text-xs text-zinc-500">Bestehendes Concept überschreiben?</span>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => { setConfirmRegen(false); generate(); }}
+                  disabled={generating}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-zinc-300 transition-colors duration-150 rounded-lg px-3 py-1.5 shadow-sm shadow-green-600/20"
+                >
+                  <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  Ja, neu generieren
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setConfirmRegen(false)}
+                  className="text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150"
+                >
+                  Abbrechen
+                </motion.button>
+              </div>
+            ) : (
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setConfirmRegen(true)}
+                disabled={generating}
+                title="Concept mit dem aktuellen Stand neu erstellen"
+                className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150 disabled:opacity-50"
+              >
+                <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <span className="hidden sm:inline">Neu generieren</span>
+              </motion.button>
+            )
+          )}
 
           {concept && (
             <motion.button
@@ -668,7 +718,15 @@ function ConceptContent() {
                   </div>
                 </motion.div>
 
-                {kpiItems.length > 0 && (
+                {/* Empfohlene Maßnahmen — renders only when the backend supplies
+                    them, so an older backend simply shows nothing here. */}
+                <MeasureViews measures={measures} lensSummary={concept?.measures_lens_summary} />
+
+                {/* Result cards, chosen per concept. Older concepts have no
+                    `cards`, so they keep rendering the three static KPI tiles. */}
+                {cards.length > 0 ? (
+                  <ConceptCardsSection cards={cards} />
+                ) : kpiItems.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {kpiItems.map(({ label, val, sub, Icon }, i) => (
                       <motion.div

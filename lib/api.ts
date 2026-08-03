@@ -242,6 +242,31 @@ export interface GoalTableRow {
   alternativen: string[];
 }
 
+export type MeasureCategory = "tooling" | "agile" | "business" | "security";
+
+/** One recommended "Mehrwert" measure, freshly written per client by the agent.
+ *  Rendered by the switchable diagram views (bento / matrix / dependencies /
+ *  radar). Everything except id+title is optional so an older backend that
+ *  doesn't emit this section yet degrades silently. */
+export interface RecommendedMeasure {
+  id: string;
+  title: string;
+  category: MeasureCategory;
+  lens?: string;
+  description?: string;
+  impact?: "Low" | "Medium" | "High";
+  effort?: "S" | "M" | "L" | "XL";
+  depends_on?: string[];
+}
+
+/** One rendered result card. `component` resolves the React renderer;
+ *  `data` is validated server-side against the template's declared fields. */
+export interface ConceptCard {
+  template_id: string;
+  component: string;
+  data: Record<string, unknown>;
+}
+
 export interface ConceptData {
   title?: string;
   now?: { summary?: string; pain_points?: string[] };
@@ -266,6 +291,16 @@ export interface ConceptData {
     error_rate?: string;
     cost_savings?: string;
   };
+  recommended_measures?: RecommendedMeasure[];
+  /** Distinct consultant perspectives across the measures, e.g. ["Agile Coaching", "Security Engineering"]. */
+  measures_lens_summary?: string[];
+  /** Result cards chosen to fit this concept's subject. Absent on concepts
+   *  generated before the feature existed — the UI then falls back to the
+   *  static KPI tiles built from business_value_summary. */
+  cards?: ConceptCard[];
+  /** Diagnostics: picked | picked_after_retry | fallback_* — why these cards. */
+  cards_source?: string;
+  cards_similarity?: number;
 }
 
 export interface ConceptResponse {

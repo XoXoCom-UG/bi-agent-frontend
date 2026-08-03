@@ -154,6 +154,22 @@ html.dark .mf-cursor-glow { background: radial-gradient(circle, rgba(34,197,94,0
 :root { --ok:#16a34a; --warn:#b45309; --err:#dc2626; --info:#2563eb; }
 html.dark { --ok:#22c55e; --warn:#f59e0b; --err:#f87171; --info:#60a5fa; }
 
+/* Measure categories — one hue per category, kept consistent across all four
+   diagram views so a colour always means the same thing. Tuned per theme
+   (lighter//more saturated on dark) rather than reused verbatim. */
+:root {
+  --cat-tooling:#16a34a;  --cat-tooling-tint:#e9f8ef;
+  --cat-agile:#c2610a;    --cat-agile-tint:#fdf2e3;
+  --cat-business:#2563eb; --cat-business-tint:#e9f0fe;
+  --cat-security:#e11d48; --cat-security-tint:#fdecf0;
+}
+html.dark {
+  --cat-tooling:#34d17a;  --cat-tooling-tint:#0f2417;
+  --cat-agile:#f0a94e;    --cat-agile-tint:#2a1c0b;
+  --cat-business:#6d94f7; --cat-business-tint:#101d3a;
+  --cat-security:#f2607f; --cat-security-tint:#2c1017;
+}
+
 /* Visible keyboard focus everywhere (mouse clicks stay clean via :focus-visible) */
 :where(a,button,[role="button"],input,textarea,select,summary,[tabindex]):focus-visible {
   outline: 2px solid var(--green); outline-offset: 2px; border-radius: 6px;
