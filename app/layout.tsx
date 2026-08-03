@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { AuthProvider } from "@/lib/auth-context";
 import { CookieBanner } from "@/components/layout/cookie-banner";
+import { StaleBuildRecovery } from "@/components/layout/stale-build-recovery";
 
 export const metadata: Metadata = {
   title: {
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="de" suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+          <StaleBuildRecovery />
           <AuthProvider>{children}</AuthProvider>
           <CookieBanner />
         </ThemeProvider>
