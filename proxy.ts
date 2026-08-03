@@ -30,13 +30,19 @@ export function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Already logged in → skip the login page
-  if (authed && pathname === "/login") {
-    const url = req.nextUrl.clone();
-    url.pathname = "/chat";
-    return NextResponse.redirect(url);
-  }
-
+  // NOTE: there used to be an "already logged in → skip /login" redirect here.
+  // It was removed because it closed a redirect loop with no exit:
+  //
+  //   proxy sees the cookie      → "authed" → lets /chat render
+  //   client resolves no session → no token → redirects to /login
+  //   proxy sees the cookie      → "authed" → redirects back to /chat        ↺
+  //
+  // The two disagree whenever the cookie is present but its session is expired
+  // or invalid, which this check cannot detect (see "Optimistic" above). The app
+  // then sat on its loading skeleton forever, burning CPU, and a hard reload
+  // could not escape it because the cookie survived. Landing a signed-in user on
+  // /login is a cosmetic issue; an inescapable loop is not. The client redirects
+  // to /chat on its own anyway (app/page.tsx, and the login form after sign-in).
   return NextResponse.next();
 }
 
