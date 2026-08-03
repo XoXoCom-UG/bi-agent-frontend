@@ -50,6 +50,17 @@ const num = (v: unknown): number | null => {
 const arr = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? v as Record<string, unknown>[] : []);
 const str = (v: unknown): string => (v == null ? "" : String(v));
 
+/**
+ * List items that actually have something to say, under `key`.
+ *
+ * The backend now guarantees this (see ITEM_SHAPES in src/agent/cards.py), but a
+ * card whose items carry no text used to render as a column of bare icons or empty
+ * circles that still reserved its full height — it read as a broken page. Filtering
+ * here too means a stale or hand-edited concept degrades to a shorter card instead.
+ */
+const filled = (v: unknown, key: string): Record<string, unknown>[] =>
+  arr(v).filter(it => str(it[key]).trim().length > 0);
+
 // ── 1. KpiCard ────────────────────────────────────────────────────────────────
 export function KpiCard({ label, value, unit, period, trend }: Record<string, unknown>) {
   const t = str(trend).toLowerCase();
@@ -158,7 +169,8 @@ const RISK_TONE: Record<string, string> = {
   low: "text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800",
 };
 export function RiskBadgeList({ items }: Record<string, unknown>) {
-  const list = arr(items);
+  const list = filled(items, "description");
+  if (!list.length) return null;
   return (
     <CardShell title="Risiken" accent="var(--cat-security)">
       <ul className="flex flex-col gap-2.5">
@@ -195,10 +207,12 @@ const STATUS_ICON: Record<string, { Icon: React.ElementType; cls: string }> = {
   kritisch: { Icon: AlertTriangle, cls: "text-red-500" },
 };
 export function StatusList({ items }: Record<string, unknown>) {
+  const list = filled(items, "label");
+  if (!list.length) return null;
   return (
     <CardShell title="Status">
       <ul className="flex flex-col gap-2">
-        {arr(items).map((it, i) => {
+        {list.map((it, i) => {
           const key = str(it.status).toLowerCase();
           const { Icon, cls } = STATUS_ICON[key] ?? { Icon: Circle, cls: "text-zinc-400" };
           return (
@@ -218,7 +232,8 @@ export function StatusList({ items }: Record<string, unknown>) {
 
 // ── 7. TimelineSteps ──────────────────────────────────────────────────────────
 export function TimelineSteps({ steps }: Record<string, unknown>) {
-  const list = arr(steps);
+  const list = filled(steps, "label");
+  if (!list.length) return null;
   return (
     <CardShell title="Ablauf">
       <ol className="relative flex flex-col gap-3 pl-1">
@@ -249,7 +264,10 @@ export function TimelineSteps({ steps }: Record<string, unknown>) {
 // ── 8. DonutBreakdown ─────────────────────────────────────────────────────────
 const SLICE_COLORS = ["var(--cat-tooling)", "var(--cat-business)", "var(--cat-agile)", "var(--cat-security)", "#8b8f8c"];
 export function DonutBreakdown({ label, slices, unit }: Record<string, unknown>) {
-  const list = arr(slices).map(s => ({ name: str(s.name), value: num(s.value) ?? 0 })).filter(s => s.value > 0);
+  const list = filled(slices, "name")
+    .map(s => ({ name: str(s.name), value: num(s.value) ?? 0 }))
+    .filter(s => s.value > 0);
+  if (!list.length) return null;
   const total = list.reduce((a, s) => a + s.value, 0) || 1;
   const R = 30, C = 2 * Math.PI * R;
   let acc = 0;
@@ -287,10 +305,12 @@ export function DonutBreakdown({ label, slices, unit }: Record<string, unknown>)
 
 // ── 9. ScorecardGrid ──────────────────────────────────────────────────────────
 export function ScorecardGrid({ items }: Record<string, unknown>) {
+  const list = filled(items, "label");
+  if (!list.length) return null;
   return (
     <CardShell title="Bewertung">
       <div className="flex flex-col gap-2.5">
-        {arr(items).map((it, i) => {
+        {list.map((it, i) => {
           const score = num(it.score) ?? 0, max = num(it.max) ?? 10;
           const pct = max > 0 ? Math.max(0, Math.min(100, (score / max) * 100)) : 0;
           return (
@@ -351,7 +371,8 @@ export function ComparisonTable({ columns, rows, caption }: Record<string, unkno
 
 // ── 11. ChecklistProgress ─────────────────────────────────────────────────────
 export function ChecklistProgress({ title, items }: Record<string, unknown>) {
-  const list = arr(items);
+  const list = filled(items, "label");
+  if (!list.length) return null;
   const done = list.filter(i => i.done === true || str(i.done).toLowerCase() === "true").length;
   return (
     <CardShell title={title ? str(title) : "Checkliste"}
@@ -378,7 +399,8 @@ export function ChecklistProgress({ title, items }: Record<string, unknown>) {
 
 // ── 12. StatGrid ──────────────────────────────────────────────────────────────
 export function StatGrid({ stats }: Record<string, unknown>) {
-  const list = arr(stats);
+  const list = filled(stats, "label");
+  if (!list.length) return null;
   return (
     <CardShell title="Kennzahlen" className="sm:col-span-2">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
