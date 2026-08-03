@@ -14,7 +14,7 @@ import {
 import { motion, AnimatePresence, useSpring } from "motion/react";
 import { deriveConceptMetrics } from "@/lib/metrics";
 import { BeforeAfterGrid, EffortPie } from "@/components/charts/concept-charts";
-import { MeasureViews } from "@/components/charts/measure-views";
+import { MeasurePriorityBoard, MeasureSequence } from "@/components/charts/measure-views";
 import { ConceptCardsSection } from "@/components/cards/card-template-renderer";
 
 // ── Magnetic button ───────────────────────────────────────────────────────────
@@ -602,8 +602,10 @@ function ConceptContent() {
             )}
 
             {/* ── Concept content ──────────────────────────────────────────── */}
+            {/* gap-8: at gap-5 the sections ran together and the page read as one
+                dense block. Sections need to be visibly separate to be scannable. */}
             {concept && (
-              <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-8">
 
                 {/* Visual dashboard — driven by the concept's own numbers. Each block
                     only appears when the underlying data is actually present. */}
@@ -718,9 +720,12 @@ function ConceptContent() {
                   </div>
                 </motion.div>
 
-                {/* Empfohlene Maßnahmen — renders only when the backend supplies
-                    them, so an older backend simply shows nothing here. */}
-                <MeasureViews measures={measures} lensSummary={concept?.measures_lens_summary} />
+                {/* Empfohlene Maßnahmen — two separate sections rather than one
+                    card with four tabbed views of the same data. Each renders only
+                    when the backend supplies measures, so an older concept simply
+                    shows nothing here. */}
+                <MeasurePriorityBoard measures={measures} lensSummary={concept?.measures_lens_summary} />
+                <MeasureSequence measures={measures} />
 
                 {/* Result cards, chosen per concept. Older concepts have no
                     `cards`, so they keep rendering the three static KPI tiles. */}
