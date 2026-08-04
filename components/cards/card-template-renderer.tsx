@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { LayoutGrid, Info, EyeOff, Pin, PinOff, Undo2, X } from "lucide-react";
+import { LayoutGrid, Info, Check, EyeOff, Pin, PinOff, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useChatStore } from "@/lib/chat-store";
 import type { ConceptCard } from "@/lib/api";
 import {
   KpiCard, BeforeAfterBar, RadialGauge, ProgressCard, RiskBadgeList, StatusList,
@@ -20,7 +21,7 @@ import {
  * frontend paired with a newer catalogue degrades rather than breaks.
  *
  * The frame around each card lives here, not in the components: hiding, pinning and
- * the "where does this number come from" panel are the same for all twelve.
+ * handing the card to the assistant are the same for all twelve.
  */
 
 const COMPONENT_MAP: Record<string, React.ComponentType<Record<string, unknown>>> = {
@@ -31,6 +32,55 @@ const COMPONENT_MAP: Record<string, React.ComponentType<Record<string, unknown>>
 
 /** Components that need the full width to be readable. */
 const WIDE = new Set(["ComparisonTable", "StatGrid"]);
+
+/** Keys that carry the card's numbers/labels rather than its plumbing. */
+const SKIP_KEYS = new Set(["basis", "title"]);
+
+/**
+ * Turn a card into something the assistant can reason about.
+ *
+ * The ⓘ button used to open a one-sentence overlay that also covered the numbers
+ * it was explaining. Handing the whole card to the assistant instead means the
+ * reader can keep asking — where a figure comes from, how solid it is, what to
+ * challenge — which is the actual question behind "where does this number come
+ * from".
+ */
+function cardToQuote(card: ConceptCard): string {
+  const data = card.data ?? {};
+  const lines: string[] = [`Karte: „${card.title || "Kennzahl"}"`];
+
+  for (const [k, v] of Object.entries(data)) {
+    if (SKIP_KEYS.has(k) || v == null || v === "") continue;
+    if (Array.isArray(v)) {
+      const items = v.map(it => {
+        if (it && typeof it === "object") {
+          const o = it as Record<string, unknown>;
+          // Whatever the item shape, these are the fields that carry meaning.
+          return ["label", "name", "description", "risk_level", "status",
+                  "value", "unit", "score", "max", "when", "note", "done"]
+            .filter(f => o[f] !== undefined && o[f] !== "")
+            .map(f => `${f}=${String(o[f])}`)
+            .join(", ");
+        }
+        return String(it);
+      }).filter(Boolean);
+      if (items.length) lines.push(`${k}:\n  - ${items.join("\n  - ")}`);
+    } else if (typeof v === "object") {
+      continue;
+    } else {
+      lines.push(`${k}: ${String(v)}`);
+    }
+  }
+
+  const basis = typeof data.basis === "string" ? data.basis.trim() : "";
+  if (basis) lines.push(`Rechenweg laut Konzept: ${basis}`);
+  return lines.join("\n");
+}
+
+const CARD_QUESTION =
+  "Erkläre mir diese Kennzahl aus dem Transformationskonzept im Detail: " +
+  "woher kommen die Zahlen, wie belastbar sind sie, welche Annahmen stecken drin " +
+  "und was sollte ich hinterfragen, bevor ich sie einem Kunden zeige?";
 
 export function CardTemplateRenderer({
   card, checked, onToggle,
@@ -78,10 +128,11 @@ function IconButton({
 /**
  * One card plus its controls.
  *
- * `basis` is the sentence the backend writes explaining where the figure came from
- * — which statement in the concept, and the arithmetic if any. It opens as an
- * overlay rather than always-on text: the number is the point, the derivation is
- * what you reach for when you have to defend it.
+ * ⓘ hands the card to the assistant on the right instead of opening a panel over
+ * it. The old overlay showed one sentence and covered the very numbers it was
+ * explaining; the assistant gets the card's full data plus the backend's Rechenweg
+ * and can be asked follow-ups, which is the real question behind "where does this
+ * number come from".
  */
 function CardFrame({
   card, pinned, onHide, onTogglePin, checked, onToggleItem,
@@ -90,8 +141,16 @@ function CardFrame({
   onHide: () => void; onTogglePin: () => void;
   checked?: string[]; onToggleItem?: (itemLabel: string) => void;
 }) {
-  const [showBasis, setShowBasis] = useState(false);
-  const basis = typeof card.data?.basis === "string" ? card.data.basis : "";
+  const pushAssistant = useChatStore(s => s.pushAssistant);
+  const setAssistantOpenMobile = useChatStore(s => s.setAssistantOpenMobile);
+  const [asked, setAsked] = useState(false);
+
+  function explain() {
+    pushAssistant({ quote: cardToQuote(card), question: CARD_QUESTION });
+    setAssistantOpenMobile(true);          // on desktop the panel is always visible
+    setAsked(true);
+    setTimeout(() => setAsked(false), 1600);
+  }
 
   // Column span is set by the grid child in ConceptCardsSection — this frame sits
   // one level deeper, so a col-span here would do nothing.
@@ -101,11 +160,15 @@ function CardFrame({
 
       {/* Controls stay out of the way until the card is hovered or focused. */}
       <div className="absolute top-2.5 right-2.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 no-print">
-        {basis ? (
-          <IconButton label="Woher kommt diese Zahl?" onClick={() => setShowBasis(v => !v)} active={showBasis}>
-            <Info className="w-3.5 h-3.5" strokeWidth={1.8} />
-          </IconButton>
-        ) : null}
+        <IconButton
+          label="Im Assistenten erklären lassen"
+          onClick={explain}
+          active={asked}
+        >
+          {asked
+            ? <Check className="w-3.5 h-3.5" strokeWidth={2.4} />
+            : <Info className="w-3.5 h-3.5" strokeWidth={1.8} />}
+        </IconButton>
         <IconButton label={pinned ? "Nicht mehr anpinnen" : "Nach oben anpinnen"} onClick={onTogglePin} active={pinned}>
           {pinned ? <PinOff className="w-3.5 h-3.5" strokeWidth={1.8} /> : <Pin className="w-3.5 h-3.5" strokeWidth={1.8} />}
         </IconButton>
@@ -114,32 +177,6 @@ function CardFrame({
         </IconButton>
       </div>
 
-      <AnimatePresence>
-        {showBasis && basis && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-            className="absolute inset-x-0 bottom-0 rounded-b-xl border-t border-zinc-200/80 dark:border-zinc-700 bg-white/97 dark:bg-zinc-900/97 backdrop-blur-sm p-3.5 no-print"
-          >
-            <div className="flex items-start gap-2">
-              <span className="text-[9.5px] font-bold uppercase tracking-wider text-green-700 dark:text-green-400 shrink-0 mt-px">
-                Rechenweg
-              </span>
-              <p className="text-[11.5px] text-zinc-600 dark:text-zinc-300 leading-relaxed min-w-0 flex-1">{basis}</p>
-              <button
-                type="button"
-                onClick={() => setShowBasis(false)}
-                aria-label="Schließen"
-                className="text-zinc-300 hover:text-zinc-600 dark:hover:text-zinc-300 shrink-0"
-              >
-                <X className="w-3.5 h-3.5" strokeWidth={2} />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

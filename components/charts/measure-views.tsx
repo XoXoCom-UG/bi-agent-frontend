@@ -2,9 +2,10 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
+import { useChatStore } from "@/lib/chat-store";
 import type { RecommendedMeasure, MeasureCategory } from "@/lib/api";
 import {
-  Crosshair, GitBranch, ArrowRight, Check, Circle, CornerUpRight,
+  Crosshair, GitBranch, ArrowRight, Check, Circle, CornerUpRight, Info,
   Wrench, Users, TrendingUp, ShieldCheck,
 } from "lucide-react";
 
@@ -222,6 +223,8 @@ function MeasureDetail({
   m: RecommendedMeasure; all: RecommendedMeasure[];
   quad: QuadId; onMove: (q: QuadId) => void;
 }) {
+  const pushAssistant = useChatStore(s => s.pushAssistant);
+  const setAssistantOpenMobile = useChatStore(s => s.setAssistantOpenMobile);
   const c = cat(m);
   const deps = (m.depends_on ?? [])
     .map(id => all.find(x => x.id === id)?.title)
@@ -257,7 +260,33 @@ function MeasureDetail({
               </p>
             ) : null}
 
-            <div className="flex flex-wrap items-center gap-1.5 mt-3.5 no-print">
+            {/* Same hand-off as the cards: the assistant gets the measure and can be
+                asked why it matters, what it costs, what it depends on. */}
+            <button
+              type="button"
+              onClick={() => {
+                pushAssistant({
+                  quote: [
+                    `Maßnahme: „${m.title}"`,
+                    `Kategorie: ${c.label} · Wirkung: ${m.impact ?? "—"} · Aufwand: ${m.effort ?? "—"}`,
+                    m.lens ? `Perspektive: ${m.lens}` : "",
+                    m.description ? `Beschreibung: ${m.description}` : "",
+                    deps.length ? `Setzt voraus: ${deps.join(", ")}` : "",
+                  ].filter(Boolean).join("\n"),
+                  question:
+                    "Erkläre mir diese Maßnahme im Detail: warum lohnt sie sich für diesen " +
+                    "Kunden, was steckt an Aufwand dahinter, welche Risiken gibt es und " +
+                    "welche Alternativen wären denkbar?",
+                });
+                setAssistantOpenMobile(true);
+              }}
+              className="no-print inline-flex items-center gap-1.5 mt-3.5 text-[10.5px] font-medium text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 rounded-md px-2 py-1 hover:bg-white dark:hover:bg-zinc-800 hover:border-zinc-300 transition-colors duration-150"
+            >
+              <Info className="w-3 h-3" strokeWidth={1.8} />
+              Im Assistenten erklären lassen
+            </button>
+
+            <div className="flex flex-wrap items-center gap-1.5 mt-3 no-print">
               <span className="inline-flex items-center gap-1 text-[10px] text-zinc-400 mr-0.5">
                 <CornerUpRight className="w-3 h-3" strokeWidth={1.8} />
                 Verschieben nach
