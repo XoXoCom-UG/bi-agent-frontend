@@ -762,8 +762,10 @@ function ConceptContent() {
                     cards={cards}
                     hidden={concept?.cards_hidden ?? []}
                     pinned={concept?.cards_pinned ?? null}
+                    checked={concept?.card_state?.checked ?? {}}
                     onHiddenChange={next => patchConcept({ cards_hidden: next })}
                     onPinnedChange={next => patchConcept({ cards_pinned: next })}
+                    onCheckedChange={next => patchConcept({ card_state: { ...concept?.card_state, checked: next } })}
                   />
                 ) : kpiItems.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

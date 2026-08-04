@@ -150,22 +150,81 @@ export function RadialGauge({ label, value, max, unit }: Record<string, unknown>
 }
 
 // ── 4. ProgressCard ───────────────────────────────────────────────────────────
-export function ProgressCard({ label, current, target, unit, note }: Record<string, unknown>) {
-  const c = num(current) ?? 0, t = num(target) ?? 0;
+/**
+ * Milestones you tick off, with the bar following along.
+ *
+ * This used to be a static number: the model filled `current: 0, target: 7` and put
+ * the milestone names into `note` as one arrow-separated string, so the card could
+ * only ever read "0 / 7 — 0 %". Nothing in the app could move it, which made it a
+ * picture of zero progress rather than a way to track any.
+ *
+ * `checked` and `onToggle` come from the card frame, which persists them in the
+ * concept. Without them the card still renders — read-only — so a concept saved
+ * before this change degrades instead of breaking.
+ */
+export function ProgressCard({
+  label, items, current, target, unit, note, checked, onToggle,
+}: Record<string, unknown>) {
+  const list = filled(items, "label");
+  const ticks = Array.isArray(checked) ? (checked as string[]) : [];
+  const toggle = typeof onToggle === "function" ? (onToggle as (l: string) => void) : null;
+
+  // With items, progress IS the tick count. Without them, fall back to the numbers
+  // an older concept carries.
+  const isDone = (it: Record<string, unknown>) =>
+    ticks.includes(str(it.label)) || it.done === true || str(it.done).toLowerCase() === "true";
+  const c = list.length ? list.filter(isDone).length : (num(current) ?? 0);
+  const t = list.length ? list.length : (num(target) ?? 0);
   const pct = t > 0 ? Math.max(0, Math.min(100, (c / t) * 100)) : 0;
+
   return (
     <CardShell title={str(label)} hint={note ? str(note) : undefined}>
       <div className="flex items-baseline justify-between mb-2">
         <span className="text-lg font-extrabold tabular-nums text-zinc-900 dark:text-zinc-50">
-          {c}<span className="text-zinc-400 font-semibold text-sm"> / {t}{unit ? ` ${str(unit)}` : ""}</span>
+          {c}<span className="text-zinc-400 font-semibold text-sm"> / {t}{unit ? ` ${unitFor(t, unit)}` : ""}</span>
         </span>
         <span className="text-[11px] font-bold text-green-700 dark:text-green-400 tabular-nums">{Math.round(pct)}%</span>
       </div>
       <div className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-          className="h-full rounded-full bg-green-600" />
+        <div
+          className="h-full rounded-full bg-green-600"
+          style={{ width: `${pct}%` }}
+        />
       </div>
+
+      {list.length > 0 && (
+        <ul className="flex flex-col gap-1 mt-3">
+          {list.map((it, i) => {
+            const lbl = str(it.label);
+            const done = isDone(it);
+            const Row = toggle ? "button" : "div";
+            return (
+              <li key={i}>
+                <Row
+                  {...(toggle
+                    ? { type: "button" as const, onClick: () => toggle(lbl), "aria-pressed": done,
+                        "aria-label": done ? `${lbl} als offen markieren` : `${lbl} als erledigt markieren` }
+                    : {})}
+                  className={cn(
+                    "w-full text-left flex items-start gap-2 rounded-md px-1 py-1 -mx-1",
+                    toggle && "hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors duration-150"
+                  )}
+                >
+                  {done
+                    ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-px text-green-600" strokeWidth={2.2} />
+                    : <Circle className="w-3.5 h-3.5 shrink-0 mt-px text-zinc-300 dark:text-zinc-600" strokeWidth={2} />}
+                  <span className={cn(
+                    "text-[11.5px] leading-snug min-w-0 flex-1",
+                    done ? "text-zinc-400 line-through" : "text-zinc-700 dark:text-zinc-300"
+                  )}>
+                    {lbl}
+                  </span>
+                </Row>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </CardShell>
   );
 }

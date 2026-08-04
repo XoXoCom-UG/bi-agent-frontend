@@ -311,6 +311,10 @@ export interface ConceptData {
    *  the concept blob so the choice survives a reload without a DB migration. */
   cards_hidden?: string[];
   cards_pinned?: string | null;
+  /** Milestones the user ticked off inside a card, keyed by template id then by the
+   *  item's own label. Labels rather than indexes, so a regenerated card with the
+   *  same milestone keeps its tick. */
+  card_state?: { checked?: Record<string, string[]> };
   /** What the user has actually done with the measures: which are ticked off, and
    *  any quadrant they moved by hand because they disagreed with the AI's call.
    *  Same storage trick as the card preferences — it lives in the concept blob. */

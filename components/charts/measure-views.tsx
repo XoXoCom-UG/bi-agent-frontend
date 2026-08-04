@@ -123,11 +123,9 @@ function ProgressHeader({ done, total }: { done: number; total: number }) {
         <span className="text-[13px] font-bold tabular-nums text-green-700 dark:text-green-400">{pct}%</span>
       </div>
       <div className="h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-        <motion.div
-          initial={false}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+        <div
           className="h-full rounded-full bg-green-600"
+          style={{ width: `${pct}%` }}
         />
       </div>
     </div>

@@ -32,10 +32,25 @@ const COMPONENT_MAP: Record<string, React.ComponentType<Record<string, unknown>>
 /** Components that need the full width to be readable. */
 const WIDE = new Set(["ComparisonTable", "StatGrid"]);
 
-export function CardTemplateRenderer({ card }: { card: ConceptCard }) {
+export function CardTemplateRenderer({
+  card, checked, onToggle,
+}: {
+  card: ConceptCard;
+  /** Milestone labels ticked off in this card (ProgressCard). */
+  checked?: string[];
+  onToggle?: (itemLabel: string) => void;
+}) {
   const Component = COMPONENT_MAP[card.component] ?? GenericFallbackCard;
-  // `title` is passed alongside the data so each template names its own card.
-  return <Component {...(card.data ?? {})} title={card.title ?? card.data?.label} />;
+  // `title` is passed alongside the data so each template names its own card; the
+  // tick state only matters to the components that have milestones.
+  return (
+    <Component
+      {...(card.data ?? {})}
+      title={card.title ?? card.data?.label}
+      checked={checked}
+      onToggle={onToggle}
+    />
+  );
 }
 
 function IconButton({
@@ -69,10 +84,11 @@ function IconButton({
  * what you reach for when you have to defend it.
  */
 function CardFrame({
-  card, pinned, onHide, onTogglePin,
+  card, pinned, onHide, onTogglePin, checked, onToggleItem,
 }: {
   card: ConceptCard; pinned: boolean;
   onHide: () => void; onTogglePin: () => void;
+  checked?: string[]; onToggleItem?: (itemLabel: string) => void;
 }) {
   const [showBasis, setShowBasis] = useState(false);
   const basis = typeof card.data?.basis === "string" ? card.data.basis : "";
@@ -81,7 +97,7 @@ function CardFrame({
   // one level deeper, so a col-span here would do nothing.
   return (
     <div className="relative group h-full">
-      <CardTemplateRenderer card={card} />
+      <CardTemplateRenderer card={card} checked={checked} onToggle={onToggleItem} />
 
       {/* Controls stay out of the way until the card is hovered or focused. */}
       <div className="absolute top-2.5 right-2.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 no-print">
@@ -129,13 +145,16 @@ function CardFrame({
 }
 
 export function ConceptCardsSection({
-  cards, hidden = [], pinned = null, onHiddenChange, onPinnedChange,
+  cards, hidden = [], pinned = null, checked = {}, onHiddenChange, onPinnedChange, onCheckedChange,
 }: {
   cards: ConceptCard[];
   hidden?: string[];
   pinned?: string | null;
+  /** template_id -> ticked milestone labels. */
+  checked?: Record<string, string[]>;
   onHiddenChange?: (next: string[]) => void;
   onPinnedChange?: (next: string | null) => void;
+  onCheckedChange?: (next: Record<string, string[]>) => void;
 }) {
   if (!cards?.length) return null;
 
@@ -159,6 +178,11 @@ export function ConceptCardsSection({
   const hide = (id: string) => onHiddenChange?.([...hidden, id]);
   const restore = () => onHiddenChange?.([]);
   const togglePin = (id: string) => onPinnedChange?.(pinned === id ? null : id);
+  const toggleItem = (tid: string, itemLabel: string) => {
+    const cur = checked[tid] ?? [];
+    const next = cur.includes(itemLabel) ? cur.filter(l => l !== itemLabel) : [...cur, itemLabel];
+    onCheckedChange?.({ ...checked, [tid]: next });
+  };
 
   return (
     <motion.section
@@ -203,6 +227,8 @@ export function ConceptCardsSection({
               pinned={pinned === card.template_id}
               onHide={() => hide(card.template_id)}
               onTogglePin={() => togglePin(card.template_id)}
+              checked={checked[card.template_id] ?? []}
+              onToggleItem={label => toggleItem(card.template_id, label)}
             />
           </motion.div>
         ))}
