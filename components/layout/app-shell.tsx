@@ -17,6 +17,10 @@ import {
 
 type ActiveScreen = "chat" | "concept" | "dashboard";
 
+/** Names the app itself once assigned, in both languages it has shipped. Only these
+ *  get backfilled — anything the user typed is left alone. */
+const PLACEHOLDER_NAMES = new Set(["Neues Projekt", "New project"]);
+
 /**
  * AppShell — the shared frame for Chat, Concept and Dashboard (Patryk sketch,
  * 2026-07-07). No left sidebar. A single horizontal topbar carries the logo,
@@ -37,6 +41,51 @@ export function AppShell({ active, children }: { active: ActiveScreen; children:
     api.getHistory(token).then(d => store.setHistory(d.sessions)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  /*
+   * Backfill the names of projects the old bug left as placeholders.
+   *
+   * "Starte Projekt" used to create the project immediately under a fixed name, so
+   * every project made before that was fixed is called "Neues Projekt" — including
+   * the ones that went on to hold real conversations. New projects are named after
+   * the first message now, but the existing ones can't rename themselves.
+   *
+   * The name is taken from the project's OLDEST conversation, which is the message
+   * that would have named it. No extra requests: history is already loaded, and it
+   * carries project_id. Only these two exact placeholders are touched — a name the
+   * user chose is never overwritten.
+   */
+  const backfilled = useRef(false);
+  useEffect(() => {
+    if (backfilled.current || !token) return;
+    if (!store.projects.length || !store.history.length) return;
+
+    const stale = store.projects.filter(
+      p => PLACEHOLDER_NAMES.has((p.name || "").trim()) && p.chats > 0
+    );
+    if (!stale.length) return;
+    backfilled.current = true;
+
+    (async () => {
+      const renames: Record<string, string> = {};
+      for (const p of stale) {
+        const first = store.history
+          .filter(x => x.project_id === p.project_id && x.title?.trim())
+          .sort((a, b) => a.saved_at.localeCompare(b.saved_at))[0];
+        const name = first?.title?.trim().slice(0, 48);
+        if (!name) continue;
+        try {
+          await api.renameProject(token, p.project_id, name);
+          renames[p.project_id] = name;
+        } catch {}
+      }
+      if (Object.keys(renames).length) {
+        store.setProjects(store.projects.map(p =>
+          renames[p.project_id] ? { ...p, name: renames[p.project_id] } : p));
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, store.projects.length, store.history.length]);
 
   // Never let the settings modal sit on top of the running tour.
   useEffect(() => { if (store.tourActive) setSettingsOpen(false); }, [store.tourActive]);
@@ -254,6 +303,23 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
   // any more, which is what makes "no chats" a safe signal for junk.
   const emptyProjects = visibleProjects.filter(p => p.chats === 0);
 
+  /**
+   * What to call a project on screen.
+   *
+   * The backfill above rewrites placeholder names in the database, but that is a
+   * network write that can fail — and the user should not keep staring at "Neues
+   * Projekt" because of a dropped request. Deriving the name here too means the fix
+   * shows up immediately either way, and the stored name catches up on the next load.
+   */
+  function projectName(p: { project_id: string; name: string; chats: number }): string {
+    const name = (p.name || "").trim();
+    if (!PLACEHOLDER_NAMES.has(name) || p.chats === 0) return name || "Projekt";
+    const first = store.history
+      .filter(x => x.project_id === p.project_id && x.title?.trim())
+      .sort((a, b) => a.saved_at.localeCompare(b.saved_at))[0];
+    return first?.title?.trim().slice(0, 48) || name;
+  }
+
   function deleteProject(e: React.MouseEvent, p: { project_id: string; name: string }) {
     e.stopPropagation();
     store.queueDelete({
@@ -387,7 +453,7 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
         {activeProject
           ? <FolderOpen className="w-3.5 h-3.5 shrink-0 text-green-600" strokeWidth={1.5} />
           : <Folder className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />}
-        <span className="truncate">{activeProject ? activeProject.name : "Projekte"}</span>
+        <span className="truncate">{activeProject ? projectName(activeProject) : "Projekte"}</span>
         <ChevronDown className={cn("w-3 h-3 shrink-0 transition-transform", open && "rotate-180")} strokeWidth={1.5} />
       </button>
 
@@ -471,7 +537,7 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
                       <ChevronDown className={cn("w-3.5 h-3.5 text-zinc-400 shrink-0 transition-transform", !isOpen && "-rotate-90")} strokeWidth={1.5} />
                       <Folder className={cn("w-3.5 h-3.5 shrink-0", isActive ? "text-green-600" : "text-zinc-400")} strokeWidth={1.5} />
                       <span className={cn("flex-1 text-xs font-medium truncate", isActive ? "text-green-800 dark:text-green-300" : "text-zinc-700 dark:text-zinc-300")}>
-                        {p.name}
+                        {projectName(p)}
                       </span>
                       <span className="text-[10px] font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5 shrink-0 group-hover/pi:hidden">{p.chats}</span>
                       <button onClick={e => deleteProject(e, p)} title="Projekt löschen"
