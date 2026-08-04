@@ -311,6 +311,13 @@ export interface ConceptData {
    *  the concept blob so the choice survives a reload without a DB migration. */
   cards_hidden?: string[];
   cards_pinned?: string | null;
+  /** What the user has actually done with the measures: which are ticked off, and
+   *  any quadrant they moved by hand because they disagreed with the AI's call.
+   *  Same storage trick as the card preferences — it lives in the concept blob. */
+  measure_state?: {
+    done?: string[];
+    quadrant?: Record<string, string>;
+  };
 }
 
 export interface ConceptResponse {

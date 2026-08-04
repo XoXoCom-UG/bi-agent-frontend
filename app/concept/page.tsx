@@ -743,8 +743,17 @@ function ConceptContent() {
                     card with four tabbed views of the same data. Each renders only
                     when the backend supplies measures, so an older concept simply
                     shows nothing here. */}
-                <MeasurePriorityBoard measures={measures} lensSummary={concept?.measures_lens_summary} />
-                <MeasureSequence measures={measures} />
+                <MeasurePriorityBoard
+                  measures={measures}
+                  lensSummary={concept?.measures_lens_summary}
+                  state={concept?.measure_state}
+                  onStateChange={next => patchConcept({ measure_state: next })}
+                />
+                <MeasureSequence
+                  measures={measures}
+                  state={concept?.measure_state}
+                  onStateChange={next => patchConcept({ measure_state: next })}
+                />
 
                 {/* Result cards, chosen per concept. Older concepts have no
                     `cards`, so they keep rendering the three static KPI tiles. */}
