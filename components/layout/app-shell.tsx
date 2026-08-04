@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
 import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, dateStr } from "@/lib/utils";
 import { SettingsModal } from "./settings-modal";
 import { AssistantDock } from "./right-panel";
 import { TutorialOverlay } from "./tutorial";
@@ -12,7 +12,7 @@ import { CommandPalette } from "./command-palette";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Zap, Map, Folder, FolderOpen, Plus, ChevronDown, Check, X,
-  GripVertical, MessageCircle, Sparkles, Trash2, RotateCcw, Search,
+  GripVertical, MessageCircle, Sparkles, Trash2, RotateCcw, Search, ChevronRight, Eraser,
 } from "lucide-react";
 
 type ActiveScreen = "chat" | "concept" | "dashboard";
@@ -218,10 +218,41 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
 
   useEffect(() => { if (creating) setTimeout(() => inputRef.current?.focus(), 50); }, [creating]);
 
+  // Which stack of same-titled chats is expanded (one at a time).
+  const [openStack, setOpenStack] = useState<string | null>(null);
+
   const pendingIds = new Set(store.pendingDeletes.map(p => p.id));
   const activeProject = store.projects.find(p => p.project_id === store.activeProjectId) ?? null;
   const visibleProjects = store.projects.filter(p => !pendingIds.has(p.project_id));
-  const looseChats = store.history.filter(s => !s.project_id && !pendingIds.has(s.session_id)).slice(0, 6);
+  const looseChats = store.history.filter(s => !s.project_id && !pendingIds.has(s.session_id));
+
+  /*
+   * Chats whose titles are identical collapse into one row.
+   *
+   * The title is the first message truncated to 30 characters, so asking the same
+   * thing four times produced four rows reading "Wir wollen in die Cloud migrie…"
+   * with nothing to tell them apart. They are genuinely separate conversations, so
+   * they must not be merged away — just stacked, with a count, expandable, and each
+   * one dated.
+   */
+  const looseGroups = (() => {
+    const groups: { key: string; title: string; chats: typeof looseChats }[] = [];
+    // A plain object, not a Map: `Map` here is lucide-react's icon, not the built-in.
+    const indexByKey: Record<string, number> = {};
+    for (const s of looseChats) {
+      const title = (s.title || "Untitled").slice(0, 30);
+      const key = title.toLowerCase().trim();
+      const at = indexByKey[key];
+      if (at === undefined) { indexByKey[key] = groups.length; groups.push({ key, title, chats: [s] }); }
+      else groups[at].chats.push(s);
+    }
+    return groups.slice(0, 6);
+  })();
+
+  // Left over from a bug that created a project the moment "Starte Projekt" was
+  // pressed, so every abandoned start persisted an empty one. Nothing creates them
+  // any more, which is what makes "no chats" a safe signal for junk.
+  const emptyProjects = visibleProjects.filter(p => p.chats === 0);
 
   function deleteProject(e: React.MouseEvent, p: { project_id: string; name: string }) {
     e.stopPropagation();
@@ -231,6 +262,19 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
       label: `Projekt „${p.name}" gelöscht`,
     });
     if (store.activeProjectId === p.project_id) { store.newChat(); store.setActiveProject(null); }
+  }
+
+  /** Queue every empty project for deletion. Uses the same 15-minute undo window as
+   *  a single delete, so a bulk action stays reversible. */
+  function cleanEmptyProjects() {
+    for (const p of emptyProjects) {
+      store.queueDelete({
+        id: p.project_id, kind: "project", item: p as never,
+        deleteAt: Date.now() + 15 * 60 * 1000,
+        label: `${emptyProjects.length} leere Projekte gelöscht`,
+      });
+      if (store.activeProjectId === p.project_id) { store.newChat(); store.setActiveProject(null); }
+    }
   }
 
   function deleteChat(e: React.MouseEvent, s: { session_id: string; title?: string }) {
@@ -358,10 +402,22 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
           >
             <div className="flex items-center justify-between px-3 py-2.5 border-b border-zinc-100 dark:border-zinc-800">
               <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">Projekte</p>
-              <button onClick={() => setCreating(c => !c)}
-                className="w-5 h-5 rounded-md flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950 transition-colors">
-                <Plus className="w-3.5 h-3.5" strokeWidth={2} />
-              </button>
+              <div className="flex items-center gap-1">
+                {/* Only appears when there is something to clean, so it can't be
+                    mistaken for a general "delete projects" button. */}
+                {emptyProjects.length > 1 && (
+                  <button onClick={cleanEmptyProjects}
+                    title={`${emptyProjects.length} Projekte ohne Chats aufräumen`}
+                    className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded-md px-1.5 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                    <Eraser className="w-3 h-3" strokeWidth={1.6} />
+                    {emptyProjects.length} leere
+                  </button>
+                )}
+                <button onClick={() => setCreating(c => !c)}
+                  className="w-5 h-5 rounded-md flex items-center justify-center text-green-600 hover:bg-green-50 dark:hover:bg-green-950 transition-colors">
+                  <Plus className="w-3.5 h-3.5" strokeWidth={2} />
+                </button>
+              </div>
             </div>
 
             {/* Inline create */}
@@ -462,17 +518,49 @@ function ProjectsMenu({ active }: { active: ActiveScreen }) {
                 <MessageCircle className="w-3.5 h-3.5 text-green-600 shrink-0" strokeWidth={1.5} />
                 Schnelle Frage — ohne Projekt
               </button>
-              {looseChats.map(s => (
-                <div key={s.session_id}
-                  className="group/lc w-full flex items-center gap-2 pl-8 pr-2 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                  onClick={() => loadSession(s.session_id, null)}>
-                  <span className="flex-1 text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{(s.title || "Untitled").slice(0, 30)}</span>
-                  <button onClick={e => deleteChat(e, s)} title="Chat löschen"
-                    className="hidden group-hover/lc:flex w-5 h-5 rounded items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0 transition-colors">
-                    <Trash2 className="w-3 h-3" strokeWidth={1.5} />
-                  </button>
-                </div>
-              ))}
+              {looseGroups.map(g => {
+                const stacked = g.chats.length > 1;
+                const isOpen = openStack === g.key;
+                return (
+                  <div key={g.key}>
+                    <div
+                      className="group/lc w-full flex items-center gap-2 pl-8 pr-2 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                      onClick={() => stacked
+                        ? setOpenStack(isOpen ? null : g.key)
+                        : loadSession(g.chats[0].session_id, null)}>
+                      {stacked && (
+                        <ChevronRight className={cn("w-3 h-3 shrink-0 text-zinc-400 transition-transform duration-150", isOpen && "rotate-90")} strokeWidth={2} />
+                      )}
+                      <span className="flex-1 text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{g.title}</span>
+                      {stacked ? (
+                        <span className="text-[10px] font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5 shrink-0">{g.chats.length}</span>
+                      ) : (
+                        <>
+                          <span className="text-[10px] text-zinc-300 dark:text-zinc-600 shrink-0 group-hover/lc:hidden">{dateStr(g.chats[0].saved_at)}</span>
+                          <button onClick={e => deleteChat(e, g.chats[0])} title="Chat löschen"
+                            className="hidden group-hover/lc:flex w-5 h-5 rounded items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0 transition-colors">
+                            <Trash2 className="w-3 h-3" strokeWidth={1.5} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {stacked && isOpen && g.chats.map(s => (
+                      <div key={s.session_id}
+                        className="group/ls w-full flex items-center gap-2 pl-[52px] pr-2 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                        onClick={() => loadSession(s.session_id, null)}>
+                        <span className="flex-1 text-[11px] text-zinc-400 dark:text-zinc-500 truncate">
+                          {dateStr(s.saved_at)} · {s.message_count} Nachrichten
+                        </span>
+                        <button onClick={e => deleteChat(e, s)} title="Chat löschen"
+                          className="hidden group-hover/ls:flex w-5 h-5 rounded items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0 transition-colors">
+                          <Trash2 className="w-3 h-3" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
         )}
