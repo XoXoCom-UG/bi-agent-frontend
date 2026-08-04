@@ -176,7 +176,7 @@ function GeneratingOverlay() {
 
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
           className="mt-12 text-center text-xs text-zinc-400">
-          Das dauert typischerweise 15–30 Sekunden
+          Das dauert typischerweise 1–2 Minuten
         </motion.p>
       </div>
     </motion.div>
@@ -241,7 +241,11 @@ function ConceptContent() {
       .finally(() => setConceptLoading(false));
   }, [token, sessionId, store.messages.length, store.demoActive]);
 
-  // Also load concept immediately if URL has ?session= param
+  // Arriving with ?session= — load the concept AND the conversation behind it.
+  //
+  // The messages matter beyond display: regenerating needs them, and the
+  // "Neu generieren" button was gated on having them, so opening a concept by URL
+  // hid the button entirely. That is why it "didn't always show up".
   useEffect(() => {
     if (store.demoActive) return;
     if (!token || !urlSession) return;
@@ -250,6 +254,17 @@ function ConceptContent() {
       .then(d => { if (d?.concept) setConcept(d.concept); })
       .catch(() => {})
       .finally(() => setConceptLoading(false));
+
+    if (!store.messages.length) {
+      api.getSession(token, urlSession)
+        .then(s => {
+          store.setSessionId(urlSession);
+          if (s.title) store.setSessionTitle(s.title);
+          if (s.messages?.length) store.setMessages(s.messages);
+        })
+        .catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, urlSession, store.demoActive]);
 
   // During the tour, show the bundled example instead of loading/generating.
@@ -286,7 +301,14 @@ function ConceptContent() {
     if (!token) return;
     setGenerating(true); setError("");
     try {
-      const msgs = store.messages;
+      let msgs = store.messages;
+      if (!msgs.length && sessionId) {
+        // Opened by URL: the conversation isn't in the store yet, and the concept is
+        // generated FROM the conversation, so fetch it rather than refusing.
+        const s = await api.getSession(token, sessionId).catch(() => null);
+        msgs = s?.messages ?? [];
+        if (msgs.length) store.setMessages(msgs);
+      }
       if (!msgs.length) {
         setError("Wähle zuerst eine Konversation aus.");
         setGenerating(false); return;
@@ -395,7 +417,7 @@ function ConceptContent() {
 
           {/* Regenerate — the only way to replace a concept that was saved before
               a backend change, so it must stay reachable whenever one exists. */}
-          {concept && !store.demoActive && hasMessages && (
+          {concept && !store.demoActive && !!sessionId && (
             confirmRegen ? (
               <div className="flex items-center gap-1.5">
                 <span className="hidden sm:inline text-xs text-zinc-500">Bestehendes Concept überschreiben?</span>

@@ -215,7 +215,6 @@ export default function ChatPage() {
   const [selBtn, setSelBtn] = useState<{ x: number; y: number; text: string } | null>(null);
 
   // Inline project creation on the welcome screen
-  const [projSaving, setProjSaving] = useState(false);
   // "Starte Projekt" clicked → reveal the left agent's composer directly.
   const [startedProject, setStartedProject] = useState(false);
 
@@ -284,8 +283,22 @@ export default function ChatPage() {
     if (store.messages.length === 0) store.setSessionTitle(t.slice(0, 55));
     store.addMessage(userMsg);
     startThinking();
+
+    // Create the project now, on the first message of a guided interview — not when
+    // the user pressed "Starte Projekt". Naming it after what they wrote beats
+    // "Neues Projekt", which is what every eagerly-created project was called.
+    let projectId = store.activeProjectId;
+    if (!projectId && store.guidedProject && store.messages.length === 0) {
+      try {
+        const p = await api.createProject(token, t.slice(0, 48));
+        store.setProjects([p, ...store.projects]);
+        store.setActiveProject(p.project_id);
+        projectId = p.project_id;
+      } catch {}
+    }
+
     try {
-      const res = await api.chat(token, { messages: [...store.messages, userMsg], session_id: store.sessionId, project_id: store.activeProjectId, guided: store.guidedProject });
+      const res = await api.chat(token, { messages: [...store.messages, userMsg], session_id: store.sessionId, project_id: projectId, guided: store.guidedProject });
       store.setMessages(res.messages);
       store.setSessionId(res.session_id);
       // NOTE: guided mode stays ON for the whole interview — it used to reset
@@ -300,21 +313,20 @@ export default function ChatPage() {
     } finally { stopThinking(); }
   }
 
-  // "Starte Projekt" → reveal the left agent's text field right away (no name
-  // prompt), start the guided interview, and create the project in the
-  // background so it stays scoped/saved.
-  async function startProjectDirect() {
-    if (!token || projSaving) return;
-    setProjSaving(true);
+  // "Starte Projekt" → reveal the left agent's text field right away and start the
+  // guided interview.
+  //
+  // It does NOT create the project yet. It used to, eagerly, which meant every
+  // abandoned start — a mis-click, a reload, a change of mind — left a permanent
+  // empty "Neues Projekt" behind. The projects list filled up with them. The
+  // project is now created on the first message instead (see `send`), which also
+  // lets it be named after what the user actually wrote.
+  function startProjectDirect() {
+    if (!token) return;
     store.newChat();
     store.setGuidedProject(true);
     setStartedProject(true);
     setTimeout(() => inputRef.current?.focus(), 80);
-    try {
-      const p = await api.createProject(token, "Neues Projekt");
-      store.setProjects([p, ...store.projects]);
-      store.setActiveProject(p.project_id);
-    } catch {} finally { setProjSaving(false); }
   }
 
   // Selection inside the message list → floating "discuss" button
