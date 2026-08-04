@@ -163,9 +163,11 @@ function EffortTag({ children }: { children: React.ReactNode }) {
  * different intents, and a single click target would make one of them accidental.
  */
 function MeasureRow({
-  m, selected, done, onSelect, onToggleDone,
+  m, selected, done, tag, onSelect, onToggleDone,
 }: {
   m: RecommendedMeasure; selected: boolean; done: boolean;
+  /** Shown only in the merged band, where the row's group is no longer in the header. */
+  tag?: string;
   onSelect: () => void; onToggleDone: () => void;
 }) {
   const c = cat(m);
@@ -202,6 +204,11 @@ function MeasureRow({
         )}>
           {m.title}
         </span>
+        {tag ? (
+          <span className="text-[9.5px] font-medium text-zinc-400 dark:text-zinc-500 whitespace-nowrap shrink-0">
+            {tag}
+          </span>
+        ) : null}
         {m.effort ? <EffortTag>{m.effort}</EffortTag> : null}
       </button>
     </div>
@@ -299,6 +306,39 @@ export function MeasurePriorityBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [measures, overrides]);
 
+  /*
+   * A group earns its own band only if it has enough measures to look like a group.
+   * Below this, it is folded into "Weitere Maßnahmen" — the alternative was an
+   * almost-empty box, which is what the fixed 2×2 kept producing.
+   */
+  const MIN_GROUP = 3;
+  const bands = useMemo(() => {
+    type Item = { m: RecommendedMeasure; tag?: string };
+    const out: { id: string; label: string; hint: string; lead?: boolean; items: Item[] }[] = [];
+    const leftovers: Item[] = [];
+
+    for (const q of QUADS) {
+      const list = byQuad[q.id];
+      if (!list.length) continue;                       // nothing to show, no box
+      if (list.length < MIN_GROUP) {
+        // Keep the quadrant visible as a chip so the judgement isn't lost.
+        leftovers.push(...list.map(m => ({ m, tag: q.label })));
+        continue;
+      }
+      out.push({ id: q.id, label: q.label, hint: q.hint, lead: q.lead, items: list.map(m => ({ m })) });
+    }
+    if (leftovers.length) {
+      out.push({
+        id: "rest",
+        label: "Weitere Maßnahmen",
+        hint: "einzelne Posten, nach Einordnung markiert",
+        items: leftovers,
+      });
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [byQuad]);
+
   const lenses = useMemo(() => tidyLenses(lensSummary ?? []), [lensSummary]);
 
   if (!measures.length) return null;
@@ -323,16 +363,24 @@ export function MeasurePriorityBoard({
         <CategoryStrip measures={measures} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {QUADS.map(q => {
-          const list = byQuad[q.id];
-          const qDone = list.filter(m => done.includes(m.id)).length;
+      {/*
+        Bands, not a fixed 2×2.
+        A real project doesn't spread evenly across four quadrants — a two-week game
+        MVP genuinely has no "high impact, high effort" work — so the grid rendered an
+        empty box beside a box holding one item. Groups with fewer than MIN_GROUP
+        measures are folded into one "Weitere Maßnahmen" band (nothing is dropped,
+        each keeps its quadrant as a chip), empty groups aren't rendered, and a band
+        is only as tall as its contents, so there is no hole to look at.
+      */}
+      <div className="flex flex-col gap-3">
+        {bands.map(band => {
+          const bDone = band.items.filter(x => done.includes(x.m.id)).length;
           return (
             <div
-              key={q.id}
+              key={band.id}
               className={cn(
                 "rounded-xl border p-3.5",
-                q.lead
+                band.lead
                   ? "border-green-200/80 dark:border-green-900/60 bg-green-50/40 dark:bg-green-950/20"
                   : "border-zinc-200/70 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-800/20"
               )}
@@ -341,33 +389,30 @@ export function MeasurePriorityBoard({
                 <div className="min-w-0">
                   <p className={cn(
                     "text-[11px] font-bold uppercase tracking-wider",
-                    q.lead ? "text-green-700 dark:text-green-400" : "text-zinc-500 dark:text-zinc-400"
+                    band.lead ? "text-green-700 dark:text-green-400" : "text-zinc-500 dark:text-zinc-400"
                   )}>
-                    {q.label}
+                    {band.label}
                   </p>
-                  <p className="text-[10px] text-zinc-400 mt-0.5">{q.hint}</p>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">{band.hint}</p>
                 </div>
                 <span className="text-[11px] font-bold tabular-nums text-zinc-400 shrink-0">
-                  {qDone > 0 ? `${qDone}/${list.length}` : list.length}
+                  {bDone > 0 ? `${bDone}/${band.items.length}` : band.items.length}
                 </span>
               </div>
 
-              {list.length ? (
-                <div className="flex flex-col gap-1.5">
-                  {list.map(m => (
-                    <MeasureRow
-                      key={m.id}
-                      m={m}
-                      done={done.includes(m.id)}
-                      selected={sel === m.id}
-                      onSelect={() => setSel(sel === m.id ? null : m.id)}
-                      onToggleDone={() => toggleDone(m.id)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[11px] text-zinc-300 dark:text-zinc-600">—</p>
-              )}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
+                {band.items.map(({ m, tag }) => (
+                  <MeasureRow
+                    key={m.id}
+                    m={m}
+                    tag={tag}
+                    done={done.includes(m.id)}
+                    selected={sel === m.id}
+                    onSelect={() => setSel(sel === m.id ? null : m.id)}
+                    onToggleDone={() => toggleDone(m.id)}
+                  />
+                ))}
+              </div>
             </div>
           );
         })}

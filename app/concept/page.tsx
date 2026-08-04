@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence, useSpring } from "motion/react";
 import { deriveConceptMetrics } from "@/lib/metrics";
-import { BeforeAfterGrid, EffortPie } from "@/components/charts/concept-charts";
+import { BeforeAfterGrid } from "@/components/charts/concept-charts";
 import { MeasurePriorityBoard, MeasureSequence } from "@/components/charts/measure-views";
 import { ConceptCardsSection } from "@/components/cards/card-template-renderer";
 
@@ -811,7 +811,6 @@ function ConceptContent() {
                   </div>
                 )}
 
-                {metrics.effort && <EffortPie mix={metrics.effort} />}
 
                 {steps.length > 0 && (
                   <motion.div
