@@ -27,8 +27,8 @@ export function CardShell({
 }) {
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-xl border border-zinc-200/80 dark:border-zinc-800",
-      "bg-white dark:bg-zinc-900 p-4 shadow-[0_1px_2px_rgba(16,26,16,0.04)]",
+      "relative overflow-hidden rounded-xl border border-zinc-200/70 dark:border-zinc-800",
+      "bg-white dark:bg-zinc-900 p-4 h-full flex flex-col",
       className
     )}>
       {accent && <span className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accent }} />}
@@ -50,6 +50,17 @@ const num = (v: unknown): number | null => {
 const arr = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? v as Record<string, unknown>[] : []);
 const str = (v: unknown): string => (v == null ? "" : String(v));
 
+/** Singular for exactly 1 — cards rendered "1 Stunden", which reads as sloppy. */
+const SINGULAR: Record<string, string> = {
+  Stunden: "Stunde", Tage: "Tage", Wochen: "Woche", Monate: "Monat", Jahre: "Jahr",
+  Minuten: "Minute", Sekunden: "Sekunde", Server: "Server", Systeme: "System",
+  Dienste: "Dienst", Personen: "Person", Entwickler: "Entwickler",
+};
+const unitFor = (v: unknown, unit: unknown): string => {
+  const u = str(unit);
+  return num(v) === 1 ? (SINGULAR[u] ?? u) : u;
+};
+
 /**
  * List items that actually have something to say, under `key`.
  *
@@ -66,7 +77,7 @@ export function KpiCard({ label, value, unit, period, trend }: Record<string, un
   const t = str(trend).toLowerCase();
   const dir = t.includes("up") || t.includes("steig") ? "up" : t.includes("down") || t.includes("sink") ? "down" : null;
   return (
-    <CardShell accent="var(--cat-tooling)">
+    <CardShell accent="rgb(22 163 74)">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">{str(label)}</p>
       <div className="flex items-baseline gap-1.5">
         <span className="text-[22px] font-extrabold text-zinc-900 dark:text-zinc-50 tabular-nums leading-none tracking-tight">
@@ -101,7 +112,7 @@ export function BeforeAfterBar({ label, before_value, after_value, unit }: Recor
                 className={cn("h-full rounded-full", color)} />
             </div>
             <span className="w-[68px] shrink-0 text-right text-[11.5px] font-bold tabular-nums text-zinc-700 dark:text-zinc-200">
-              {v}{unit ? ` ${str(unit)}` : ""}
+              {v}{unit ? ` ${unitFor(v, unit)}` : ""}
             </span>
           </div>
         ))}
@@ -168,11 +179,11 @@ const RISK_TONE: Record<string, string> = {
   niedrig: "text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800",
   low: "text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800",
 };
-export function RiskBadgeList({ items }: Record<string, unknown>) {
+export function RiskBadgeList({ items, title }: Record<string, unknown>) {
   const list = filled(items, "description");
   if (!list.length) return null;
   return (
-    <CardShell title="Risiken" accent="var(--cat-security)">
+    <CardShell title={str(title) || "Risiken"} accent="rgb(22 163 74)">
       <ul className="flex flex-col gap-2.5">
         {list.map((it, i) => {
           const level = str(it.risk_level).toLowerCase();
@@ -206,11 +217,11 @@ const STATUS_ICON: Record<string, { Icon: React.ElementType; cls: string }> = {
   teilweise: { Icon: AlertTriangle, cls: "text-amber-500" },
   kritisch: { Icon: AlertTriangle, cls: "text-red-500" },
 };
-export function StatusList({ items }: Record<string, unknown>) {
+export function StatusList({ items, title }: Record<string, unknown>) {
   const list = filled(items, "label");
   if (!list.length) return null;
   return (
-    <CardShell title="Status">
+    <CardShell title={str(title) || "Status"}>
       <ul className="flex flex-col gap-2">
         {list.map((it, i) => {
           const key = str(it.status).toLowerCase();
@@ -231,11 +242,11 @@ export function StatusList({ items }: Record<string, unknown>) {
 }
 
 // ── 7. TimelineSteps ──────────────────────────────────────────────────────────
-export function TimelineSteps({ steps }: Record<string, unknown>) {
+export function TimelineSteps({ steps, title }: Record<string, unknown>) {
   const list = filled(steps, "label");
   if (!list.length) return null;
   return (
-    <CardShell title="Ablauf">
+    <CardShell title={str(title) || "Ablauf"}>
       <ol className="relative flex flex-col gap-3 pl-1">
         {list.map((s, i) => (
           <li key={i} className="relative flex gap-3">
@@ -304,11 +315,11 @@ export function DonutBreakdown({ label, slices, unit }: Record<string, unknown>)
 }
 
 // ── 9. ScorecardGrid ──────────────────────────────────────────────────────────
-export function ScorecardGrid({ items }: Record<string, unknown>) {
+export function ScorecardGrid({ items, title }: Record<string, unknown>) {
   const list = filled(items, "label");
   if (!list.length) return null;
   return (
-    <CardShell title="Bewertung">
+    <CardShell title={str(title) || "Bewertung"}>
       <div className="flex flex-col gap-2.5">
         {list.map((it, i) => {
           const score = num(it.score) ?? 0, max = num(it.max) ?? 10;
@@ -335,11 +346,11 @@ export function ScorecardGrid({ items }: Record<string, unknown>) {
 }
 
 // ── 10. ComparisonTable ───────────────────────────────────────────────────────
-export function ComparisonTable({ columns, rows, caption }: Record<string, unknown>) {
+export function ComparisonTable({ columns, rows, caption, title }: Record<string, unknown>) {
   const cols = (Array.isArray(columns) ? columns : []).map(str);
   const body = (Array.isArray(rows) ? rows : []) as unknown[][];
   return (
-    <CardShell title={caption ? str(caption) : "Vergleich"} className="sm:col-span-2">
+    <CardShell title={str(caption) || str(title) || "Vergleich"} className="sm:col-span-2">
       <div className="overflow-x-auto -mx-1">
         <table className="w-full text-[11.5px]">
           <thead>
@@ -398,11 +409,11 @@ export function ChecklistProgress({ title, items }: Record<string, unknown>) {
 }
 
 // ── 12. StatGrid ──────────────────────────────────────────────────────────────
-export function StatGrid({ stats }: Record<string, unknown>) {
+export function StatGrid({ stats, title }: Record<string, unknown>) {
   const list = filled(stats, "label");
   if (!list.length) return null;
   return (
-    <CardShell title="Kennzahlen" className="sm:col-span-2">
+    <CardShell title={str(title) || "Kennzahlen"} className="sm:col-span-2">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {list.map((s, i) => (
           <div key={i} className="min-w-0">

@@ -300,6 +300,25 @@ function ConceptContent() {
     finally { setGenerating(false); }
   }
 
+  /**
+   * Apply a small change to the concept and persist it.
+   *
+   * Used by the card controls (hide / pin). The choice lives inside the concept
+   * blob, which `db_save_concept` already stores as JSONB — so it survives a reload
+   * without a schema change. Optimistic: the UI updates immediately and a failed
+   * save just means the preference doesn't outlive the session, which is a better
+   * trade than blocking the click on a round-trip.
+   */
+  async function patchConcept(patch: Partial<ConceptData>) {
+    if (!concept) return;
+    const next = { ...concept, ...patch };
+    setConcept(next);
+    if (!token || !sessionId || store.demoActive) return;
+    try {
+      await api.saveConcept(token, sessionId, next);
+    } catch {}
+  }
+
   // Feed the right-side assistant with the concept currently on screen.
   useEffect(() => {
     if (!concept) return;
@@ -730,7 +749,13 @@ function ConceptContent() {
                 {/* Result cards, chosen per concept. Older concepts have no
                     `cards`, so they keep rendering the three static KPI tiles. */}
                 {cards.length > 0 ? (
-                  <ConceptCardsSection cards={cards} />
+                  <ConceptCardsSection
+                    cards={cards}
+                    hidden={concept?.cards_hidden ?? []}
+                    pinned={concept?.cards_pinned ?? null}
+                    onHiddenChange={next => patchConcept({ cards_hidden: next })}
+                    onPinnedChange={next => patchConcept({ cards_pinned: next })}
+                  />
                 ) : kpiItems.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {kpiItems.map(({ label, val, sub, Icon }, i) => (

@@ -264,6 +264,12 @@ export interface RecommendedMeasure {
 export interface ConceptCard {
   template_id: string;
   component: string;
+  /** From the TEMPLATE, not the component — four risk templates used to render
+   *  four cards all titled "Risiken" with no way to tell them apart. */
+  title?: string;
+  /** Subject the card covers. At most one card per topic, which is what stops the
+   *  section repeating itself. */
+  topic?: string;
   data: Record<string, unknown>;
 }
 
@@ -301,6 +307,10 @@ export interface ConceptData {
   /** Diagnostics: picked | picked_after_retry | fallback_* — why these cards. */
   cards_source?: string;
   cards_similarity?: number;
+  /** Cards the user hid, and the one they pinned to the top. Template ids, kept in
+   *  the concept blob so the choice survives a reload without a DB migration. */
+  cards_hidden?: string[];
+  cards_pinned?: string | null;
 }
 
 export interface ConceptResponse {
