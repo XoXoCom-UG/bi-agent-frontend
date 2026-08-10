@@ -153,7 +153,7 @@ export default function LoginPage() {
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--green)", marginBottom: 16 }}>IT Consulting Agent</div>
           <h2 style={{ fontSize: 28, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.025em", lineHeight: 1.2, marginBottom: 16 }}>Transformation Concepts in Minuten, nicht Wochen.</h2>
           <p style={{ fontSize: 14, color: "var(--text-3)", lineHeight: 1.65, marginBottom: 28 }}>Analysiere den Ist-Zustand, definiere Ziele und erstelle einen vollständigen Projektplan — KI-gestützt, auf Basis echter IT-Erfahrung.</p>
-          {[["⚡", "Transformation Concept", "Ist/Ziel-Tabelle, Schritte, User Stories, Business Value."],["🗺", "Roadmap-Dashboard", "Phasen, Tool-Empfehlungen mit Pro/Contra, Verdikt."],["💬", "IT-Wissensbasis", "Fundierte Antworten aus geprüften IT-Quellen."]].map(([icon, title, desc]) => (
+          {[["⚡", "Transformation Concept", "Ist/Ziel-Tabelle, Maßnahmen, User Stories, Business Value."],["🗺", "Roadmap-Dashboard", "Phasen, Tool-Empfehlungen mit Pro/Contra, Verdikt."],["💬", "IT-Wissensbasis", "Fundierte Antworten aus geprüften IT-Quellen."]].map(([icon, title, desc]) => (
             <div key={title} style={{ display: "flex", gap: 12, marginBottom: 16 }}>
               <div style={{ width: 36, height: 36, borderRadius: 9, background: "#fff", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{icon}</div>
               <div><div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 2 }}>{title}</div><div style={{ fontSize: 12, color: "var(--text-3)", lineHeight: 1.5 }}>{desc}</div></div>

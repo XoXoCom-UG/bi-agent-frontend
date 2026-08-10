@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Tooltip, Legend,
 } from "recharts";
 import { ArrowDownRight } from "lucide-react";
-import type { BeforeAfter, EffortMix } from "@/lib/metrics";
+import type { BeforeAfter } from "@/lib/metrics";
 import { eur } from "@/lib/metrics";
 
 const GREEN = "#16a34a";
@@ -65,30 +65,3 @@ export function BeforeAfterGrid({ items }: { items: BeforeAfter[] }) {
 const EFFORT_COLORS: Record<string, string> = { S: "#86efac", M: "#22c55e", L: "#15803d" };
 const EFFORT_LABEL: Record<string, string> = { S: "Klein", M: "Mittel", L: "Groß" };
 
-export function EffortPie({ mix }: { mix: EffortMix }) {
-  const data = (["S", "M", "L"] as const)
-    .map(k => ({ key: k, name: EFFORT_LABEL[k], value: mix[k] }))
-    .filter(d => d.value > 0);
-  if (!data.length) return null;
-  const total = data.reduce((s, d) => s + d.value, 0);
-  return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-5 sm:p-6">
-      <h2 className="text-base font-semibold text-zinc-900 mb-1">Aufwandsverteilung</h2>
-      <p className="text-xs text-zinc-400 mb-3">{total} Maßnahmen nach Umsetzungsaufwand</p>
-      <div className="h-[180px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={data} dataKey="value" nameKey="name" innerRadius={44} outerRadius={70} paddingAngle={2} stroke="none">
-              {data.map(d => <Cell key={d.key} fill={EFFORT_COLORS[d.key]} />)}
-            </Pie>
-            <Tooltip
-              formatter={(v, n) => [`${Number(v)} Maßnahmen`, n]}
-              contentStyle={{ borderRadius: 10, border: "1px solid #e4e4e7", fontSize: 12 }}
-            />
-            <Legend iconType="circle" formatter={v => <span style={{ fontSize: 12, color: "#52525b" }}>{v}</span>} />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-}

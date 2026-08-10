@@ -440,25 +440,52 @@ export function ComparisonTable({ columns, rows, caption, title }: Record<string
 }
 
 // ── 11. ChecklistProgress ─────────────────────────────────────────────────────
-export function ChecklistProgress({ title, items }: Record<string, unknown>) {
+/**
+ * A checklist you can actually tick.
+ *
+ * These templates were pulled from the catalogue because the card always read
+ * "0 von N erledigt" — the model set done:false and nothing in the app could change
+ * it, so it was a picture of an untouched list. `checked`/`onToggle` come from the
+ * card frame, which persists them in the concept, same as ProgressCard. Without
+ * them the card still renders, read-only.
+ */
+export function ChecklistProgress({ title, items, checked, onToggle }: Record<string, unknown>) {
   const list = filled(items, "label");
   if (!list.length) return null;
-  const done = list.filter(i => i.done === true || str(i.done).toLowerCase() === "true").length;
+  const ticks = Array.isArray(checked) ? (checked as string[]) : [];
+  const toggle = typeof onToggle === "function" ? (onToggle as (l: string) => void) : null;
+  const isDone = (it: Record<string, unknown>) =>
+    ticks.includes(str(it.label)) || it.done === true || str(it.done).toLowerCase() === "true";
+  const done = list.filter(isDone).length;
+
   return (
     <CardShell title={title ? str(title) : "Checkliste"}
-      hint={list.length ? `${done} von ${list.length} erledigt` : undefined}>
-      <ul className="flex flex-col gap-1.5">
+      hint={`${done} von ${list.length} erledigt`}>
+      <ul className="flex flex-col gap-1">
         {list.map((it, i) => {
-          const isDone = it.done === true || str(it.done).toLowerCase() === "true";
+          const lbl = str(it.label);
+          const ticked = isDone(it);
+          const Row = toggle ? "button" : "div";
           return (
-            <li key={i} className="flex items-start gap-2.5">
-              {isDone
-                ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5 text-green-600" strokeWidth={2} />
-                : <Circle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-zinc-300 dark:text-zinc-600" strokeWidth={2} />}
-              <span className={cn("text-[12px] leading-snug",
-                isDone ? "text-zinc-400 line-through" : "text-zinc-700 dark:text-zinc-300")}>
-                {str(it.label)}
-              </span>
+            <li key={i}>
+              <Row
+                {...(toggle
+                  ? { type: "button" as const, onClick: () => toggle(lbl), "aria-pressed": ticked,
+                      "aria-label": ticked ? `${lbl} als offen markieren` : `${lbl} als erledigt markieren` }
+                  : {})}
+                className={cn(
+                  "w-full text-left flex items-start gap-2.5 rounded-md px-1 py-1 -mx-1",
+                  toggle && "hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors duration-150"
+                )}
+              >
+                {ticked
+                  ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-px text-green-600" strokeWidth={2.2} />
+                  : <Circle className="w-3.5 h-3.5 shrink-0 mt-px text-zinc-300 dark:text-zinc-600" strokeWidth={2} />}
+                <span className={cn("text-[12px] leading-snug min-w-0 flex-1",
+                  ticked ? "text-zinc-400 line-through" : "text-zinc-700 dark:text-zinc-300")}>
+                  {lbl}
+                </span>
+              </Row>
             </li>
           );
         })}

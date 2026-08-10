@@ -221,6 +221,10 @@ function ConceptContent() {
   // asks once instead of discarding it on a mis-click.
   const [confirmRegen, setConfirmRegen] = useState(false);
 
+  // Pending debounced concept save (see patchConcept).
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveRef = useRef<{ token: string; sessionId: string; concept: ConceptData } | null>(null);
+
   useEffect(() => { if (!loading && !token) router.replace("/login"); }, [token, loading]);
 
   // Load history if not loaded yet
@@ -331,15 +335,37 @@ function ConceptContent() {
    * save just means the preference doesn't outlive the session, which is a better
    * trade than blocking the click on a round-trip.
    */
-  async function patchConcept(patch: Partial<ConceptData>) {
+  function patchConcept(patch: Partial<ConceptData>) {
     if (!concept) return;
     const next = { ...concept, ...patch };
     setConcept(next);
     if (!token || !sessionId || store.demoActive) return;
-    try {
-      await api.saveConcept(token, sessionId, next);
-    } catch {}
+
+    // Coalesce writes. Every tick used to POST the entire concept blob, so ticking
+    // off a dozen measures fired a dozen full-size requests that could also land out
+    // of order. The UI already updated above, so the delay costs nothing visible.
+    saveRef.current = { token, sessionId, concept: next };
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(flushConceptSave, 700);
   }
+
+  /** Persist whatever the latest pending concept is. Last write wins. */
+  function flushConceptSave() {
+    saveTimer.current = null;
+    const pending = saveRef.current;
+    saveRef.current = null;
+    if (!pending) return;
+    api.saveConcept(pending.token, pending.sessionId, pending.concept).catch(() => {});
+  }
+
+  // A debounced save must not be lost by leaving the page — flush it on unmount.
+  useEffect(() => () => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      flushConceptSave();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Feed the right-side assistant with the concept currently on screen.
   useEffect(() => {
@@ -606,7 +632,7 @@ function ConceptContent() {
                 </motion.div>
                 <h3 className="text-lg font-semibold text-zinc-900 mb-2">Concept generieren</h3>
                 <p className="text-sm text-zinc-500 max-w-sm mx-auto mb-8 leading-relaxed">
-                  Die KI analysiert deine Konversation und erstellt ein strukturiertes Transformation Concept mit Business Value, Schritten und User Stories.
+                  Die KI analysiert deine Konversation und erstellt ein strukturiertes Transformation Concept mit Business Value, Maßnahmen und User Stories.
                 </p>
                 {error && (
                   <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
@@ -627,7 +653,7 @@ function ConceptContent() {
                 <div className="mt-10 grid grid-cols-3 gap-4 max-w-xs mx-auto">
                   {[
                     { icon: Clock,        label: "Business Value", sub: "ROI & Zeit" },
-                    { icon: Zap,          label: "Schritte",       sub: "Aktionsplan" },
+                    { icon: Zap,          label: "Maßnahmen",      sub: "Aktionsplan" },
                     { icon: CheckCircle2, label: "User Stories",   sub: "Für dein Team" },
                   ].map(({ icon: Icon, label, sub }) => (
                     <div key={label} className="flex flex-col items-center text-center gap-1.5">
@@ -678,7 +704,7 @@ function ConceptContent() {
                     </div>
                     {goalTable.length > 0 && (
                       <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/50 px-2.5 py-1 rounded-full tabular-nums">
-                        {goalTable.length} Schritte
+                        {goalTable.length} Ziele
                       </span>
                     )}
                   </div>
@@ -821,7 +847,7 @@ function ConceptContent() {
                   >
                     <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
                       <h2 className="text-base font-semibold text-zinc-900">Transformationsschritte</h2>
-                      <span className="text-xs text-zinc-400">{steps.length} Schritte</span>
+                      <span className="text-xs text-zinc-400">{steps.length} Maßnahmen</span>
                     </div>
                     {steps.map((s, i) => (
                       <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }}

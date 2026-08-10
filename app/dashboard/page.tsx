@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useState, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useChatStore } from "@/lib/chat-store";
@@ -12,7 +12,6 @@ import {
   CheckCircle2, ChevronDown, Copy, Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { PhaseEffortChart } from "@/components/charts/phase-effort";
 
 // ── Roadmap loading ───────────────────────────────────────────────────────────
 const RM_PHASES = [
@@ -238,42 +237,110 @@ function StepCard({ step, index, onDiscuss, onEdit }: {
 }
 
 // ── Phase timeline (horizontal, sequence + relative size) ───────────────────────
-function PhaseTimeline({ phases }: { phases: NonNullable<RoadmapData["phases"]> }) {
-  const shades = ["bg-green-400", "bg-green-500", "bg-green-600", "bg-green-700", "bg-green-800"];
+/**
+ * What can start now, and what waits on what.
+ *
+ * Replaces two visuals that both misled:
+ *
+ *  - "Zeitlicher Ablauf" was a row of coloured bars whose width came from
+ *    `flexGrow: ph.steps.length` — the STEP COUNT. A phase with four small steps
+ *    looked longer than a phase with one large one, under a heading promising
+ *    chronology. It measured nothing.
+ *  - `StepFlow` drew arrows between steps in array order while never reading
+ *    `depends_on`, so it asserted a sequence the data did not claim.
+ *
+ * This uses `depends_on` for real, across ALL phases rather than within one, because
+ * a prerequisite frequently sits in an earlier phase — which is exactly the thing
+ * worth seeing. Steps with no unmet prerequisite land in stage 1: those are the ones
+ * you can start today.
+ */
+export function RoadmapFlow({ phases }: { phases: NonNullable<RoadmapData["phases"]> }) {
+  type Step = NonNullable<RoadmapData["phases"]>[0]["steps"][0];
+  type Entry = { step: Step; phase: number };
+
+  const { stages, titleById, hasDeps } = useMemo(() => {
+    const all: Entry[] = phases.flatMap((ph, pi) => ph.steps.map(s => ({ step: s, phase: pi })));
+    // Plain objects, not Map: `Map` in this file is lucide-react's icon, imported by
+    // that name, so `new Map()` silently resolves to the component.
+    const stepById: Record<string, Step> = {};
+    const titleById: Record<string, string> = {};
+    all.forEach(x => { stepById[x.step.id] = x.step; titleById[x.step.id] = x.step.title; });
+
+    const depth: Record<string, number> = {};
+    const resolve = (id: string, seen: Set<string>): number => {
+      if (depth[id] !== undefined) return depth[id];
+      if (seen.has(id)) return 0;                                  // cycle guard
+      seen.add(id);
+      const deps = (stepById[id]?.depends_on ?? []).filter(d => stepById[d] && d !== id);
+      const v = deps.length ? Math.max(...deps.map(d => resolve(d, seen))) + 1 : 0;
+      depth[id] = v;
+      return v;
+    };
+    all.forEach(x => resolve(x.step.id, new Set<string>()));
+
+    const max = Math.max(0, ...Object.values(depth));
+    const grouped: Entry[][] = Array.from({ length: max + 1 }, () => []);
+    all.forEach(x => grouped[depth[x.step.id] ?? 0].push(x));
+    const hasDeps = all.some(x => (x.step.depends_on ?? []).some(d => stepById[d]));
+    return { stages: grouped.filter(st => st.length), titleById, hasDeps };
+  }, [phases]);
+
+  // Without a single declared prerequisite there is no order to draw, and inventing
+  // one is what the old view did.
+  if (!hasDeps) return null;
+
+  const NAMES = ["Sofort möglich", "Danach", "Anschließend", "Zuletzt", "Am Ende"];
+
   return (
     <div className="mb-8">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400 mb-2">Zeitlicher Ablauf</p>
-      <div className="flex items-stretch gap-1.5">
-        {phases.map((ph, i) => (
-          <motion.div key={i}
-            initial={{ opacity: 0, scaleX: 0.6 }} animate={{ opacity: 1, scaleX: 1 }}
-            transition={{ type: "spring", duration: 0.5, bounce: 0, delay: i * 0.08 }}
-            style={{ flexGrow: ph.steps.length || 1, flexBasis: 0, transformOrigin: "left" }}
-            className={`${shades[i % shades.length]} rounded-lg px-3 py-2.5 text-white min-w-0`}>
-            <p className="text-[10px] font-semibold opacity-90 leading-none mb-1">Phase {i + 1}</p>
-            <p className="text-xs font-semibold truncate leading-tight">{ph.name}</p>
-            <p className="text-[10px] opacity-80 mt-0.5">{ph.steps.length} Maßnahmen</p>
-          </motion.div>
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400 mb-2">
+        Reihenfolge — was auf was aufbaut
+      </p>
+      <div className="flex flex-col gap-2.5">
+        {stages.map((stage, si) => (
+          <div key={si}
+            className="rounded-xl border border-zinc-200/70 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-800/20 p-3.5">
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className="w-5 h-5 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-[10px] font-bold tabular-nums text-zinc-500 shrink-0">
+                {si + 1}
+              </span>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 min-w-0 flex-1">
+                {NAMES[si] ?? `Stufe ${si + 1}`}
+              </p>
+              {si < stages.length - 1 && (
+                <ArrowRight className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0" strokeWidth={1.8} />
+              )}
+              <span className="text-[11px] font-bold tabular-nums text-zinc-400 shrink-0">{stage.length}</span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
+              {stage.map(({ step, phase }) => {
+                const deps = (step.depends_on ?? [])
+                  .map(d => titleById[d]).filter(Boolean);
+                return (
+                  <div key={step.id}
+                    className="rounded-lg border border-zinc-200/70 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2.5 py-2">
+                    <div className="flex items-start gap-2">
+                      <p className="min-w-0 flex-1 text-[11.5px] font-medium leading-snug text-zinc-800 dark:text-zinc-200">
+                        {step.title}
+                      </p>
+                      {step.effort ? (
+                        <span className="text-[9.5px] font-bold tabular-nums text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700 rounded px-1 py-px shrink-0">
+                          {step.effort}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="text-[10px] text-zinc-400 mt-1">
+                      Phase {phase + 1}
+                      {deps.length ? <> · setzt voraus: {deps.join(", ")}</> : null}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-// ── Step flow (chips connected by arrows — how steps build on each other) ────────
-function StepFlow({ steps }: { steps: NonNullable<RoadmapData["phases"]>[0]["steps"] }) {
-  if (steps.length < 2) return null;
-  return (
-    <div className="flex flex-wrap items-center gap-1.5 mb-4">
-      {steps.map((s, i) => (
-        <div key={s.id} className="flex items-center gap-1.5">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-1 text-[11px] text-zinc-600 dark:text-zinc-300 max-w-[220px]">
-            <span className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400 text-[9px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
-            <span className="truncate">{s.title}</span>
-          </span>
-          {i < steps.length - 1 && <ArrowRight className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0" strokeWidth={2} />}
-        </div>
-      ))}
     </div>
   );
 }
@@ -447,11 +514,10 @@ function DashboardContent() {
                         </p>
                       </motion.div>
 
-                      {/* Visual: phase timeline */}
-                      {roadmap.phases && roadmap.phases.length > 0 && <PhaseTimeline phases={roadmap.phases} />}
-
-                      {/* Visual: effort mix per phase */}
-                      {roadmap.phases && roadmap.phases.length > 0 && <PhaseEffortChart phases={roadmap.phases} />}
+                      {/* Order, from the declared prerequisites. "Aufwand pro Phase"
+                          was removed on request: a bar chart of S/M/L counts per
+                          phase is not something a reader can act on. */}
+                      {roadmap.phases && roadmap.phases.length > 0 && <RoadmapFlow phases={roadmap.phases} />}
 
                       {roadmap.phases?.map((ph, pi) => (
                         <motion.div key={pi}
@@ -468,9 +534,6 @@ function DashboardContent() {
                           {ph.goal && (
                             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">{ph.goal}</p>
                           )}
-
-                          {/* Visual: how the steps build on each other */}
-                          <StepFlow steps={ph.steps} />
 
                           {/* Steps — clean list */}
                           <div className="flex flex-col gap-2">
