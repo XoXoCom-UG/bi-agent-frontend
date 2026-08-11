@@ -120,6 +120,26 @@ function toText(content: unknown): string {
   return "";
 }
 
+/**
+ * Tidy what's left after a [[MARKER]] is lifted out of a message.
+ *
+ * The agent puts its markers mid-message, often fenced by `---` rules. Removing the
+ * marker left the rules behind with nothing between them, so the bubble showed two
+ * horizontal lines around an empty band. `.trim()` doesn't help: the hole is in the
+ * middle, not at the ends.
+ */
+function tidyAfterMarkers(text: string): string {
+  return text
+    // Two rules with nothing between them fenced the marker that just got lifted, so
+    // BOTH are noise. A lone rule between two paragraphs is authored content and is
+    // left alone. Table separators ("| --- |") never match: the line starts with "|".
+    .replace(/\n[ \t]*-{3,}[ \t]*(?:\n[ \t]*)*\n[ \t]*-{3,}[ \t]*/g, "\n")
+    .replace(/^(?:[ \t]*-{3,}[ \t]*\n?)+/, "")   // a rule now opening the message
+    .replace(/(?:\n[ \t]*-{3,}[ \t]*)+$/, "")    // ...or closing it
+    .replace(/\n{3,}/g, "\n\n")                  // collapse the hole it left
+    .trim();
+}
+
 function ChoiceChips({ choices, onSelect }: { choices: string[]; onSelect: (c: string) => void }) {
   const [picked, setPicked] = useState<string | null>(null);
   return (
@@ -708,6 +728,8 @@ export default function ChatPage() {
                 let openTarget: "concept" | "roadmap" | null = null;
                 const om = content.match(/\[\[OPEN:\s*(concept|roadmap)\s*\]\]/i);
                 if (om) { openTarget = om[1].toLowerCase() as "concept" | "roadmap"; content = content.replace(om[0], "").trim(); }
+                // Markers are gone; close the holes they left before rendering.
+                if (cm || mm || om) content = tidyAfterMarkers(content);
                 // Skip empty turns (tool-only / stripped messages) — no empty bubbles.
                 if (!content.trim() && choices.length === 0 && multi.length === 0 && !openTarget) return null;
                 const isLastAssistant = i === lastAssistantIdx && !store.sending;
