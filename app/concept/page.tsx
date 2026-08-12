@@ -12,8 +12,6 @@ import {
   ChevronRight, CheckCircle2, FileText, MessageSquare, ArrowLeft, Pencil, RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence, useSpring } from "motion/react";
-import { deriveConceptMetrics } from "@/lib/metrics";
-import { BeforeAfterGrid } from "@/components/charts/concept-charts";
 import { MeasurePriorityBoard, MeasureSequence } from "@/components/charts/measure-views";
 import { ConceptCardsSection } from "@/components/cards/card-template-renderer";
 
@@ -395,7 +393,6 @@ function ConceptContent() {
     .filter(k => k.val);
 
   // Chart data derived from the concept's own text (empty blocks are hidden).
-  const metrics = deriveConceptMetrics(concept);
 
   const hasMessages = store.messages.length > 0;
   // All conversations (project chats included) can carry a concept.
@@ -674,18 +671,14 @@ function ConceptContent() {
             {concept && (
               <div className="flex flex-col gap-8">
 
-                {/* Visual dashboard — driven by the concept's own numbers. Each block
-                    only appears when the underlying data is actually present. */}
-                {metrics.beforeAfter.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ type: "spring", duration: 0.5, bounce: 0 }}
-                    className="flex flex-col gap-5"
-                  >
-                    <BeforeAfterGrid items={metrics.beforeAfter} />
-                  </motion.div>
-                )}
+                {/* The prose-parsed VORHER/NACHHER block used to sit here. It read
+                    "von X auf Y" out of sentences and normalised time units, so it
+                    compared different periods as if they were the same thing and
+                    rendered "Nachher" green whatever the direction — one concept
+                    claimed effort improving from 160h to 1200h. The cards section
+                    already carries BeforeAfterBar with explicit, validated
+                    before_value/after_value/unit fields. Two sources for the same
+                    number meant one of them could lie; the guessed one is gone. */}
 
                 {/* Ziel-Zustand FIRST — as a table: Ziel | Bestes Tooling | Alternativen */}
                 <motion.div

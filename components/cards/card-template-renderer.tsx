@@ -32,6 +32,9 @@ const COMPONENT_MAP: Record<string, React.ComponentType<Record<string, unknown>>
 
 /** Components that need the full width to be readable. */
 const WIDE = new Set(["ComparisonTable", "StatGrid"]);
+/** Components showing a single figure — they must never be stretched to match a
+ *  neighbour full of list items, so they are laid out among themselves. */
+const SMALL = new Set(["KpiCard", "RadialGauge"]);
 
 /** Keys that carry the card's numbers/labels rather than its plumbing. */
 const SKIP_KEYS = new Set(["basis", "title"]);
@@ -201,16 +204,27 @@ export function ConceptCardsSection({
     ? [...visible].sort((a, b) => (a.template_id === pinned ? -1 : b.template_id === pinned ? 1 : 0))
     : visible;
 
-  // Lead card, then the narrow cards paired up, then the full-width ones.
-  //
-  // A wide card in the middle of the run broke a pair and left the card beside it
-  // orphaned next to a gap — the same ragged look as before, just smaller. Wide
-  // cards are the reference tables, so they read fine at the end, and this leaves
-  // at most one half-empty row: the last.
+  /*
+   * Grouped by how much a card actually has to say, then laid out per group.
+   *
+   * Cards fill their cell so a row ends flush, which is tidy while neighbours are
+   * comparable — and awful when they aren't. A single-number card ("500 ms") beside
+   * a six-item checklist got stretched to the checklist's height, which is the big
+   * empty box in the report. Pairing like with like removes the mismatch instead of
+   * giving up on even rows: one-number cards sit three-up among themselves, lists
+   * and bars two-up, tables full width.
+   */
   const [lead, ...rest] = byPriority;
-  const ordered = lead
-    ? [lead, ...rest.filter(c => !WIDE.has(c.component)), ...rest.filter(c => WIDE.has(c.component))]
-    : [];
+  const bands: { key: string; cols: string; cards: ConceptCard[] }[] = [];
+  if (lead) bands.push({ key: "lead", cols: "grid-cols-1", cards: [lead] });
+
+  const small = rest.filter(c => SMALL.has(c.component));
+  const wide = rest.filter(c => WIDE.has(c.component));
+  const medium = rest.filter(c => !SMALL.has(c.component) && !WIDE.has(c.component));
+
+  if (small.length) bands.push({ key: "small", cols: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3", cards: small });
+  if (medium.length) bands.push({ key: "medium", cols: "grid-cols-1 sm:grid-cols-2", cards: medium });
+  for (const [i, c] of wide.entries()) bands.push({ key: `wide-${i}`, cols: "grid-cols-1", cards: [c] });
 
   const hide = (id: string) => onHiddenChange?.([...hidden, id]);
   const restore = () => onHiddenChange?.([]);
@@ -247,27 +261,29 @@ export function ConceptCardsSection({
         )}
       </div>
 
-      {/* Equal-height rows: cards fill their cell (CardShell is h-full), so a row
-          ends flush instead of leaving a void under the shorter card. */}
-      <div className="px-5 pb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {ordered.map((card, i) => (
-          <motion.div
-            key={`${card.template_id}-${i}`}
-            layout
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Math.min(i * 0.03, 0.24), duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
-            className={cn("min-w-0", (i === 0 || WIDE.has(card.component)) && "sm:col-span-2")}
-          >
-            <CardFrame
-              card={card}
-              pinned={pinned === card.template_id}
-              onHide={() => hide(card.template_id)}
-              onTogglePin={() => togglePin(card.template_id)}
-              checked={checked[card.template_id] ?? []}
-              onToggleItem={label => toggleItem(card.template_id, label)}
-            />
-          </motion.div>
+      <div className="px-5 pb-6 flex flex-col gap-4">
+        {bands.map((band, bi) => (
+          <div key={band.key} className={cn("grid gap-4", band.cols)}>
+            {band.cards.map((card, i) => (
+              <motion.div
+                key={`${card.template_id}-${i}`}
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min((bi + i) * 0.03, 0.24), duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+                className="min-w-0"
+              >
+                <CardFrame
+                  card={card}
+                  pinned={pinned === card.template_id}
+                  onHide={() => hide(card.template_id)}
+                  onTogglePin={() => togglePin(card.template_id)}
+                  checked={checked[card.template_id] ?? []}
+                  onToggleItem={label => toggleItem(card.template_id, label)}
+                />
+              </motion.div>
+            ))}
+          </div>
         ))}
       </div>
     </motion.section>
