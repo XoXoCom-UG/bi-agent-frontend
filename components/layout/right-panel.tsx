@@ -158,8 +158,14 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
           ]
         : [];
       const res = await api.chat(token, { messages: [...seed, ...shown], session_id: sessionRef.current, project_id: projectId, persona });
-      const reply = res.messages[res.messages.length - 1];
-      const finalMsgs = reply ? [...shown, reply] : shown;
+      // Only an assistant turn may be appended. Appending whatever came last put a
+      // second copy of the user's own message in the thread whenever the backend
+      // returned a list with no reply in it.
+      const reply = res.messages?.[res.messages.length - 1];
+      if (!reply || reply.role !== "assistant") {
+        throw new Error("Keine Antwort erhalten — bitte nochmal senden.");
+      }
+      const finalMsgs = [...shown, reply];
       setMessages(finalMsgs);
       if (scopeKey) api.saveAssistantThread(token, scopeKey, finalMsgs).catch(() => {});
     } catch (e: unknown) {

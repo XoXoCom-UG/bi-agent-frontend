@@ -319,6 +319,14 @@ export default function ChatPage() {
 
     try {
       const res = await api.chat(token, { messages: [...store.messages, userMsg], session_id: store.sessionId, project_id: projectId, guided: store.guidedProject });
+      // A list that doesn't end in a reply must never be rendered as if it were a
+      // conversation: that showed the user's own message with silence underneath and
+      // no hint that anything had failed. Throwing routes it to the catch below,
+      // which puts a visible error in the thread.
+      const last = res.messages?.[res.messages.length - 1];
+      if (!last || last.role !== "assistant") {
+        throw new Error("Keine Antwort erhalten — bitte nochmal senden.");
+      }
       store.setMessages(res.messages);
       store.setSessionId(res.session_id);
       // NOTE: guided mode stays ON for the whole interview — it used to reset
