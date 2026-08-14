@@ -12,7 +12,7 @@ import { cn, scopedKey } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Zap, ArrowUp, ArrowRight, MessageSquare, CheckCircle2, Copy, Check,
-  Folder, Plus, LayoutDashboard, Sparkles, Wrench, ShieldCheck, Server, Lock, Pencil,
+  Folder, Plus, LayoutDashboard, Sparkles, Wrench, ShieldCheck, Server, Lock, Pencil, RefreshCw,
 } from "lucide-react";
 
 // ── Phase list (long, non-repeating within a response) ───────────────────────
@@ -201,10 +201,24 @@ function MultiChoiceChips({ choices, onSubmit }: { choices: string[]; onSubmit: 
 }
 
 // ── Message actions (copy — right-aligned) ────────────────────────────────────
-function MsgActions({ text }: { text: string }) {
+function MsgActions({ text, onRegenerate }: { text: string; onRegenerate?: () => void }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="flex items-center justify-end w-full gap-1 mt-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity duration-150">
+    <div className="flex items-center justify-end w-full gap-1 mt-1.5 opacity-0 group-hover/msg:opacity-100 focus-within:opacity-100 transition-opacity duration-150">
+      {/* Asked for in the review: when a reply is cut off — dropped connection,
+          server hiccup — the way out was copying the question and pasting it again.
+          Only offered on the LAST reply, because regenerating an older one would
+          throw away everything said after it. */}
+      {onRegenerate && (
+        <button
+          onClick={onRegenerate}
+          title="Antwort neu generieren"
+          className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors duration-150"
+        >
+          <RefreshCw className="w-3 h-3" strokeWidth={1.5} />
+          Neu generieren
+        </button>
+      )}
       <button
         onClick={() => navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })}
         title="Kopieren"
@@ -338,6 +352,45 @@ export default function ChatPage() {
       api.getProjects(token).then(d => store.setProjects(d.projects)).catch(() => {});
     } catch (e: unknown) {
       store.addMessage({ role: "assistant", content: `**Fehler:** ${(e as Error).message}` });
+    } finally { stopThinking(); }
+  }
+
+  /**
+   * Re-run the last turn.
+   *
+   * Drops every trailing assistant message — the failed reply, or an error bubble —
+   * and re-sends the conversation that ends with the user's question. Asked for in
+   * the review: when a reply is cut off by a dropped connection, the only way out
+   * was copying the question and pasting it again, which is exactly the kind of
+   * friction the product is supposed to remove.
+   */
+  async function regenerate() {
+    if (!token || store.sending) return;
+    const msgs = store.messages;
+    let cut = msgs.length;
+    while (cut > 0 && msgs[cut - 1].role === "assistant") cut--;
+    const upTo = msgs.slice(0, cut);
+    if (!upTo.length) return;                 // nothing to re-ask
+
+    store.setMessages(upTo);
+    startThinking();
+    try {
+      const res = await api.chat(token, {
+        messages: upTo,
+        session_id: store.sessionId,
+        project_id: store.activeProjectId,
+        guided: store.guidedProject,
+      });
+      const last = res.messages?.[res.messages.length - 1];
+      if (!last || last.role !== "assistant") {
+        throw new Error("Keine Antwort erhalten — bitte nochmal senden.");
+      }
+      store.setMessages(res.messages);
+      store.setSessionId(res.session_id);
+      api.getHistory(token).then(d => store.setHistory(d.sessions)).catch(() => {});
+    } catch (e: unknown) {
+      // Put the question back with the error under it, so the button is still there.
+      store.setMessages([...upTo, { role: "assistant", content: `**Fehler:** ${(e as Error).message}` }]);
     } finally { stopThinking(); }
   }
 
@@ -756,7 +809,7 @@ export default function ChatPage() {
                           : "bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200 px-5 py-4 rounded-2xl rounded-tl-sm w-full"
                       )}
                         dangerouslySetInnerHTML={{ __html: md(content) }} />
-                      {!isUser && <MsgActions text={content} />}
+                      {!isUser && <MsgActions text={content} onRegenerate={isLastAssistant ? regenerate : undefined} />}
                       {choices.length > 0 && <ChoiceChips choices={choices} onSelect={send} />}
                       {multi.length > 0 && isLastAssistant && <MultiChoiceChips choices={multi} onSubmit={send} />}
                       {openTarget === "concept" && (
