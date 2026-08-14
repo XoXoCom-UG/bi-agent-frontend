@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 import {
@@ -104,8 +105,8 @@ export function BeforeAfterBar({ label, before_value, after_value, unit }: Recor
     <CardShell title={str(label)} hint={delta !== 0 ? `${improved ? "−" : "+"}${Math.abs(delta)}%` : undefined}>
       <div className="flex flex-col gap-2">
         {rows.map(([name, v, color]) => (
-          <div key={name} className="flex items-center gap-2.5">
-            <span className="w-[52px] shrink-0 text-[11px] text-zinc-500">{name}</span>
+          <div key={name} className="flex items-center gap-2.5 group/bar rounded px-1 -mx-1 py-0.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors duration-150">
+            <span className="w-[52px] shrink-0 text-[11px] text-zinc-500 group-hover/bar:text-zinc-800 dark:group-hover/bar:text-zinc-200 transition-colors duration-150">{name}</span>
             <div className="flex-1 h-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
               <motion.div initial={{ width: 0 }} animate={{ width: `${(v / max) * 100}%` }}
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
@@ -333,7 +334,16 @@ export function TimelineSteps({ steps, title }: Record<string, unknown>) {
 
 // ── 8. DonutBreakdown ─────────────────────────────────────────────────────────
 const SLICE_COLORS = ["var(--cat-tooling)", "var(--cat-business)", "var(--cat-agile)", "var(--cat-security)", "#8b8f8c"];
+/**
+ * Slices and legend highlight together on hover.
+ *
+ * Static, the slices ran into each other and there was no way to tell which arc
+ * belonged to which label — you had to match colours by eye, and adjacent shades
+ * look alike at 10px stroke width. Hovering either the arc OR its legend row now
+ * lifts that slice, dims the rest, and puts its share in the middle of the ring.
+ */
 export function DonutBreakdown({ label, slices, unit }: Record<string, unknown>) {
+  const [hot, setHot] = useState<number | null>(null);
   const list = filled(slices, "name")
     .map(s => ({ name: str(s.name), value: num(s.value) ?? 0 }))
     .filter(s => s.value > 0);
@@ -341,25 +351,53 @@ export function DonutBreakdown({ label, slices, unit }: Record<string, unknown>)
   const total = list.reduce((a, s) => a + s.value, 0) || 1;
   const R = 30, C = 2 * Math.PI * R;
   let acc = 0;
+  const active = hot != null ? list[hot] : null;
+
   return (
     <CardShell title={str(label)}>
-      <div className="flex items-center gap-4">
-        <svg viewBox="0 0 76 76" className="w-[76px] h-[76px] shrink-0 -rotate-90">
-          {list.map((s, i) => {
-            const frac = s.value / total;
-            const dash = `${frac * C} ${C - frac * C}`;
-            const offset = -acc * C;
-            acc += frac;
-            return (
-              <circle key={i} cx="38" cy="38" r={R} fill="none" strokeWidth="10"
-                stroke={SLICE_COLORS[i % SLICE_COLORS.length]}
-                strokeDasharray={dash} strokeDashoffset={offset} />
-            );
-          })}
-        </svg>
+      <div className="flex items-center gap-4" onMouseLeave={() => setHot(null)}>
+        <div className="relative w-[76px] h-[76px] shrink-0">
+          <svg viewBox="0 0 76 76" className="w-full h-full -rotate-90">
+            {list.map((s, i) => {
+              const frac = s.value / total;
+              const dash = `${frac * C} ${C - frac * C}`;
+              const offset = -acc * C;
+              acc += frac;
+              const dim = hot != null && hot !== i;
+              return (
+                <circle
+                  key={i} cx="38" cy="38" r={R} fill="none"
+                  strokeWidth={hot === i ? 12 : 10}
+                  stroke={SLICE_COLORS[i % SLICE_COLORS.length]}
+                  strokeDasharray={dash} strokeDashoffset={offset}
+                  opacity={dim ? 0.28 : 1}
+                  onMouseEnter={() => setHot(i)}
+                  className="transition-[opacity,stroke-width] duration-150 cursor-default"
+                />
+              );
+            })}
+          </svg>
+          {/* The hovered share, in the hole where it reads without a tooltip. */}
+          {active && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <span className="text-[12px] font-extrabold tabular-nums text-zinc-900 dark:text-zinc-50">
+                {Math.round((active.value / total) * 100)}%
+              </span>
+            </div>
+          )}
+        </div>
+
         <ul className="min-w-0 flex-1 flex flex-col gap-1">
           {list.map((s, i) => (
-            <li key={i} className="flex items-center gap-2 text-[11.5px]">
+            <li
+              key={i}
+              onMouseEnter={() => setHot(i)}
+              className={cn(
+                "flex items-center gap-2 text-[11.5px] rounded px-1 -mx-1 py-px transition-colors duration-150",
+                hot === i && "bg-zinc-100 dark:bg-zinc-800",
+                hot != null && hot !== i && "opacity-45"
+              )}
+            >
               <i className="w-2 h-2 rounded-sm shrink-0" style={{ background: SLICE_COLORS[i % SLICE_COLORS.length] }} />
               <span className="flex-1 min-w-0 truncate text-zinc-600 dark:text-zinc-300">{s.name}</span>
               <span className="tabular-nums font-semibold text-zinc-800 dark:text-zinc-200">
@@ -375,16 +413,25 @@ export function DonutBreakdown({ label, slices, unit }: Record<string, unknown>)
 
 // ── 9. ScorecardGrid ──────────────────────────────────────────────────────────
 export function ScorecardGrid({ items, title }: Record<string, unknown>) {
+  // Rows of near-identical bars are hard to follow across; hovering one makes it
+  // unambiguous which criterion the bar belongs to.
+  const [hot, setHot] = useState<number | null>(null);
   const list = filled(items, "label");
   if (!list.length) return null;
   return (
     <CardShell title={str(title) || "Bewertung"}>
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-2.5" onMouseLeave={() => setHot(null)}>
         {list.map((it, i) => {
           const score = num(it.score) ?? 0, max = num(it.max) ?? 10;
           const pct = max > 0 ? Math.max(0, Math.min(100, (score / max) * 100)) : 0;
+          const dim = hot != null && hot !== i;
           return (
-            <div key={i}>
+            <div
+              key={i}
+              onMouseEnter={() => setHot(i)}
+              className={cn("rounded px-1 -mx-1 py-0.5 transition-opacity duration-150",
+                            dim && "opacity-45", hot === i && "bg-zinc-50 dark:bg-zinc-800/60")}
+            >
               <div className="flex items-baseline justify-between mb-1">
                 <span className="text-[11.5px] text-zinc-600 dark:text-zinc-300 truncate pr-2">{str(it.label)}</span>
                 <span className="text-[11.5px] font-bold tabular-nums text-zinc-800 dark:text-zinc-200 shrink-0">
