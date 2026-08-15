@@ -28,7 +28,7 @@ export function CardShell({
 }) {
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-xl border border-zinc-200/70 dark:border-zinc-800",
+      "card-lift relative overflow-hidden rounded-xl border border-zinc-200/70 dark:border-zinc-800",
       "bg-white dark:bg-zinc-900 p-4 h-full flex flex-col",
       className
     )}>

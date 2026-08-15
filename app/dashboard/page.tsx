@@ -94,10 +94,13 @@ function StepCard({ step, index, onDiscuss, onEdit }: {
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", duration: 0.4, bounce: 0.05, delay: index * 0.06 }}
-      className={`rounded-xl border overflow-hidden transition-colors duration-150 ${
+      // Framer writes `transform` inline here, so the CSS .card-lift hover would be
+      // overridden — the lift has to come from whileHover on the same element.
+      whileHover={{ y: -2 }}
+      className={`rounded-xl border overflow-hidden transition-[border-color,box-shadow] duration-150 hover:shadow-[0_10px_22px_-14px_rgba(16,40,22,0.38)] ${
         done
           ? "border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20"
-          : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700"
+          : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-400 dark:hover:border-zinc-600"
       }`}
     >
       {/* Header */}
@@ -319,7 +322,7 @@ export function RoadmapFlow({ phases }: { phases: NonNullable<RoadmapData["phase
                   .map(d => titleById[d]).filter(Boolean);
                 return (
                   <div key={step.id}
-                    className="rounded-lg border border-zinc-200/70 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2.5 py-2">
+                    className="card-lift rounded-lg border border-zinc-200/70 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2.5 py-2">
                     <div className="flex items-start gap-2">
                       <p className="min-w-0 flex-1 text-[11.5px] font-medium leading-snug text-zinc-800 dark:text-zinc-200">
                         {step.title}
