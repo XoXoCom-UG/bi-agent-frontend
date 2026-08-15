@@ -6,6 +6,7 @@ import { useChatStore } from "@/lib/chat-store";
 import { api } from "@/lib/api";
 import { md } from "@/lib/markdown";
 import { AppShell } from "@/components/layout/app-shell";
+import { ProjectJourney, type JourneyStage } from "@/components/layout/project-journey";
 import { DEMO_MESSAGES } from "@/lib/demo";
 import { Badge } from "@/components/ui";
 import { cn, scopedKey } from "@/lib/utils";
@@ -252,6 +253,35 @@ export default function ChatPage() {
   // "Starte Projekt" clicked → reveal the left agent's composer directly.
   const [startedProject, setStartedProject] = useState(false);
 
+  /*
+   * Does this conversation already have a concept / a roadmap?
+   *
+   * Drives the journey indicator. Read from the server rather than tracked
+   * locally: a counter we increment ourselves can disagree with the data, and a
+   * progress indicator that lies is worse than none. Two cheap GETs that touch only
+   * the database — no model call — and both answer 200 with null when there is
+   * nothing yet.
+   */
+  const [hasConcept, setHasConcept] = useState(false);
+  const [hasRoadmap, setHasRoadmap] = useState(false);
+  useEffect(() => {
+    if (!token || !store.sessionId || !store.messages.length) {
+      setHasConcept(false); setHasRoadmap(false); return;
+    }
+    let alive = true;
+    api.getConcept(token, store.sessionId)
+      .then(d => { if (alive) setHasConcept(!!d?.concept); }).catch(() => {});
+    api.getRoadmap(token, store.sessionId)
+      .then(d => { if (alive) setHasRoadmap(!!d?.roadmap); }).catch(() => {});
+    return () => { alive = false; };
+  }, [token, store.sessionId, store.messages.length]);
+
+  function openStage(stage: JourneyStage) {
+    if (stage === "concept") router.push(`/concept?session=${store.sessionId}`);
+    else if (stage === "roadmap") router.push(`/dashboard?session=${store.sessionId}`);
+    // "interview" is this page — nothing to navigate to.
+  }
+
   // "Hire an Agent" start: the left agent introduces itself, numbered and
   // renameable (UI-only — does not touch the agent's prompting). The rename
   // is scoped per account so it can't leak into another user's session.
@@ -482,6 +512,25 @@ export default function ChatPage() {
 
   return (
     <AppShell active="chat">
+        {/* Where you are, for the whole run of a project. Only once the interview
+            has actually started — on the welcome screen there is no project yet, and
+            a journey with nothing on it is noise. */}
+        {msgs.length > 0 && !demo && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", duration: 0.4, bounce: 0 }}
+            className="no-print shrink-0 border-b border-zinc-100 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm px-4 md:px-6 py-2 flex justify-center"
+          >
+            <ProjectJourney
+              hasMessages={msgs.length > 0}
+              hasConcept={hasConcept}
+              hasRoadmap={hasRoadmap}
+              onOpen={openStage}
+            />
+          </motion.div>
+        )}
+
         {/* Messages / Project hub / Welcome */}
         <div className="flex-1 overflow-y-auto relative" ref={msgListRef} onMouseUp={handleMouseUp}>
           {/* Floating "discuss selection" button */}
@@ -757,6 +806,17 @@ export default function ChatPage() {
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mb-6">
                     Beschreibe kurz dein Projekt oder deine Herausforderung — ich stelle dir dann die richtigen Fragen, und wir bauen gemeinsam Konzept &amp; Roadmap.
                   </p>
+
+                  {/* The button promised three stages; this is where that promise
+                      lands, so starting a project shows what it leads to. */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1, type: "spring", duration: 0.45, bounce: 0 }}
+                    className="w-full mb-6"
+                  >
+                    <ProjectJourney hasMessages={false} hasConcept={false} hasRoadmap={false} variant="preview" />
+                  </motion.div>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {["Wir wollen in die Cloud migrieren", "Wir brauchen ein IT-Sicherheitskonzept", "Welches ERP passt zu uns?"].map((ex, i) => (
                       <motion.button
