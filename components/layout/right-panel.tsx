@@ -376,7 +376,7 @@ export function AssistantPanel({ token, projectId, scopeKey }: { token: string |
 
       {/* Composer — always available */}
       <div className="px-3 pb-3 pt-1 shrink-0">
-        <div className="flex gap-2 items-end bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 focus-within:border-green-400 dark:focus-within:border-green-600 transition-colors">
+        <div className="focus-parent flex gap-2 items-end bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 focus-within:border-green-400 dark:focus-within:border-green-600 transition-colors">
           <textarea value={input} rows={1}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}

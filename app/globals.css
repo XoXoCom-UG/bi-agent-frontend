@@ -175,6 +175,13 @@ html.dark {
   outline: 2px solid var(--green); outline-offset: 2px; border-radius: 6px;
 }
 
+/* A container that shows focus for the field inside it — the composers use
+   focus-within to turn their whole border green. Without this the rule above ALSO
+   ringed the textarea, so focusing it drew two green rounded rectangles, one inside
+   the other. The container's border is the focus indicator here, so the inner one is
+   redundant, not missing: accessibility is preserved. */
+.focus-parent :focus-visible { outline: none; }
+
 /* Skeleton loaders */
 .skeleton { position: relative; overflow: hidden; background: #eceeec; border-radius: 8px; }
 html.dark .skeleton { background: #1f2320; }
